@@ -178,11 +178,11 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   translation: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.textSecondary,
     marginTop: 5,
     fontStyle: 'italic',
-    lineHeight: 16,
+    lineHeight: 18,
   },
   footer: {
     flexDirection: 'row',

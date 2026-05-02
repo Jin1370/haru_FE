@@ -56,8 +56,29 @@ const EXTRA_BUBBLE_GAP = 16;
 // "new messages" badge instead of yanking the viewport.
 const NEAR_BOTTOM_THRESHOLD = 120;
 
+function isSameDay(a: string, b: string) {
+  const da = new Date(a);
+  const db = new Date(b);
+  return (
+    da.getFullYear() === db.getFullYear() &&
+    da.getMonth() === db.getMonth() &&
+    da.getDate() === db.getDate()
+  );
+}
+
+function formatDateLabel(iso: string, locale: string) {
+  const d = new Date(iso);
+  const tag = locale === 'ko' ? 'ko-KR' : 'en-US';
+  return d.toLocaleDateString(tag, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  });
+}
+
 export default function ChatScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
     matchId,
@@ -336,16 +357,28 @@ export default function ChatScreen() {
     const prev = index > 0 ? messages[index - 1] : null;
     const isMine = item.sender_id === userId;
     const showAvatar = !isMine && (!prev || prev.sender_id !== item.sender_id);
+    const showDateSeparator = !prev || !isSameDay(prev.created_at, item.created_at);
     return (
-      <ChatBubble
-        message={item}
-        isMine={isMine}
-        partnerId={partnerId}
-        partnerPhoto={partnerPhoto}
-        showAvatar={showAvatar}
-        onAvatarPress={() => setPartnerModalOpen(true)}
-        onRetryAudio={retryAudio}
-      />
+      <>
+        {showDateSeparator && (
+          <View style={styles.dateSeparator}>
+            <View style={styles.dateLine} />
+            <Text style={styles.dateText}>
+              {formatDateLabel(item.created_at, i18n.language)}
+            </Text>
+            <View style={styles.dateLine} />
+          </View>
+        )}
+        <ChatBubble
+          message={item}
+          isMine={isMine}
+          partnerId={partnerId}
+          partnerPhoto={partnerPhoto}
+          showAvatar={showAvatar}
+          onAvatarPress={() => setPartnerModalOpen(true)}
+          onRetryAudio={retryAudio}
+        />
+      </>
     );
   };
 
@@ -485,8 +518,12 @@ export default function ChatScreen() {
         animationType="fade"
         onRequestClose={() => setPartnerModalOpen(false)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setPartnerModalOpen(false)}>
-          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+        <View style={styles.modalBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setPartnerModalOpen(false)}
+          />
+          <View style={styles.modalCard}>
             <Pressable
               onPress={() => setPartnerModalOpen(false)}
               hitSlop={12}
@@ -505,7 +542,11 @@ export default function ChatScreen() {
                 variant="detail"
               />
             )}
-            <ScrollView contentContainerStyle={styles.modalBody}>
+            <ScrollView
+              style={styles.modalScroll}
+              contentContainerStyle={styles.modalBody}
+              showsVerticalScrollIndicator={false}
+            >
               {partnerName && (
                 <Text style={styles.modalName}>
                   {partnerName}
@@ -528,8 +569,8 @@ export default function ChatScreen() {
                 </View>
               )}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       <Modal
@@ -600,6 +641,25 @@ const styles = StyleSheet.create({
   },
   messageList: {
     paddingTop: 10,
+  },
+  dateSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 12,
+    paddingHorizontal: 24,
+    gap: 10,
+  },
+  dateLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.textLight,
+    opacity: 0.5,
+  },
+  dateText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontFamily: fonts.medium,
+    letterSpacing: 0.2,
   },
   inputDock: {
     position: 'absolute',
@@ -682,6 +742,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 360,
+    maxHeight: '100%',
     backgroundColor: colors.card,
     borderRadius: radii.xl,
     overflow: 'hidden',
@@ -699,6 +760,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.92)',
     ...shadows.soft,
+  },
+  modalScroll: {
+    flexShrink: 1,
   },
   modalBody: {
     padding: 18,
