@@ -155,6 +155,11 @@ export default {
         emotionPicker: {
             toggleLabel: "감정 선택",
         },
+        profileSheet: {
+            age: "나이",
+            origin: "국적",
+            interests: "관심사",
+        },
     },
 
     setupProfile: {

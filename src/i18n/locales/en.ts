@@ -156,6 +156,11 @@ export default {
     emotionPicker: {
       toggleLabel: 'Choose emotion',
     },
+    profileSheet: {
+      age: 'Age',
+      origin: 'Origin',
+      interests: 'Interests',
+    },
   },
 
   setupProfile: {

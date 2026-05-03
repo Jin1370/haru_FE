@@ -516,45 +516,63 @@ export default function ChatScreen() {
               contentContainerStyle={styles.modalBody}
               showsVerticalScrollIndicator={false}
             >
-              {partnerName && (
-                <Text style={styles.modalName} numberOfLines={1}>
-                  {partnerName}
-                </Text>
-              )}
-              {(partnerBirthDate || partnerNationality) && (
-                <View style={styles.modalDetailRow}>
-                  {partnerBirthDate && (
-                    <Text style={styles.modalDetail} numberOfLines={1}>
-                      {t('common.ageSuffix', { age: calculateAge(partnerBirthDate) })}
+              {(partnerName || partnerBioAudio) && (
+                <View style={styles.modalNameRow}>
+                  {partnerName && (
+                    <Text style={styles.modalName} numberOfLines={1}>
+                      {partnerName}
                     </Text>
                   )}
-                  {partnerBirthDate && partnerNationality && (
-                    <Text style={styles.modalDetailSep}>•</Text>
-                  )}
-                  {partnerNationality && (
-                    <CountryFlag
-                      isoCode={partnerNationality}
-                      size={11}
-                      style={styles.modalFlag}
-                    />
-                  )}
-                  {partnerNationality && (
-                    <Text style={styles.modalDetail} numberOfLines={1}>
-                      {partnerNationality}
-                    </Text>
+                  {partnerBioAudio && (
+                    <AudioPlayer url={partnerBioAudio} compact />
                   )}
                 </View>
               )}
-              {partnerBioAudio && <AudioPlayer url={partnerBioAudio} />}
-              {partnerInterests.length > 0 && (
-                <View style={styles.modalTags}>
-                  {partnerInterests.map((tag, i) => (
-                    <View key={`${tag}-${i}`} style={styles.modalTag}>
-                      <Text style={styles.modalTagText}>{tag}</Text>
+              <View style={styles.sheet}>
+                {partnerBirthDate && (
+                  <View style={styles.sheetRow}>
+                    <Text style={styles.sheetLabel}>
+                      {t('chat.profileSheet.age')}
+                    </Text>
+                    <Text style={styles.sheetValueText} numberOfLines={1}>
+                      {t('common.ageSuffix', {
+                        age: calculateAge(partnerBirthDate),
+                      })}
+                    </Text>
+                  </View>
+                )}
+                {partnerNationality && (
+                  <View style={styles.sheetRow}>
+                    <Text style={styles.sheetLabel}>
+                      {t('chat.profileSheet.origin')}
+                    </Text>
+                    <View style={styles.sheetValueInline}>
+                      <CountryFlag
+                        isoCode={partnerNationality}
+                        size={11}
+                        style={styles.modalFlag}
+                      />
+                      <Text style={styles.sheetValueText} numberOfLines={1}>
+                        {partnerNationality}
+                      </Text>
                     </View>
-                  ))}
-                </View>
-              )}
+                  </View>
+                )}
+                {partnerInterests.length > 0 && (
+                  <View style={styles.sheetRow}>
+                    <Text style={styles.sheetLabel}>
+                      {t('chat.profileSheet.interests')}
+                    </Text>
+                    <View style={styles.modalTags}>
+                      {partnerInterests.map((tag, i) => (
+                        <View key={`${tag}-${i}`} style={styles.modalTag}>
+                          <Text style={styles.modalTagText}>{tag}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -752,30 +770,53 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   modalBody: {
-    padding: 18,
-    gap: 12,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 18,
+    gap: 8,
+  },
+  modalNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 0,
   },
   modalName: {
-    fontSize: 21,
+    flexShrink: 1,
+    fontSize: 20,
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.3,
   },
-  modalDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
+  sheet: {
+    marginTop: 4,
+    gap: 8,
   },
-  modalDetail: {
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  sheetLabel: {
+    width: 56,
+    fontSize: 12,
+    color: colors.textLight,
+    fontFamily: fonts.medium,
+    letterSpacing: 0.5,
+    paddingTop: 2,
+  },
+  sheetValueText: {
+    flexShrink: 1,
     fontSize: 13,
-    color: colors.textSecondary,
+    color: colors.text,
     fontFamily: fonts.medium,
     letterSpacing: 0.3,
+    paddingTop: 2,
   },
-  modalDetailSep: {
-    fontSize: 13,
-    color: colors.textLight,
-    marginHorizontal: 8,
+  sheetValueInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
   },
   modalFlag: {
     width: 16,
@@ -784,20 +825,21 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
   },
   modalTags: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
   },
   modalTag: {
     backgroundColor: colors.white,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.border,
   },
   modalTagText: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.primaryDark,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
