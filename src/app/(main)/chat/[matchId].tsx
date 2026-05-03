@@ -18,6 +18,7 @@ import {
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import CountryFlag from 'react-native-country-flag';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChatBubble } from '@/components/chat/ChatBubble';
@@ -163,9 +164,8 @@ export default function ChatScreen() {
   const prevLengthRef = useRef(0);
   const prevFirstIdRef = useRef<string | null>(null);
   const prevLastIdRef = useRef<string | null>(null);
-  const initialScrolledRef = useRef(false);
-  // Tracks whether the user is parked near the bottom of the list. Updated by
-  // FlatList.onScroll. Starts true so the initial auto-scroll path runs.
+  // Tracks whether the user is parked near the newest end of the list (visual
+  // bottom in the inverted list). Updated by FlatList.onScroll.
   const isNearBottomRef = useRef(true);
 
   useEffect(() => {
@@ -189,51 +189,10 @@ export default function ChatScreen() {
     }
   }, [messages.length, markRead]);
 
-  // Initial scroll-to-bottom: variable-height bubbles + lazy-mounted audio bars
-  // mean the content size grows over multiple frames after first render. Fire
-  // scrollToEnd at several delays — scrollToEnd uses the internal contentLength
-  // at call time, so a single rAF call can land short if the footer spacer or
-  // audio bars are still settling.
-  useEffect(() => {
-    if (loading) return;
-    if (initialScrolledRef.current) return;
-    if (messages.length === 0) return;
-    const scroll = () => flatListRef.current?.scrollToEnd({ animated: false });
-    const rafId = requestAnimationFrame(scroll);
-    const timeouts = [50, 150, 350, 700, 1200].map((d) => setTimeout(scroll, d));
-    const finalize = setTimeout(() => {
-      initialScrolledRef.current = true;
-    }, 1500);
-    return () => {
-      cancelAnimationFrame(rafId);
-      timeouts.forEach(clearTimeout);
-      clearTimeout(finalize);
-    };
-  }, [loading, messages.length]);
-
-  // Re-snap when the input dock height is measured. The footer spacer height
-  // depends on inputDockHeight; the first paint uses a fallback, and when the
-  // real measurement arrives the content grows — without this the last
-  // message can remain hidden behind the dock.
-  useEffect(() => {
-    if (loading) return;
-    if (messages.length === 0) return;
-    if (!inputDockHeight) return;
-    if (initialScrolledRef.current && !isNearBottomRef.current) return;
-    requestAnimationFrame(() => {
-      flatListRef.current?.scrollToEnd({ animated: false });
-    });
-  }, [inputDockHeight, loading, messages.length]);
-
-  const handleContentSizeChange = () => {
-    if (loading) return;
-    if (messages.length === 0) return;
-    // During the initial window always snap. After, only snap when the user
-    // is still near the bottom so late-arriving audio bars don't yank users
-    // who have scrolled up.
-    if (initialScrolledRef.current && !isNearBottomRef.current) return;
-    flatListRef.current?.scrollToEnd({ animated: false });
-  };
+  // Inverted FlatList anchors the visual bottom (newest message) at scroll
+  // offset 0 — opening the chat puts the newest message in view from the
+  // first frame, with no visible scroll cascade. Late-arriving audio bars
+  // grow content above the anchor, not at it, so the user never sees a jump.
 
   // Auto-scroll when a NEW message lands at the end (sent or received).
   // Skip when older messages are prepended via loadOlder — detected by the
@@ -253,10 +212,12 @@ export default function ChatScreen() {
     if (currLen > prevLen) {
       const prependedOlder = prevFirstId !== null && currFirstId !== prevFirstId;
       const appendedNew = !prependedOlder && currLastId !== prevLastIdRef.current;
-      if (appendedNew && initialScrolledRef.current) {
+      // Skip the very first population (prevLen === 0) — inverted list opens
+      // at offset 0 already, so no explicit scroll needed and no badge wanted.
+      if (appendedNew && prevLen > 0) {
         const isMine = lastMessage?.sender_id === userId;
         if (isMine || isNearBottomRef.current) {
-          flatListRef.current?.scrollToEnd({ animated: true });
+          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
           setNewMessagesCount(0);
         } else {
           setNewMessagesCount((c) => c + 1);
@@ -270,22 +231,19 @@ export default function ChatScreen() {
   }, [messages, userId]);
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
-    const nearBottom = distanceFromBottom < NEAR_BOTTOM_THRESHOLD;
+    // In an inverted FlatList contentOffset.y === 0 means the visual bottom
+    // (newest message) is fully in view; offset grows as the user scrolls up
+    // toward older history.
+    const { contentOffset } = e.nativeEvent;
+    const nearBottom = contentOffset.y < NEAR_BOTTOM_THRESHOLD;
     isNearBottomRef.current = nearBottom;
-    // First time the user scrolls away from the bottom, end the initial
-    // auto-snap window so we don't fight their scroll input.
-    if (!nearBottom && !initialScrolledRef.current) {
-      initialScrolledRef.current = true;
-    }
     if (nearBottom && newMessagesCount > 0) {
       setNewMessagesCount(0);
     }
   };
 
   const handleNewMessagesBadgePress = () => {
-    flatListRef.current?.scrollToEnd({ animated: true });
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
     setNewMessagesCount(0);
   };
 
@@ -353,22 +311,22 @@ export default function ChatScreen() {
     prevAccessRef.current = access;
   }, [partnerId, access]);
 
+  // Inverted-list source: data[0] is the newest message (rendered at the
+  // visual bottom), data[N-1] is the oldest (visual top). The "previous"
+  // chronological message of inverseMessages[index] is inverseMessages[index + 1].
+  const inverseMessages = useMemo(() => [...messages].reverse(), [messages]);
+
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
-    const prev = index > 0 ? messages[index - 1] : null;
+    const prev = inverseMessages[index + 1] ?? null;
     const isMine = item.sender_id === userId;
     const showAvatar = !isMine && (!prev || prev.sender_id !== item.sender_id);
     const showDateSeparator = !prev || !isSameDay(prev.created_at, item.created_at);
+    // Inverted FlatList applies scaleY(-1) to each cell, so JSX order within
+    // a cell is visually flipped. Render the bubble first and the separator
+    // last so that, after the cell flip, the separator ends up above the
+    // bubble (i.e. above the oldest message of each day group).
     return (
       <>
-        {showDateSeparator && (
-          <View style={styles.dateSeparator}>
-            <View style={styles.dateLine} />
-            <Text style={styles.dateText}>
-              {formatDateLabel(item.created_at, i18n.language)}
-            </Text>
-            <View style={styles.dateLine} />
-          </View>
-        )}
         <ChatBubble
           message={item}
           isMine={isMine}
@@ -378,6 +336,15 @@ export default function ChatScreen() {
           onAvatarPress={() => setPartnerModalOpen(true)}
           onRetryAudio={retryAudio}
         />
+        {showDateSeparator && (
+          <View style={styles.dateSeparator}>
+            <View style={styles.dateLine} />
+            <Text style={styles.dateText}>
+              {formatDateLabel(item.created_at, i18n.language)}
+            </Text>
+            <View style={styles.dateLine} />
+          </View>
+        )}
       </>
     );
   };
@@ -404,22 +371,24 @@ export default function ChatScreen() {
         <IntimacyGauge roundTrips={roundTrips} />
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={inverseMessages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
-          onStartReached={hasMore ? loadOlder : undefined}
-          onStartReachedThreshold={0.1}
+          inverted
+          onEndReached={hasMore ? loadOlder : undefined}
+          onEndReachedThreshold={0.1}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          onContentSizeChange={handleContentSizeChange}
           contentContainerStyle={styles.messageList}
           style={styles.list}
-          ListHeaderComponent={
+          // Inverted: ListHeaderComponent renders at the visual BOTTOM (above
+          // the input dock), ListFooterComponent renders at the visual TOP.
+          ListHeaderComponent={<View style={{ height: listBottomPad }} />}
+          ListFooterComponent={
             loading ? (
               <ActivityIndicator color={colors.primary} style={{ padding: 12 }} />
             ) : null
           }
-          ListFooterComponent={<View style={{ height: listBottomPad }} />}
         />
 
         {newMessagesCount > 0 && (
@@ -548,15 +517,33 @@ export default function ChatScreen() {
               showsVerticalScrollIndicator={false}
             >
               {partnerName && (
-                <Text style={styles.modalName}>
+                <Text style={styles.modalName} numberOfLines={1}>
                   {partnerName}
-                  {partnerBirthDate ? `, ${calculateAge(partnerBirthDate)}` : ''}
                 </Text>
               )}
-              {(partnerNationality || partnerLanguage) && (
-                <Text style={styles.modalMeta}>
-                  {[partnerNationality, partnerLanguage].filter(Boolean).join(' / ')}
-                </Text>
+              {(partnerBirthDate || partnerNationality) && (
+                <View style={styles.modalDetailRow}>
+                  {partnerBirthDate && (
+                    <Text style={styles.modalDetail} numberOfLines={1}>
+                      {t('common.ageSuffix', { age: calculateAge(partnerBirthDate) })}
+                    </Text>
+                  )}
+                  {partnerBirthDate && partnerNationality && (
+                    <Text style={styles.modalDetailSep}>•</Text>
+                  )}
+                  {partnerNationality && (
+                    <CountryFlag
+                      isoCode={partnerNationality}
+                      size={11}
+                      style={styles.modalFlag}
+                    />
+                  )}
+                  {partnerNationality && (
+                    <Text style={styles.modalDetail} numberOfLines={1}>
+                      {partnerNationality}
+                    </Text>
+                  )}
+                </View>
               )}
               {partnerBioAudio && <AudioPlayer url={partnerBioAudio} />}
               {partnerInterests.length > 0 && (
@@ -769,10 +756,32 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   modalName: {
-    fontSize: 20,
+    fontSize: 21,
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.3,
+  },
+  modalDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  modalDetail: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontFamily: fonts.medium,
+    letterSpacing: 0.3,
+  },
+  modalDetailSep: {
+    fontSize: 13,
+    color: colors.textLight,
+    marginHorizontal: 8,
+  },
+  modalFlag: {
+    width: 16,
+    height: 11,
+    marginRight: 6,
+    borderRadius: 1.5,
   },
   modalTags: {
     flexDirection: 'row',
@@ -792,13 +801,6 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
-  },
-  modalMeta: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    letterSpacing: 0.2,
-    marginTop: -6,
   },
   unlockCard: {
     width: '100%',
