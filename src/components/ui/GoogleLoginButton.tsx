@@ -69,12 +69,14 @@ const styles = StyleSheet.create({
   button: {
     height: 40,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#747775',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     justifyContent: 'center',
-    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   content: {
     flexDirection: 'row',
@@ -93,7 +95,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.medium,
     letterSpacing: 0.25,
-    color: '#1f1f1f',
+    color: '#5f6368',
   },
   labelDisabled: {
     opacity: 0.38,
@@ -103,6 +105,5 @@ const styles = StyleSheet.create({
   },
   disabled: {
     backgroundColor: '#FFFFFF61',
-    borderColor: '#1f1f1f1f',
   },
 });

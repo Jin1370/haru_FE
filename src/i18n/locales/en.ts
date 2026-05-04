@@ -59,8 +59,8 @@ export default {
   },
 
   auth: {
-    appName: 'VoiceMate',
-    tagline: 'Connect beyond language barriers',
+    appName: 'HARU',
+    tagline: 'Different language, same day',
     email: 'Email',
     password: 'Password',
     login: 'Log In',

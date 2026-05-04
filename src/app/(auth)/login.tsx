@@ -1,25 +1,63 @@
-import { View, Text, TextInput, StyleSheet, Alert, Keyboard, Platform, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  Alert,
+  Keyboard,
+  Platform,
+  Pressable,
+  Image,
+  useWindowDimensions,
+} from 'react-native';
 import { Redirect } from 'expo-router';
 import Constants from 'expo-constants';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { GoogleLoginButton } from '@/components/ui/GoogleLoginButton';
-import { PhotoBackground } from '@/components/ui/PhotoBackground';
 import { useAuthStore } from '@/stores/authStore';
 import { colors, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
+
+const LOGIN_BG = require('../../../assets/images/login-day.png');
+const LOGIN_BG_BLUR = 12;
 
 const isExpoGo = Constants.appOwnership === 'expo';
 
 export default function LoginScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { login, emailLogin, emailSignup, isAuthenticated, hasProfile } = useAuthStore();
   const [loadingAction, setLoadingAction] = useState<'email' | 'google' | null>(null);
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [kbHeight, setKbHeight] = useState(0);
+
+  // Top-anchored cover-fit background. Mimics CSS object-fit: cover with
+  // object-position: top — ensures full coverage and clips overflow from
+  // the bottom rather than splitting it top/bottom.
+  const { width: screenW, height: screenH } = useWindowDimensions();
+  const bgStyle = useMemo(() => {
+    const src = Image.resolveAssetSource(LOGIN_BG);
+    if (!src?.width || !src?.height) {
+      return { position: 'absolute' as const, top: 0, left: 0, width: '100%' as const, height: '100%' as const };
+    }
+    const imgAR = src.width / src.height;
+    const screenAR = screenW / screenH;
+    const scale = imgAR < screenAR ? screenW / src.width : screenH / src.height;
+    const scaledW = src.width * scale;
+    const scaledH = src.height * scale;
+    return {
+      position: 'absolute' as const,
+      top: 0,
+      left: (screenW - scaledW) / 2,
+      width: scaledW,
+      height: scaledH,
+    };
+  }, [screenW, screenH]);
 
   // Manual keyboard tracking: KeyboardAvoidingView's behavior leaves a residual
   // gap under the sheet on Android new-arch edge-to-edge builds after the
@@ -44,7 +82,7 @@ export default function LoginScreen() {
     if (isExpoGo) {
       Alert.alert(
         t('auth.loginFailed'),
-        'Google 로그인은 dev-client 또는 정식 빌드에서만 동작합니다. 이메일 로그인 또는 개발 스킵을 사용하세요.'
+        'Google 로그인은 dev-client 또는 정식 빌드에서만 동작합니다. 이메일 로그인을 사용하세요.'
       );
       return;
     }
@@ -94,14 +132,15 @@ export default function LoginScreen() {
   }
 
   return (
-    <PhotoBackground>
+    <View style={styles.bgRoot}>
+      <Image source={LOGIN_BG} style={bgStyle} blurRadius={LOGIN_BG_BLUR} />
       <View style={[styles.container, { paddingBottom: kbHeight }]}>
         <View style={styles.header}>
           <Text style={styles.title}>{t('auth.appName')}</Text>
           <Text style={styles.subtitle}>{t('auth.tagline')}</Text>
         </View>
 
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: 24 + insets.bottom }]}>
           <View style={styles.sheetHandle} />
           <View style={styles.form}>
             <TextInput
@@ -146,11 +185,15 @@ export default function LoginScreen() {
           />
         </View>
       </View>
-    </PhotoBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  bgRoot: {
+    flex: 1,
+    overflow: 'hidden',
+  },
   container: {
     flex: 1,
     justifyContent: 'space-between',
@@ -171,10 +214,13 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-    color: 'rgba(255,240,245,0.88)',
+    color: colors.white,
     marginTop: 12,
     letterSpacing: 0.6,
     fontFamily: fonts.medium,
+    textShadowColor: 'rgba(226,122,160,0.45)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 14,
   },
   sheet: {
     backgroundColor: colors.card,
@@ -182,7 +228,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radii.xl + 8,
     paddingHorizontal: 24,
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 24,
     gap: 14,
     ...shadows.soft,
   },

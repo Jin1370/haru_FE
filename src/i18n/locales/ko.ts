@@ -59,8 +59,8 @@ export default {
     },
 
     auth: {
-        appName: "VoiceMate",
-        tagline: "언어의 장벽을 넘는 연결",
+        appName: "HARU",
+        tagline: "언어가 달라도, 같은 하루",
         email: "이메일",
         password: "비밀번호",
         login: "로그인",
