@@ -410,6 +410,9 @@ export default {
     uploadFailed: 'Upload Failed',
     tooShortTitle: 'Recording Too Short',
     tooShortMessage: 'Voice clone requires at least 10 seconds. Please record again.',
+    tooQuietTitle: 'No Voice Detected',
+    tooQuietMessage:
+      'We could not hear your voice in the recording. Move closer to the mic or record in a quieter place, then try again.',
   },
 
   preferences: {

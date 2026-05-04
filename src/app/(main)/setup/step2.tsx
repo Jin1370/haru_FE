@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,8 @@ const RECORD_ORANGE = '#E8945F';
 const REGISTERED_PINK = colors.like;
 const MAX_DURATION_MS = 60_000;
 const MIN_DURATION_MS = 10_000;
+const MIN_AVG_METERING_DB = -45;
+const MIN_BYTES_PER_SEC = 7000;
 const RING_SIZE = 56;
 const RING_STROKE = 3;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
@@ -82,11 +84,12 @@ export default function SetupStep2() {
   const insets = useSafeAreaInsets();
   const { status, loading, uploadClone, deleteClone, checkStatus } = useVoice();
   const profile = useAuthStore((s) => s.profile);
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(recorder);
+  const recorder = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
+  const recorderState = useAudioRecorderState(recorder, 200);
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
   const [recordingDurationMs, setRecordingDurationMs] = useState(0);
   const [scriptExpanded, setScriptExpanded] = useState(false);
+  const meteringSamplesRef = useRef<number[]>([]);
 
   useEffect(() => {
     checkStatus().catch(() => {});
@@ -98,6 +101,14 @@ export default function SetupStep2() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recorderState.isRecording, recorderState.durationMillis]);
+
+  useEffect(() => {
+    if (!recorderState.isRecording) return;
+    const m = recorderState.metering;
+    if (typeof m === 'number' && Number.isFinite(m)) {
+      meteringSamplesRef.current.push(m);
+    }
+  }, [recorderState.isRecording, recorderState.metering]);
 
   const cloneStatus = status?.status ?? profile?.voice_clone_status ?? 'pending';
   const voiceReady = cloneStatus === 'ready';
@@ -112,6 +123,7 @@ export default function SetupStep2() {
       }
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await recorder.prepareToRecordAsync();
+      meteringSamplesRef.current = [];
       recorder.record();
     } catch (e: any) {
       Alert.alert(t('common.error'), e.message);
@@ -139,6 +151,20 @@ export default function SetupStep2() {
     const info = await FileSystem.getInfoAsync(recordingUri);
     if (info.exists && info.size && info.size > 10 * 1024 * 1024) {
       Alert.alert(t('setupVoice.fileTooLarge'), t('setupVoice.voiceSizeLimit'));
+      return;
+    }
+    const samples = meteringSamplesRef.current;
+    const avgDb = samples.length > 0 ? samples.reduce((a, b) => a + b, 0) / samples.length : null;
+    const sizeBytes = info.exists && info.size ? info.size : 0;
+    const bytesPerSec = recordingDurationMs > 0 ? (sizeBytes * 1000) / recordingDurationMs : 0;
+    if (__DEV__) {
+      console.log('[voice-guard]', { avgDb, samples: samples.length, sizeBytes, durationMs: recordingDurationMs, bytesPerSec });
+    }
+    const meteringTooQuiet = avgDb !== null && avgDb < MIN_AVG_METERING_DB;
+    const sizeTooSmall = bytesPerSec > 0 && bytesPerSec < MIN_BYTES_PER_SEC;
+    if (meteringTooQuiet || sizeTooSmall) {
+      Alert.alert(t('setupVoice.tooQuietTitle'), t('setupVoice.tooQuietMessage'));
+      setRecordingUri(null);
       return;
     }
     try {

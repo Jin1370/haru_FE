@@ -411,6 +411,9 @@ export default {
         tooShortTitle: "녹음이 너무 짧습니다",
         tooShortMessage:
             "보이스 클론을 만들려면 10초 이상 녹음이 필요합니다. 다시 녹음해주세요.",
+        tooQuietTitle: "목소리가 들리지 않아요",
+        tooQuietMessage:
+            "녹음에서 목소리를 감지하지 못했어요. 마이크에 더 가까이 말하거나 조용한 곳에서 다시 녹음해주세요.",
     },
 
     preferences: {
