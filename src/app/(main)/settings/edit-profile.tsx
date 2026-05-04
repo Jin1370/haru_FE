@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/Input';
+import { FormField } from '@/components/ui/FormField';
 import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { LanguageProficiencyEditor } from '@/components/ui/LanguageProficiencyEditor';
@@ -20,6 +21,7 @@ import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { SUPPORTED_NATIONALITIES, type NationalityCode } from '@/constants/nationalities';
 import { INTEREST_OPTIONS, INTEREST_SECTIONS, MAX_INTERESTS } from '@/constants/interests';
+import { validateDisplayName } from '@/utils/validators';
 import type { LanguageProficiency } from '@/types';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
@@ -56,6 +58,7 @@ export default function EditProfileScreen() {
   });
   const [nationalityOpen, setNationalityOpen] = useState(false);
   const [interests, setInterests] = useState<string[]>(profile?.interests ?? []);
+  const [displayNameError, setDisplayNameError] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -103,10 +106,15 @@ export default function EditProfileScreen() {
   };
 
   const handleSave = async () => {
-    if (!form.display_name.trim()) {
-      Alert.alert(t('common.error'), t('signupWizard.displayNameRequired'));
+    // Inline-error UX: display_name violations now render under the field
+    // instead of an Alert. Birth date / nationality / language failures keep
+    // the existing Alert path per scope (only display_name was in scope).
+    const nameErr = validateDisplayName(form.display_name);
+    if (nameErr) {
+      setDisplayNameError(t(nameErr.key, nameErr.vars));
       return;
     }
+    setDisplayNameError(null);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(form.birth_date)) {
       Alert.alert(t('common.error'), t('signupWizard.birthDateRequired'));
       return;
@@ -151,12 +159,19 @@ export default function EditProfileScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.label}>{t('setupProfile.displayName')}</Text>
-        <Input
+        <FormField
           value={form.display_name}
-          onChangeText={(v) => setForm((f) => ({ ...f, display_name: v }))}
+          onChangeText={(v) => {
+            setForm((f) => ({ ...f, display_name: v }));
+            // Clear the field-level error as soon as the user starts typing
+            // so the message doesn't linger past the correction.
+            if (displayNameError) setDisplayNameError(null);
+          }}
           placeholder={t('setupProfile.displayNamePlaceholder')}
           maxLength={50}
-          style={styles.inputCompact}
+          error={displayNameError}
+          inputStyle={styles.inputCompact}
+          errorTestID="edit-profile-display-name-error"
         />
         <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.birthDate')}</Text>
         <Input

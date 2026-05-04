@@ -25,6 +25,8 @@ import { ChatBubble } from '@/components/chat/ChatBubble';
 import { AudioPlayer } from '@/components/chat/AudioPlayer';
 import { IntimacyGauge } from '@/components/chat/IntimacyGauge';
 import { MatchActionsSheet } from '@/components/matches/MatchActionsSheet';
+import { ErrorText } from '@/components/ui/ErrorText';
+import { validateMessageText } from '@/utils/validators';
 import {
   EmotionPicker,
   EmotionChipRow,
@@ -154,6 +156,7 @@ export default function ChatScreen() {
   } = useChat(matchId!);
 
   const [text, setText] = useState('');
+  const [composerError, setComposerError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [kbHeight, setKbHeight] = useState(0);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
@@ -250,8 +253,16 @@ export default function ChatScreen() {
   };
 
   const handleSend = async () => {
+    if (sending) return;
+    // Inline composer validation — empty/too-long/forbidden-char errors now
+    // appear above the input rather than as an Alert.alert popup.
+    const validationErr = validateMessageText(text);
+    if (validationErr) {
+      setComposerError(t(validationErr.key, validationErr.vars));
+      return;
+    }
+    setComposerError(null);
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
     setSending(true);
     setText('');
     const emotionForSend = selectedEmotion;
@@ -262,6 +273,9 @@ export default function ChatScreen() {
     try {
       await send(trimmed, emotionForSend);
     } catch (e: any) {
+      // Network / send-side failures still surface as Alert (out of scope
+      // for the validation refactor — only client-side rule violations move
+      // inline).
       Alert.alert(t('common.error'), e.message);
     } finally {
       setSending(false);
@@ -456,6 +470,11 @@ export default function ChatScreen() {
               />
             </View>
           )}
+          {composerError ? (
+            <View style={styles.composerErrorWrapper}>
+              <ErrorText testID="chat-composer-error">{composerError}</ErrorText>
+            </View>
+          ) : null}
           <View
             style={[
               styles.inputBar,
@@ -472,7 +491,12 @@ export default function ChatScreen() {
             <TextInput
               style={styles.input}
               value={text}
-              onChangeText={setText}
+              onChangeText={(v) => {
+                setText(v);
+                // Clear the inline error as soon as the user starts editing
+                // so the message doesn't linger past the correction.
+                if (composerError) setComposerError(null);
+              }}
               placeholder={t('chat.typeMessage')}
               placeholderTextColor={colors.textLight}
               maxLength={1000}
@@ -716,6 +740,13 @@ const styles = StyleSheet.create({
   },
   emotionRowWrapper: {
     backgroundColor: colors.card,
+    borderTopWidth: 0.5,
+    borderTopColor: colors.borderSoft,
+  },
+  composerErrorWrapper: {
+    backgroundColor: colors.card,
+    paddingHorizontal: 18,
+    paddingTop: 6,
     borderTopWidth: 0.5,
     borderTopColor: colors.borderSoft,
   },
