@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
+import { ErrorText } from '@/components/ui/ErrorText';
 import { MenuCardButton } from '@/components/ui/MenuCardButton';
 import { AudioPlayer } from '@/components/chat/AudioPlayer';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
@@ -51,6 +52,9 @@ export default function ProfileScreen() {
   // immediately without a hot reload.
   const [photoBust, setPhotoBust] = useState(0);
   const bustUri = (uri: string) => (photoBust > 0 ? `${uri}${uri.includes('?') ? '&' : '?'}cb=${photoBust}` : uri);
+  // Transient inline message for photo-pick failures (format / size / cap).
+  // Cleared on every new pick attempt or successful upload.
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -94,6 +98,7 @@ export default function ProfileScreen() {
   }, [bioSet, audioReady, loadProfile]);
 
   const pickAndValidate = async () => {
+    setPhotoError(null);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -106,12 +111,12 @@ export default function ProfileScreen() {
     const asset = result.assets[0];
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (asset.mimeType && !allowedTypes.includes(asset.mimeType)) {
-      Alert.alert(t('profile.invalidFormat'), t('profile.invalidImageFormat'));
+      setPhotoError(t('profile.invalidImageFormat'));
       return null;
     }
     const info = await FileSystem.getInfoAsync(asset.uri);
     if (info.exists && info.size && info.size > 5 * 1024 * 1024) {
-      Alert.alert(t('profile.fileTooLarge'), t('profile.photoSizeLimit'));
+      setPhotoError(t('profile.photoSizeLimit'));
       return null;
     }
     return asset.uri;
@@ -119,7 +124,7 @@ export default function ProfileScreen() {
 
   const handleAddPhoto = async () => {
     if ((profile?.photos.length ?? 0) >= MAX_PHOTOS) {
-      Alert.alert(t('profile.photoActionsTitle'), t('profile.maxPhotosReached'));
+      setPhotoError(t('profile.maxPhotosReached'));
       return;
     }
     const uri = await pickAndValidate();
@@ -128,6 +133,8 @@ export default function ProfileScreen() {
       await uploadPhoto(uri);
       setPhotoBust((n) => n + 1);
     } catch (e: any) {
+      // Network/BE upload failures stay as Alert — different failure mode
+      // (server-side, retryable) from the local pick rejections above.
       Alert.alert(t('profile.uploadFailed'), e.message);
     }
   };
@@ -235,44 +242,47 @@ export default function ProfileScreen() {
           </Pressable>
         )}
 
-        <View style={styles.thumbColumn}>
-          {Array.from({ length: THUMB_COUNT }).map((_, i) => {
-            const photoIndex = i + 1;
-            const uri = profile.photos[photoIndex];
-            if (uri) {
+        {Array.from({ length: COL_COUNT }).map((_, colIdx) => (
+          <View key={`col-${colIdx}`} style={styles.thumbColumn}>
+            {Array.from({ length: THUMBS_PER_COL }).map((__, rowIdx) => {
+              // Slot index layout: main=0, col0={1,2}, col1={3,4}.
+              const photoIndex = 1 + colIdx * THUMBS_PER_COL + rowIdx;
+              const uri = profile.photos[photoIndex];
+              if (uri) {
+                return (
+                  <Pressable
+                    key={`thumb-${photoIndex}`}
+                    style={styles.thumbSlot}
+                    onPress={() => handlePhotoPress(photoIndex)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('profile.photoActionsTitle')}
+                  >
+                    <Image
+                      key={`thumb-${photoIndex}-${photoBust}`}
+                      source={{ uri: bustUri(uri) }}
+                      style={styles.photo}
+                      resizeMode="cover"
+                      onError={(e) =>
+                        console.warn('[profile] thumb photo load failed', photoIndex, uri, e.nativeEvent)
+                      }
+                    />
+                  </Pressable>
+                );
+              }
               return (
                 <Pressable
-                  key={`thumb-${photoIndex}`}
-                  style={styles.thumbSlot}
-                  onPress={() => handlePhotoPress(photoIndex)}
+                  key={`thumb-add-${photoIndex}`}
+                  style={[styles.thumbSlot, styles.addSlot]}
+                  onPress={handleAddPhoto}
                   accessibilityRole="button"
-                  accessibilityLabel={t('profile.photoActionsTitle')}
+                  accessibilityLabel={t('profile.addPhoto')}
                 >
-                  <Image
-                    key={`thumb-${photoIndex}-${photoBust}`}
-                    source={{ uri: bustUri(uri) }}
-                    style={styles.photo}
-                    resizeMode="cover"
-                    onError={(e) =>
-                      console.warn('[profile] thumb photo load failed', photoIndex, uri, e.nativeEvent)
-                    }
-                  />
+                  <Ionicons name="add" size={24} color={colors.textSecondary} />
                 </Pressable>
               );
-            }
-            return (
-              <Pressable
-                key={`thumb-add-${photoIndex}`}
-                style={[styles.thumbSlot, styles.addSlot]}
-                onPress={handleAddPhoto}
-                accessibilityRole="button"
-                accessibilityLabel={t('profile.addPhoto')}
-              >
-                <Ionicons name="add" size={24} color={colors.textSecondary} />
-              </Pressable>
-            );
-          })}
-        </View>
+            })}
+          </View>
+        ))}
       </View>
 
       {photoBusy && (
@@ -281,6 +291,8 @@ export default function ProfileScreen() {
           <Text style={styles.photoBusyText}>{t('profile.reorderingPhotos')}</Text>
         </View>
       )}
+
+      <ErrorText testID="profile-photo-error">{photoError}</ErrorText>
 
       {/* Profile Info Card */}
       <LinearGradient
@@ -466,11 +478,14 @@ export default function ProfileScreen() {
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_WIDTH = SCREEN_WIDTH - 32; // matches contentContainerStyle padding (16 * 2)
 const GRID_GAP = 10;
-const THUMB_COUNT = 3; // three thumbnails stacked vertically beside the main photo
-const MAIN_PHOTO_WIDTH = Math.round(GRID_WIDTH * (2 / 3));
+const COL_COUNT = 2;
+const THUMBS_PER_COL = 2;
+// Main fills half the grid width; the remaining half is split evenly across
+// the two thumbnail columns. main + 4 thumbs = MAX_PHOTOS=5.
+const MAIN_PHOTO_WIDTH = Math.round((GRID_WIDTH - GRID_GAP * COL_COUNT) / 2);
 const MAIN_PHOTO_HEIGHT = Math.round((MAIN_PHOTO_WIDTH * 4) / 3); // 3:4 portrait
-const THUMB_WIDTH = GRID_WIDTH - MAIN_PHOTO_WIDTH - GRID_GAP;
-const THUMB_HEIGHT = Math.round((MAIN_PHOTO_HEIGHT - GRID_GAP * (THUMB_COUNT - 1)) / THUMB_COUNT);
+const THUMB_WIDTH = Math.round(MAIN_PHOTO_WIDTH / 2);
+const THUMB_HEIGHT = Math.round((MAIN_PHOTO_HEIGHT - GRID_GAP) / THUMBS_PER_COL);
 
 const styles = StyleSheet.create({
   container: {

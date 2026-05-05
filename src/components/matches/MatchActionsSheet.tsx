@@ -14,8 +14,10 @@ import { useTranslation } from 'react-i18next';
 import * as blockService from '@/services/block';
 import * as reportService from '@/services/report';
 import { ApiRequestError } from '@/services/api';
+import { ErrorText } from '@/components/ui/ErrorText';
 import { colors, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
+import { validateReportDescription } from '@/utils/validators';
 import type { ReportReason } from '@/types';
 
 const REPORT_REASONS: ReportReason[] = [
@@ -93,8 +95,15 @@ export function MatchActionsSheet({
     );
   };
 
+  // Live-validate the optional description field so a paste of forbidden
+  // unicode (zero-width / RTL-override) or an over-length string surfaces
+  // inline before the user taps submit.
+  const descriptionErr = validateReportDescription(reportDescription);
+  const descriptionError = descriptionErr ? t(descriptionErr.key) : null;
+
   const handleReportSubmit = async () => {
     if (!partnerId || !reportReason || reportSubmitting) return;
+    if (descriptionErr) return; // gate submit on inline error
     setReportSubmitting(true);
     const description = reportDescription.trim();
     try {
@@ -197,7 +206,10 @@ export function MatchActionsSheet({
               })}
             </ScrollView>
             <TextInput
-              style={styles.reportTextarea}
+              style={[
+                styles.reportTextarea,
+                descriptionError ? styles.reportTextareaError : null,
+              ]}
               placeholder={t('matches.report.descriptionPlaceholder')}
               placeholderTextColor={colors.textLight}
               value={reportDescription}
@@ -205,6 +217,7 @@ export function MatchActionsSheet({
               multiline
               maxLength={500}
             />
+            <ErrorText testID="report-description-error">{descriptionError}</ErrorText>
             <Text style={styles.reportNotice}>{t('matches.report.sideEffectNotice')}</Text>
             <Pressable
               onPress={handleReportSubmit}
@@ -342,6 +355,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     color: colors.text,
     textAlignVertical: 'top',
+  },
+  reportTextareaError: {
+    borderColor: colors.error,
   },
   reportNotice: {
     marginTop: 12,

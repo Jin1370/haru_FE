@@ -125,7 +125,16 @@ class ApiClient {
       timeoutMs,
     );
 
-    if (res.status === 401 && retry) {
+    // Token-issuing auth endpoints (login/signup/google) returning 401 means
+    // bad credentials, NOT an expired session — don't try to refresh, and
+    // don't fire onSessionExpired. Just let the ApiRequestError fall through
+    // so the form can map BE codes to inline field errors.
+    const isAuthIssueEndpoint =
+      path.startsWith('/api/auth/login') ||
+      path.startsWith('/api/auth/signup') ||
+      path.startsWith('/api/auth/google');
+
+    if (res.status === 401 && retry && !isAuthIssueEndpoint) {
       isRefreshing = true;
       refreshPromise = refreshAccessToken();
       const newToken = await refreshPromise;

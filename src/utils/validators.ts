@@ -41,10 +41,20 @@ export function validatePassword(value: string): ValidationError | null {
   return null;
 }
 
+// Mirrors the BE zod schema's max(50). Picked to cover Latin/Slavic/Indic/
+// Arabic full names (first + middle + last + patronymics) without truncation.
+// Tinder/Hinge sit at 50 too.
+export const DISPLAY_NAME_MAX = 50;
+
 export function validateDisplayName(value: string): ValidationError | null {
   if (value.length === 0) return { key: 'validation.displayNameRequired' };
   if (value !== value.trim()) return { key: 'validation.displayNameTrimmed' };
-  if (value.length > 20) return { key: 'validation.displayNameTooLong' };
+  if (value.length > DISPLAY_NAME_MAX) {
+    return {
+      key: 'validation.displayNameTooLong',
+      vars: { max: DISPLAY_NAME_MAX },
+    };
+  }
   if (FORBIDDEN_NAME_RE.test(value)) {
     return { key: 'validation.displayNameInvalidChars' };
   }
@@ -66,6 +76,19 @@ export function validateMessageText(value: string): ValidationError | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) return { key: 'validation.messageEmpty' };
   if (trimmed.length > 500) return { key: 'validation.messageTooLong' };
+  if (FORBIDDEN_TEXT_RE.test(value)) {
+    return { key: 'validation.textInvalidChars' };
+  }
+  return null;
+}
+
+// Optional free-form text used for the report-reason description. Empty is
+// allowed (the field is optional), but length and forbidden chars still
+// apply so an attacker can't smuggle bidi-override or zero-width payloads
+// into the moderation queue.
+export function validateReportDescription(value: string): ValidationError | null {
+  if (value.length === 0) return null;
+  if (value.length > 500) return { key: 'validation.messageTooLong' };
   if (FORBIDDEN_TEXT_RE.test(value)) {
     return { key: 'validation.textInvalidChars' };
   }

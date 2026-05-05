@@ -499,7 +499,11 @@ export default function ChatScreen() {
               }}
               placeholder={t('chat.typeMessage')}
               placeholderTextColor={colors.textLight}
-              maxLength={1000}
+              // Match the validator's 500-char rule at the input layer so
+              // typing/pasting beyond the cap is dropped natively (RN
+              // truncates pasted strings to maxLength). The validator's
+              // messageTooLong path stays as a safety net for legacy data.
+              maxLength={500}
               multiline
             />
             <Pressable

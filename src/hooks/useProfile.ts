@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import * as profileService from '@/services/profile';
 import type { ProfileUpsertRequest, PhotoUploadResponse, PhotoDeleteResponse } from '@/types';
 
-export const MAX_PHOTOS = 6;
+export const MAX_PHOTOS = 5;
 
 // BE has no reorder/primary endpoint, so mutating photo order means
 // delete-all-then-reupload. Remote URLs must be downloaded to a local

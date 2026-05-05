@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { ErrorText } from '@/components/ui/ErrorText';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import {
@@ -28,6 +29,10 @@ interface BioPhrasePickerProps {
   disabled?: boolean;
   lockedHint?: string;
   onCustomFocus?: () => void;
+  // Inline validation error (e.g. forbidden zero-width chars on the custom
+  // text). Renders directly under the custom input and tints its border red
+  // so the message stays visually attached to the field that caused it.
+  error?: string | null;
 }
 
 const CATEGORY_TINTS: Record<BioPhraseCategory, string> = {
@@ -40,6 +45,7 @@ const CATEGORY_TINTS: Record<BioPhraseCategory, string> = {
 };
 
 const CUSTOM_TINT = '#C8ADBA';
+const CUSTOM_MAX = 500;
 
 export function BioPhrasePicker({
   value,
@@ -48,6 +54,7 @@ export function BioPhrasePicker({
   disabled,
   lockedHint,
   onCustomFocus,
+  error,
 }: BioPhrasePickerProps) {
   const { t } = useTranslation();
 
@@ -146,12 +153,32 @@ export function BioPhrasePicker({
           styles.card,
           selectedId === 'custom' && styles.cardSelected,
           disabled && styles.cardDisabled,
+          // Red border whenever there's an inline validation error — most
+          // such errors come from the custom-typed string, so visually
+          // attach them to this card.
+          error ? styles.cardError : null,
         ]}
       >
-        <View style={[styles.tag, { backgroundColor: CUSTOM_TINT }]}>
-          <Text style={styles.tagText}>
-            {t('setupProfile.bioPicker.category.custom')}
-          </Text>
+        <View style={styles.customHeaderRow}>
+          <View style={[styles.tag, { backgroundColor: CUSTOM_TINT }]}>
+            <Text style={styles.tagText}>
+              {t('setupProfile.bioPicker.category.custom')}
+            </Text>
+          </View>
+          {/* Counter only shows once the user is actively in custom mode —
+              otherwise it's noise across the preset cards. Turns red at the
+              cap so the user understands why typing stopped. */}
+          {selectedId === 'custom' ? (
+            <Text
+              style={[
+                styles.charCounter,
+                customText.length >= CUSTOM_MAX && styles.charCounterMax,
+              ]}
+              accessibilityLabel={`${customText.length} / ${CUSTOM_MAX}`}
+            >
+              {customText.length} / {CUSTOM_MAX}
+            </Text>
+          ) : null}
         </View>
         <CustomInput
           value={customText}
@@ -160,6 +187,7 @@ export function BioPhrasePicker({
           placeholder={t('setupProfile.bioPicker.customPlaceholder')}
           onFocus={onCustomFocus}
         />
+        <ErrorText testID="bio-phrase-picker-error">{error ?? null}</ErrorText>
       </Pressable>
 
       {disabled && lockedHint ? (
@@ -214,11 +242,30 @@ const styles = StyleSheet.create({
   cardDisabled: {
     opacity: 0.5,
   },
+  cardError: {
+    borderColor: colors.error,
+  },
   tag: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radii.pill,
+  },
+  customHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  charCounter: {
+    fontSize: 11,
+    color: colors.textLight,
+    fontFamily: fonts.regular,
+    letterSpacing: 0.2,
+  },
+  charCounterMax: {
+    color: colors.error,
+    fontFamily: fonts.medium,
   },
   tagText: {
     fontSize: 10,

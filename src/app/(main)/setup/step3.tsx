@@ -18,6 +18,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useSignupDraftStore } from '@/stores/signupDraftStore';
 import { colors } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
+import { validateVoiceIntro } from '@/utils/validators';
 
 export default function SetupStep3() {
   const { t } = useTranslation();
@@ -38,8 +39,17 @@ export default function SetupStep3() {
   }, [profile, voiceReady]);
 
   const [bio, setBio] = useState(draft.bio || profile?.voice_intro || '');
+  const [bioError, setBioError] = useState<string | null>(null);
   const [kbHeight, setKbHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Live-validate the bio while the user picks/types so length and forbidden
+  // chars surface inline (red border + ErrorText) inside the picker card.
+  const handleBioChange = (next: string) => {
+    setBio(next);
+    const err = validateVoiceIntro(next);
+    setBioError(err ? t(err.key, err.vars) : null);
+  };
 
   useEffect(() => {
     const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -68,10 +78,19 @@ export default function SetupStep3() {
   };
 
   const handleNext = async () => {
+    // Block when empty (required) or when the live validator already flagged
+    // a length / forbidden-char issue. Inline message under the custom input
+    // (via BioPhrasePicker.error) replaces the previous Alert popup.
     if (!bio.trim()) {
-      Alert.alert(t('common.error'), t('signupWizard.bioRequired'));
+      setBioError(t('signupWizard.bioRequired'));
       return;
     }
+    const err = validateVoiceIntro(bio);
+    if (err) {
+      setBioError(t(err.key, err.vars));
+      return;
+    }
+    setBioError(null);
     try {
       draft.setBio(bio.trim());
       await persistBio(bio.trim());
@@ -119,10 +138,11 @@ export default function SetupStep3() {
         <Text style={styles.subtitle}>{t('profile.editBioSubtitle')}</Text>
         <BioPhrasePicker
           value={bio}
-          onChange={setBio}
+          onChange={handleBioChange}
           language={profile?.languages?.[0]?.code ?? profile?.language ?? 'ko'}
           disabled={!voiceReady}
           lockedHint={!voiceReady ? t('setupProfile.bioLockedHint') : undefined}
+          error={bioError}
           onCustomFocus={() => {
             // Wait for keyboard show animation + paddingBottom re-render before
             // scrolling so the input lands above the keyboard, not under it.

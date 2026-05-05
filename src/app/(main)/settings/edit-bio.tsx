@@ -12,7 +12,6 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
-import { ErrorText } from '@/components/ui/ErrorText';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { BioPhrasePicker } from '@/components/setup/BioPhrasePicker';
 import { useProfile } from '@/hooks/useProfile';
@@ -103,8 +102,8 @@ export default function EditBioScreen() {
           language={profile?.language ?? 'ko'}
           disabled={!voiceReady}
           lockedHint={!voiceReady ? t('setupProfile.bioLockedHint') : undefined}
+          error={bioError}
         />
-        <ErrorText testID="edit-bio-error">{bioError}</ErrorText>
         {!voiceReady ? (
           <View style={styles.lockedCta}>
             <Button

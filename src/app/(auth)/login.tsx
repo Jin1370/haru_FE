@@ -154,21 +154,39 @@ export default function LoginScreen() {
 
   const handleEmailAuth = async () => {
     if (loadingAction) return;
-    // Client-side validation first so the user gets immediate feedback
-    // without a network round trip on obvious mistakes.
+
+    // 1) Email is the prerequisite — if it's syntactically wrong, surface
+    //    only the email error and hold off on the password complaint until
+    //    the user has fixed the prerequisite. Showing both at once forces
+    //    the user to mentally re-prioritise.
     const emailErr = validateEmail(email);
-    const passwordErr = isSignup
+    if (emailErr) {
+      setErrors({ email: t(emailErr.key, emailErr.vars), password: null });
+      return;
+    }
+
+    // 2) Password client-side check. Login only requires non-empty (the BE
+    //    owns the real format rule, and existing accounts may use a legacy
+    //    password); signup mirrors the BE policy so the user gets immediate
+    //    feedback on obvious format mistakes.
+    const passwordClientErr = isSignup
       ? validatePassword(password)
       : password.length === 0
-        ? { key: 'validation.passwordRequired' }
+        ? { key: 'validation.passwordRequired' as const }
         : null;
-    if (emailErr || passwordErr) {
+
+    // Login: bail without hitting BE on a bad password.
+    // Signup: still try BE so EMAIL_TAKEN can win over the password format
+    // complaint — the user has to fix the email regardless of password
+    // strength, so showing the password error first would create churn.
+    if (!isSignup && passwordClientErr) {
       setErrors({
-        email: emailErr ? t(emailErr.key, emailErr.vars) : null,
-        password: passwordErr ? t(passwordErr.key, passwordErr.vars) : null,
+        email: null,
+        password: t(passwordClientErr.key, passwordClientErr.vars),
       });
       return;
     }
+
     setErrors(NO_ERRORS);
     setLoadingAction('email');
     try {
@@ -178,6 +196,27 @@ export default function LoginScreen() {
         await emailLogin(email.trim(), password);
       }
     } catch (e) {
+      // Email-side BE codes win over a local password complaint: the email
+      // is the gating field and must be fixed regardless.
+      if (e instanceof ApiRequestError) {
+        const isEmailCode =
+          e.code === 'EMAIL_TAKEN' ||
+          e.code === 'EMAIL_NOT_REGISTERED' ||
+          e.code === 'EMAIL_NOT_CONFIRMED';
+        if (isEmailCode) {
+          applyAuthError(e, isSignup);
+          return;
+        }
+      }
+      // Signup only: BE didn't flag the email, so now reveal the local
+      // password format issue we deliberately suppressed earlier.
+      if (isSignup && passwordClientErr) {
+        setErrors({
+          email: null,
+          password: t(passwordClientErr.key, passwordClientErr.vars),
+        });
+        return;
+      }
       applyAuthError(e, isSignup);
     } finally {
       setLoadingAction(null);

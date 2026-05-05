@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,14 @@ import {
   Alert,
   Pressable,
   BackHandler,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { router, useNavigation, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Input } from '@/components/ui/Input';
+import { FormField } from '@/components/ui/FormField';
+import { ErrorText } from '@/components/ui/ErrorText';
 import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { LanguageProficiencyEditor } from '@/components/ui/LanguageProficiencyEditor';
@@ -23,6 +25,7 @@ import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { SUPPORTED_NATIONALITIES, type NationalityCode } from '@/constants/nationalities';
 import { INTEREST_OPTIONS, INTEREST_SECTIONS, MAX_INTERESTS } from '@/constants/interests';
+import { validateDisplayName, DISPLAY_NAME_MAX } from '@/utils/validators';
 import type { LanguageProficiency } from '@/types';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
@@ -72,9 +75,35 @@ export default function SetupStep1() {
   });
   const [nationalityOpen, setNationalityOpen] = useState(false);
   const [interests, setInterests] = useState<string[]>(draft.interests);
+  const [displayNameError, setDisplayNameError] = useState<string | null>(null);
+  const [birthDateError, setBirthDateError] = useState<string | null>(null);
+  const [nationalityError, setNationalityError] = useState<string | null>(null);
+  const [languagesError, setLanguagesError] = useState<string | null>(null);
 
-  const setLanguages = (next: LanguageProficiency[]) =>
+  // Auto-scroll target tracking. Mirrors edit-profile.tsx — handleNext scrolls
+  // the first invalid field back into view if it's been pushed offscreen by
+  // the long interests grid below.
+  type FieldKey = 'display_name' | 'birth_date' | 'nationality' | 'languages';
+  const scrollRef = useRef<ScrollView>(null);
+  const fieldYRef = useRef<Record<FieldKey, number>>({
+    display_name: 0,
+    birth_date: 0,
+    nationality: 0,
+    languages: 0,
+  });
+  const onFieldLayout = (key: FieldKey) => (e: LayoutChangeEvent) => {
+    fieldYRef.current[key] = e.nativeEvent.layout.y;
+  };
+  const SCROLL_PAD = 16;
+  const scrollToField = (key: FieldKey) => {
+    const y = fieldYRef.current[key];
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - SCROLL_PAD), animated: true });
+  };
+
+  const setLanguages = (next: LanguageProficiency[]) => {
     setForm((f) => ({ ...f, languages: next }));
+    if (languagesError && next.length > 0) setLanguagesError(null);
+  };
 
   // Map localized interest labels to ids so the selection survives language
   // toggles (matches edit-profile.tsx — keep labels canonical for the BE).
@@ -107,20 +136,39 @@ export default function SetupStep1() {
 
   const handleNext = async () => {
     if (upserting) return;
-    if (!form.display_name.trim()) {
-      Alert.alert(t('common.error'), t('signupWizard.displayNameRequired'));
+
+    // Validate everything together so the user sees every mistake at once
+    // instead of one-per-tap. Scroll to the first invalid field for the
+    // user's convenience (long interests grid below pushes the top fields
+    // off the visible viewport on smaller screens).
+    const nameErr = validateDisplayName(form.display_name);
+    const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(form.birth_date);
+    const nationalityMissing = !form.nationality;
+    const languagesMissing = form.languages.length === 0;
+
+    setDisplayNameError(nameErr ? t(nameErr.key, nameErr.vars) : null);
+    setBirthDateError(dateValid ? null : t('validation.birthDateInvalid'));
+    setNationalityError(
+      nationalityMissing ? t('setupProfile.selectNationalityRequired') : null,
+    );
+    setLanguagesError(
+      languagesMissing ? t('setupProfile.addAtLeastOneLanguage') : null,
+    );
+
+    if (nameErr) {
+      scrollToField('display_name');
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.birth_date)) {
-      Alert.alert(t('common.error'), t('signupWizard.birthDateRequired'));
+    if (!dateValid) {
+      scrollToField('birth_date');
       return;
     }
-    if (!form.nationality) {
-      Alert.alert(t('common.error'), t('setupProfile.selectNationalityRequired'));
+    if (nationalityMissing) {
+      scrollToField('nationality');
       return;
     }
-    if (form.languages.length === 0) {
-      Alert.alert(t('common.error'), t('setupProfile.addAtLeastOneLanguage'));
+    if (languagesMissing) {
+      scrollToField('languages');
       return;
     }
     const step1Payload = {
@@ -161,27 +209,42 @@ export default function SetupStep1() {
         subtitle={t('signupWizard.step1Subtitle')}
       />
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
       >
-      <Text style={styles.label}>{t('setupProfile.displayName')}</Text>
-      <Input
-        value={form.display_name}
-        onChangeText={(v) => setForm((f) => ({ ...f, display_name: v }))}
-        placeholder={t('setupProfile.displayNamePlaceholder')}
-        maxLength={50}
-        style={styles.inputCompact}
-      />
+      <View onLayout={onFieldLayout('display_name')}>
+        <Text style={styles.label}>{t('setupProfile.displayName')}</Text>
+        <FormField
+          value={form.display_name}
+          onChangeText={(v) => {
+            setForm((f) => ({ ...f, display_name: v }));
+            if (displayNameError) setDisplayNameError(null);
+          }}
+          placeholder={t('setupProfile.displayNamePlaceholder')}
+          maxLength={DISPLAY_NAME_MAX}
+          error={displayNameError}
+          inputStyle={styles.inputCompact}
+          errorTestID="setup-step1-display-name-error"
+        />
+      </View>
 
-      <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.birthDate')}</Text>
-      <Input
-        value={form.birth_date}
-        onChangeText={(v) => setForm((f) => ({ ...f, birth_date: formatBirthDate(v) }))}
-        placeholder={t('setupProfile.birthDatePlaceholder')}
-        keyboardType="number-pad"
-        maxLength={10}
-        style={styles.inputCompact}
-      />
+      <View onLayout={onFieldLayout('birth_date')}>
+        <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.birthDate')}</Text>
+        <FormField
+          value={form.birth_date}
+          onChangeText={(v) => {
+            setForm((f) => ({ ...f, birth_date: formatBirthDate(v) }));
+            if (birthDateError) setBirthDateError(null);
+          }}
+          placeholder={t('setupProfile.birthDatePlaceholder')}
+          keyboardType="number-pad"
+          maxLength={10}
+          error={birthDateError}
+          inputStyle={styles.inputCompact}
+          errorTestID="setup-step1-birth-date-error"
+        />
+      </View>
 
       <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.gender')}</Text>
       <View style={styles.genderRow}>
@@ -198,51 +261,62 @@ export default function SetupStep1() {
         ))}
       </View>
 
-      <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.nationality')}</Text>
-      <Pressable
-        style={[styles.selectBtn, nationalityOpen && styles.selectBtnOpen]}
-        onPress={() => setNationalityOpen((v) => !v)}
-      >
-        <Text style={[styles.selectText, !form.nationality && styles.selectPlaceholder]}>
-          {form.nationality
-            ? t(`nationalities.${form.nationality}`)
-            : t('setupProfile.nationalityPlaceholder')}
-        </Text>
-        <Ionicons
-          name={nationalityOpen ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          color={colors.textSecondary}
-        />
-      </Pressable>
-      {nationalityOpen && (
-        <View style={[styles.chipRow, styles.dropdownPanel]}>
-          {SUPPORTED_NATIONALITIES.map(({ code, labelKey }) => {
-            const selected = form.nationality === code;
-            return (
-              <Pressable
-                key={code}
-                style={[styles.chip, selected && styles.chipActive]}
-                onPress={() => {
-                  setForm((f) => ({ ...f, nationality: code as NationalityCode }));
-                  setNationalityOpen(false);
-                }}
-              >
-                <Text style={[styles.chipText, selected && styles.chipActiveText]}>
-                  {t(labelKey)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
+      <View onLayout={onFieldLayout('nationality')}>
+        <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.nationality')}</Text>
+        <Pressable
+          style={[
+            styles.selectBtn,
+            nationalityOpen && styles.selectBtnOpen,
+            nationalityError ? styles.selectBtnError : null,
+          ]}
+          onPress={() => setNationalityOpen((v) => !v)}
+        >
+          <Text style={[styles.selectText, !form.nationality && styles.selectPlaceholder]}>
+            {form.nationality
+              ? t(`nationalities.${form.nationality}`)
+              : t('setupProfile.nationalityPlaceholder')}
+          </Text>
+          <Ionicons
+            name={nationalityOpen ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={colors.textSecondary}
+          />
+        </Pressable>
+        {nationalityOpen && (
+          <View style={[styles.chipRow, styles.dropdownPanel]}>
+            {SUPPORTED_NATIONALITIES.map(({ code, labelKey }) => {
+              const selected = form.nationality === code;
+              return (
+                <Pressable
+                  key={code}
+                  style={[styles.chip, selected && styles.chipActive]}
+                  onPress={() => {
+                    setForm((f) => ({ ...f, nationality: code as NationalityCode }));
+                    setNationalityOpen(false);
+                    if (nationalityError) setNationalityError(null);
+                  }}
+                >
+                  <Text style={[styles.chipText, selected && styles.chipActiveText]}>
+                    {t(labelKey)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+        <ErrorText testID="setup-step1-nationality-error">{nationalityError}</ErrorText>
+      </View>
 
-      <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.languages')}</Text>
-      <LanguageProficiencyEditor
-        value={form.languages}
-        onChange={setLanguages}
-        emptyHint={t('setupProfile.languagesHint')}
-        showPrimary
-      />
+      <View onLayout={onFieldLayout('languages')}>
+        <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.languages')}</Text>
+        <LanguageProficiencyEditor
+          value={form.languages}
+          onChange={setLanguages}
+          emptyHint={t('setupProfile.languagesHint')}
+          showPrimary
+        />
+        <ErrorText testID="setup-step1-languages-error">{languagesError}</ErrorText>
+      </View>
 
       {/* Interests — optional. Markup mirrors settings/edit-profile.tsx so
           a user revisiting this through Settings sees the exact same shape. */}
@@ -341,6 +415,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   selectBtnOpen: { borderColor: colors.primary, backgroundColor: colors.white },
+  selectBtnError: { borderColor: colors.error },
   inputCompact: { fontSize: 14 },
   selectText: { fontSize: 14, color: colors.text, fontFamily: fonts.medium },
   selectPlaceholder: { color: colors.textLight },
