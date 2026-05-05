@@ -21,7 +21,8 @@ import { useProfile } from '@/hooks/useProfile';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { SUPPORTED_NATIONALITIES, type NationalityCode } from '@/constants/nationalities';
-import { INTEREST_OPTIONS, INTEREST_SECTIONS, MAX_INTERESTS } from '@/constants/interests';
+import { INTEREST_SECTIONS, MAX_INTERESTS } from '@/constants/interests';
+import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { isLanguageCode, type LanguageCode } from '@/constants/languages';
 import { validateDisplayName, DISPLAY_NAME_MAX } from '@/utils/validators';
 
@@ -99,28 +100,29 @@ export default function EditProfileScreen() {
     }
   }, [profile]);
 
-  const labelToId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const opt of INTEREST_OPTIONS) map.set(t(opt.labelKey), opt.id);
-    return map;
-  }, [t]);
+  // Storage moved from "current-locale label" to canonical id (see
+  // useInterestResolver doc) so the displayed label always reflects the
+  // current app language. Legacy stored labels still resolve to ids.
+  const { resolveId } = useInterestResolver();
 
   const selectedInterestIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const label of interests) {
-      const id = labelToId.get(label);
+    for (const stored of interests) {
+      const id = resolveId(stored);
       if (id) ids.add(id);
     }
     return ids;
-  }, [interests, labelToId]);
+  }, [interests, resolveId]);
 
-  const toggleInterest = (id: string, label: string) => {
+  const toggleInterest = (id: string) => {
     if (selectedInterestIds.has(id)) {
-      setInterests((prev) => prev.filter((v) => v !== label));
+      setInterests((prev) =>
+        prev.filter((v) => v !== id && resolveId(v) !== id),
+      );
       return;
     }
     if (interests.length >= MAX_INTERESTS) return;
-    setInterests((prev) => [...prev, label]);
+    setInterests((prev) => [...prev, id]);
   };
 
   const handleSave = async () => {
@@ -322,7 +324,7 @@ export default function EditProfileScreen() {
                       selected && styles.chipActive,
                       disabled && styles.chipDisabled,
                     ]}
-                    onPress={() => toggleInterest(id, label)}
+                    onPress={() => toggleInterest(id)}
                   >
                     <Text
                       style={[

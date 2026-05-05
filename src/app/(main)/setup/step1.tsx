@@ -22,7 +22,8 @@ import { useSignupDraftStore, type Gender } from '@/stores/signupDraftStore';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { SUPPORTED_NATIONALITIES, type NationalityCode } from '@/constants/nationalities';
-import { INTEREST_OPTIONS, INTEREST_SECTIONS, MAX_INTERESTS } from '@/constants/interests';
+import { INTEREST_SECTIONS, MAX_INTERESTS } from '@/constants/interests';
+import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { validateDisplayName, DISPLAY_NAME_MAX } from '@/utils/validators';
 import type { LanguageCode } from '@/constants/languages';
 
@@ -102,33 +103,33 @@ export default function SetupStep1() {
     if (languageError && next) setLanguageError(null);
   };
 
-  // Map localized interest labels to ids so the selection survives language
-  // toggles (matches edit-profile.tsx — keep labels canonical for the BE).
-  // Cast through unknown because INTEREST_OPTIONS is a heterogeneous readonly
-  // tuple and flatMap on `as const` arrays loses the element type.
-  const labelToId = useMemo(() => {
-    const map = new Map<string, string>();
-    const opts = INTEREST_OPTIONS as readonly { id: string; labelKey: string }[];
-    for (const opt of opts) map.set(t(opt.labelKey), opt.id);
-    return map;
-  }, [t]);
+  // Storage moved from "current-locale label" to canonical id so the
+  // displayed label survives both language toggles and re-loads from BE.
+  // The resolver also recognises legacy stored labels (any supported
+  // language) so existing profiles keep their selection state intact.
+  const { resolveId } = useInterestResolver();
 
   const selectedInterestIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const label of interests) {
-      const id = labelToId.get(label);
+    for (const stored of interests) {
+      const id = resolveId(stored);
       if (id) ids.add(id);
     }
     return ids;
-  }, [interests, labelToId]);
+  }, [interests, resolveId]);
 
-  const toggleInterest = (id: string, label: string) => {
+  const toggleInterest = (id: string) => {
     if (selectedInterestIds.has(id)) {
-      setInterests((prev) => prev.filter((v) => v !== label));
+      // Drop both forms: the canonical id and any legacy localized label
+      // that points at this id (covers profiles registered before the
+      // canonicalization).
+      setInterests((prev) =>
+        prev.filter((v) => v !== id && resolveId(v) !== id),
+      );
       return;
     }
     if (interests.length >= MAX_INTERESTS) return;
-    setInterests((prev) => [...prev, label]);
+    setInterests((prev) => [...prev, id]);
   };
 
   const handleNext = () => {
@@ -338,7 +339,7 @@ export default function SetupStep1() {
                     selected && styles.chipActive,
                     disabled && styles.chipDisabled,
                   ]}
-                  onPress={() => toggleInterest(id, label)}
+                  onPress={() => toggleInterest(id)}
                 >
                   <Text
                     style={[

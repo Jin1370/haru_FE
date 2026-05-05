@@ -26,6 +26,7 @@ import { AudioPlayer } from '@/components/chat/AudioPlayer';
 import { IntimacyGauge } from '@/components/chat/IntimacyGauge';
 import { MatchActionsSheet } from '@/components/matches/MatchActionsSheet';
 import { ErrorText } from '@/components/ui/ErrorText';
+import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { validateMessageText } from '@/utils/validators';
 import {
   EmotionPicker,
@@ -83,6 +84,7 @@ function formatDateLabel(iso: string, locale: string) {
 
 export default function ChatScreen() {
   const { t, i18n } = useTranslation();
+  const { labelFor: interestLabelFor } = useInterestResolver();
   const insets = useSafeAreaInsets();
   const {
     matchId,
@@ -613,7 +615,7 @@ export default function ChatScreen() {
                     <View style={styles.modalTags}>
                       {partnerInterests.map((tag, i) => (
                         <View key={`${tag}-${i}`} style={styles.modalTag}>
-                          <Text style={styles.modalTagText}>{tag}</Text>
+                          <Text style={styles.modalTagText}>{interestLabelFor(tag)}</Text>
                         </View>
                       ))}
                     </View>

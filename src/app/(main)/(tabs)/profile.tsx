@@ -24,6 +24,7 @@ import { MenuCardButton } from '@/components/ui/MenuCardButton';
 import { AudioPlayer } from '@/components/chat/AudioPlayer';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
 import { useProfile, MAX_PHOTOS } from '@/hooks/useProfile';
+import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { useAuthStore } from '@/stores/authStore';
 import { colors, gradients, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
@@ -35,6 +36,7 @@ const BIO_AUDIO_POLL_TIMEOUT_MS = 60_000;
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
+  const { labelFor: interestLabelFor } = useInterestResolver();
   const navigation = useNavigation();
   const {
     profile,
@@ -368,7 +370,7 @@ export default function ProfileScreen() {
             <View style={styles.infoTags}>
               {profile.interests.map((tag, i) => (
                 <View key={i} style={styles.infoTag}>
-                  <Text style={styles.infoTagText}>{tag}</Text>
+                  <Text style={styles.infoTagText}>{interestLabelFor(tag)}</Text>
                 </View>
               ))}
             </View>

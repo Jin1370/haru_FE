@@ -147,3 +147,10 @@ export const INTEREST_OPTIONS: readonly InterestOption[] = INTEREST_SECTIONS.fla
 );
 
 export const MAX_INTERESTS = 10;
+
+// Set of valid canonical ids for fast `is this an id?` lookups. Stored
+// interest values are migrating from "localized label" → "id" so display
+// code needs to recognise both forms during the transition.
+export const INTEREST_ID_SET: ReadonlySet<string> = new Set(
+  INTEREST_OPTIONS.map((o) => o.id),
+);
