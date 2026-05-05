@@ -1,17 +1,30 @@
 import { useCallback } from 'react';
-import { Pressable, Text, StyleSheet } from 'react-native';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors } from '@/constants/colors';
+import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 
 interface AudioPlayerProps {
   url: string;
   compact?: boolean;
   showProgressBar?: boolean;
+  /**
+   * Horizontal play-bar layout: play/pause button + linear progress fill +
+   * elapsed/total time. Used when an inline icon feels too sparse (e.g.
+   * voice intro preview under language tabs).
+   */
+  showBar?: boolean;
   tintColor?: string;
+}
+
+function formatClock(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const r = Math.floor(seconds % 60);
+  return `${m}:${r.toString().padStart(2, '0')}`;
 }
 
 const RING_SIZE = 56;
@@ -19,7 +32,7 @@ const RING_STROKE = 3;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-export function AudioPlayer({ url, compact = false, showProgressBar = false, tintColor = colors.primary }: AudioPlayerProps) {
+export function AudioPlayer({ url, compact = false, showProgressBar = false, showBar = false, tintColor = colors.primary }: AudioPlayerProps) {
   const { t } = useTranslation();
   const player = useAudioPlayer(url);
   const status = useAudioPlayerStatus(player);
@@ -38,6 +51,38 @@ export function AudioPlayer({ url, compact = false, showProgressBar = false, tin
       player.play();
     }
   }, [player, isPlaying, duration, currentTime]);
+
+  if (showBar) {
+    return (
+      <View style={styles.barRow}>
+        <Pressable
+          onPress={toggle}
+          style={[styles.barPlayBtn, { borderColor: tintColor }]}
+          accessibilityRole="button"
+          accessibilityLabel={isPlaying ? t('audioPlayer.stop') : t('audioPlayer.play')}
+          hitSlop={6}
+        >
+          <Ionicons
+            name={isPlaying ? 'pause' : 'play'}
+            size={16}
+            color={tintColor}
+            style={isPlaying ? undefined : styles.playIconOffset}
+          />
+        </Pressable>
+        <View style={styles.barTrack}>
+          <View
+            style={[
+              styles.barFill,
+              { width: `${progress * 100}%`, backgroundColor: tintColor },
+            ]}
+          />
+        </View>
+        <Text style={[styles.barTime, { color: tintColor }]} numberOfLines={1}>
+          {formatClock(currentTime)} / {formatClock(duration)}
+        </Text>
+      </View>
+    );
+  }
 
   if (showProgressBar) {
     return (
@@ -104,6 +149,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
     fontFamily: fonts.medium,
+  },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 4,
+  },
+  barPlayBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+  },
+  barTrack: {
+    flex: 1,
+    height: 5,
+    borderRadius: radii.pill,
+    // Match the voice intro card's edit-button chip (`colors.primaryLight`)
+    // so the toggle container, play-bar track, and edit button all share
+    // one surface tone against the blush card gradient.
+    backgroundColor: colors.primaryLight,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: radii.pill,
+  },
+  barTime: {
+    fontSize: 11,
+    fontFamily: fonts.medium,
+    letterSpacing: 0.3,
+    minWidth: 56,
+    textAlign: 'right',
   },
   ringContainer: {
     width: RING_SIZE,

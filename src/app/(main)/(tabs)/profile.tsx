@@ -21,9 +21,10 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { MenuCardButton } from '@/components/ui/MenuCardButton';
-import { AudioPlayer } from '@/components/chat/AudioPlayer';
+import { VoiceIntroMultiLangPreview } from '@/components/profile/VoiceIntroMultiLangPreview';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
 import { useProfile, MAX_PHOTOS } from '@/hooks/useProfile';
+import { VOICE_INTRO_SLOT_LANGUAGES } from '@/types';
 import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { useAuthStore } from '@/stores/authStore';
 import { colors, gradients, radii, shadows } from '@/constants/colors';
@@ -74,14 +75,25 @@ export default function ProfileScreen() {
     });
   }, [navigation, t]);
 
-  // BE generates voice_intro audio asynchronously (fire-and-forget TTS). When
-  // voice_intro is present but voice_intro_audio_url is still null, poll for
-  // the URL to appear so the play button shows up without requiring a manual reload.
+  // BE generates voice_intro audio asynchronously (fire-and-forget TTS).
+  // Mig 011 expanded the single voice_intro_audio_url into a 3-slot
+  // (ko/ja/en) status object — poll until every slot has resolved to
+  // ready/failed. While the migration is rolling out the BE may also emit
+  // an empty `{}` status object (no synthesis attempted yet), in which
+  // case we fall back to the legacy single-column boolean so the previous
+  // behaviour is preserved.
   const bioSet = Boolean(profile?.voice_intro && profile.voice_intro.trim().length > 0);
-  const audioReady = Boolean(profile?.voice_intro_audio_url);
+  const status = profile?.voice_intro_audio_status;
+  const hasNewStatus = Boolean(status && Object.keys(status).length > 0);
+  const allSlotsSettled = hasNewStatus
+    ? VOICE_INTRO_SLOT_LANGUAGES.every((l) => {
+        const s = status?.[l];
+        return s === 'ready' || s === 'failed';
+      })
+    : Boolean(profile?.voice_intro_audio_url); // legacy single-column fallback (mig 011 backfill window)
   const [synthesizing, setSynthesizing] = useState(false);
   useEffect(() => {
-    if (!bioSet || audioReady) {
+    if (!bioSet || allSlotsSettled) {
       setSynthesizing(false);
       return;
     }
@@ -97,7 +109,7 @@ export default function ProfileScreen() {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [bioSet, audioReady, loadProfile]);
+  }, [bioSet, allSlotsSettled, loadProfile]);
 
   const pickAndValidate = async () => {
     setPhotoError(null);
@@ -388,15 +400,6 @@ export default function ProfileScreen() {
         <View style={styles.voiceCardHeader}>
           <View style={styles.voiceCardTitleGroup}>
             <Text style={styles.voiceCardTitle}>{t('profile.voiceCardTitle')}</Text>
-            {profile.voice_intro_audio_url ? (
-              // Re-key on URL so saving a new voice_intro mounts a fresh player
-              // instance — expo-audio's useAudioPlayer captures source at first
-              // render and wouldn't reload a changed prop, so the previous
-              // intro's audio would keep playing despite a new url.
-              <AudioPlayer key={profile.voice_intro_audio_url} url={profile.voice_intro_audio_url} compact />
-            ) : synthesizing ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : null}
           </View>
           <Pressable
             style={styles.bioEditBtn}
@@ -408,6 +411,9 @@ export default function ProfileScreen() {
             <Ionicons name="pencil" size={16} color={colors.primaryDark} />
           </Pressable>
         </View>
+        {/* Author-written text comes first so the multi-language tabs below
+            read as "the same line, in three voices" — clarifies that ja/en
+            slots are translations of the visible text, not separate inputs. */}
         <View style={styles.bioRow}>
           <Text
             style={[styles.bio, !profile.voice_intro && styles.bioEmpty]}
@@ -416,6 +422,19 @@ export default function ProfileScreen() {
             {profile.voice_intro || t('profile.bioEmpty')}
           </Text>
         </View>
+        {bioSet ? (
+          <View style={styles.voicePreviewWrap}>
+            <VoiceIntroMultiLangPreview
+              authorLanguage={profile.language}
+              audioUrls={profile.voice_intro_audio_urls}
+              audioStatus={profile.voice_intro_audio_status}
+            />
+          </View>
+        ) : synthesizing ? (
+          <View style={styles.voicePreviewWrap}>
+            <ActivityIndicator size="small" color={colors.primary} />
+          </View>
+        ) : null}
       </LinearGradient>
 
       </ScrollView>
@@ -682,6 +701,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.3,
+  },
+  voicePreviewWrap: {
+    marginTop: 12,
   },
   bioRow: {
     flexDirection: 'row',

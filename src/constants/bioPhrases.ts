@@ -6,14 +6,15 @@ export type BioPhraseCategory =
   | 'confidence'
   | 'aegyo';
 
-// Languages with hand-translated preset bodies. Mirrors the launch whitelist
-// (constants/languages.ts → ko/ja/en/th/hi) so every supported profile
-// language has a native preset and the displayed text matches the language
-// the voice clone will synthesize. profile.language values outside this set
-// fall back to English to avoid TTS mismatch.
+// Languages the bio picker actually displays. Voice intro audio is only
+// generated for the i18n active set (ko/ja/en), so any profile language
+// outside this set must show English text — otherwise the user picks a
+// preset in their native script that has no matching TTS to play back.
+// Hand-translated th/hi bodies are still stored on each preset for
+// findPresetByText round-tripping, but they are not surfaced in the picker.
 export type BioPhraseLanguage = 'ko' | 'en' | 'ja' | 'th' | 'hi';
 
-const SUPPORTED_BIO_LANGUAGES: readonly BioPhraseLanguage[] = ['ko', 'en', 'ja', 'th', 'hi'];
+const DISPLAYABLE_BIO_LANGUAGES: readonly BioPhraseLanguage[] = ['ko', 'en', 'ja'];
 const FALLBACK_BIO_LANGUAGE: BioPhraseLanguage = 'en';
 
 export interface BioPhrase {
@@ -124,19 +125,22 @@ export const BIO_PHRASES: readonly BioPhrase[] = [
   },
 ] as const;
 
-function isSupportedBioLanguage(code: string): code is BioPhraseLanguage {
-  return (SUPPORTED_BIO_LANGUAGES as readonly string[]).includes(code);
+function isDisplayableBioLanguage(code: string): code is BioPhraseLanguage {
+  return (DISPLAYABLE_BIO_LANGUAGES as readonly string[]).includes(code);
 }
 
 export function getBioPhraseText(phrase: BioPhrase, language: string): string {
-  return phrase.text[isSupportedBioLanguage(language) ? language : FALLBACK_BIO_LANGUAGE];
+  return phrase.text[isDisplayableBioLanguage(language) ? language : FALLBACK_BIO_LANGUAGE];
 }
 
-// Match across every translation so a stored bio in any language locates its
-// preset. Lets the picker re-highlight the originally chosen card after a
-// language switch instead of dropping into "custom".
+// Match across every stored translation (including th/hi) so a profile that
+// previously saved a preset in a now-non-displayable language still resolves
+// back to its preset id. The picker then promotes it to the displayable
+// language via getBioPhraseText, keeping bio text aligned with TTS coverage.
+const ALL_BIO_LANGUAGES: readonly BioPhraseLanguage[] = ['ko', 'en', 'ja', 'th', 'hi'];
+
 export function findPresetByText(text: string): BioPhrase | undefined {
   return BIO_PHRASES.find((p) =>
-    SUPPORTED_BIO_LANGUAGES.some((lang) => p.text[lang] === text),
+    ALL_BIO_LANGUAGES.some((lang) => p.text[lang] === text),
   );
 }
