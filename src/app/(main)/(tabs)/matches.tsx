@@ -1,6 +1,6 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { MatchItem } from '@/components/matches/MatchItem';
 import { MatchActionsSheet } from '@/components/matches/MatchActionsSheet';
@@ -15,9 +15,15 @@ export default function MatchesScreen() {
   const { matches, loading, hasMore, loadMatches, loadMore } = useMatches();
   const [actionTarget, setActionTarget] = useState<MatchListItem | null>(null);
 
-  useEffect(() => {
-    loadMatches();
-  }, [loadMatches]);
+  // Refetch every time the tab regains focus so unread_count reflects the
+  // BE truth after the chat screen's markRead. The list-level Realtime
+  // channel only listens to INSERTs, so unread decrements (read_at flips)
+  // never reach the list otherwise.
+  useFocusEffect(
+    useCallback(() => {
+      loadMatches();
+    }, [loadMatches]),
+  );
 
   const renderItem = useCallback(({ item }: { item: MatchListItem }) => (
     <MatchItem

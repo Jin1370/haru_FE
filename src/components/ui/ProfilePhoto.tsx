@@ -97,7 +97,13 @@ function AvatarVariant({
   lockedLabel: string;
 }) {
   const radius = size / 2;
-  const ringPad = ringed ? 2 : 0;
+  // Ring footprint is reserved unconditionally so toggling ringed never
+  // pushes neighboring layout (e.g. the matches row name/time on the right).
+  // When ringed=false the wrapper is a transparent View of the same size;
+  // when ringed=true the same wrapper paints the gradient.
+  const RING_PAD = 2;
+  const outerSize = size + RING_PAD * 2;
+  const outerRadius = outerSize / 2;
   const blurRadius = blurred ? Math.max(AVATAR_BLUR_MIN, size * AVATAR_BLUR_MULTIPLIER) : 0;
   const lockIconSize = Math.max(10, Math.round(size * 0.28));
 
@@ -132,29 +138,29 @@ function AvatarVariant({
     </View>
   );
 
+  const wrapperLayout = {
+    width: outerSize,
+    height: outerSize,
+    borderRadius: outerRadius,
+    padding: RING_PAD,
+  };
+
   if (ringed) {
     return (
       <LinearGradient
         colors={[...gradients.primary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[
-          avatarStyles.ring,
-          {
-            width: size + ringPad * 2,
-            height: size + ringPad * 2,
-            borderRadius: (size + ringPad * 2) / 2,
-            padding: ringPad,
-          },
-          style,
-        ]}
+        style={[avatarStyles.ring, wrapperLayout, style]}
       >
         {inner}
       </LinearGradient>
     );
   }
 
-  return <View style={style}>{inner}</View>;
+  return (
+    <View style={[avatarStyles.ring, wrapperLayout, style]}>{inner}</View>
+  );
 }
 
 const avatarStyles = StyleSheet.create({

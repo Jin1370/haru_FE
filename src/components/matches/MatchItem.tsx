@@ -109,10 +109,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
+    // Lock the row height so unread (with the badge child, h:22) and read
+    // (text-only, intrinsic line height) rows stay identical regardless of
+    // which fontFamily wins. Without this, switching from regular→medium
+    // and the absence of the badge each shave a few px off the card.
+    minHeight: 22,
   },
   lastMessage: {
-    fontSize: 14,
+    fontSize: 12,
+    // Pin the rendered line height — `regular` and `medium` ship slightly
+    // different intrinsic line metrics, so an explicit value keeps the row
+    // height consistent across read/unread states.
+    lineHeight: 18,
     color: colors.textSecondary,
+    fontFamily: fonts.regular,
     flex: 1,
   },
   lastMessageUnread: {
