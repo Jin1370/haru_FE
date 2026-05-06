@@ -19,6 +19,7 @@ import { useSignupDraftStore } from '@/stores/signupDraftStore';
 import { colors } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { validateVoiceIntro } from '@/utils/validators';
+import { buildVoiceIntroPayload } from '@/utils/voiceIntroPayload';
 
 export default function SetupStep3() {
   const { t } = useTranslation();
@@ -40,14 +41,23 @@ export default function SetupStep3() {
   }, [profile, voiceReady]);
 
   const [bio, setBio] = useState(draft.bio || profile?.voice_intro || '');
+  // Catalog id of the picked preset (or null for custom-typed bios). Starts
+  // null and is filled by BioPhrasePicker's initial sync effect once it has
+  // resolved `value` against the catalog. Forwarded to BE via
+  // `voice_intro_phrase_id` (voice-intro-preset-bypass sprint).
+  const [phraseId, setPhraseId] = useState<string | null>(draft.bioPhraseId);
   const [bioError, setBioError] = useState<string | null>(null);
   const [kbHeight, setKbHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
   // Live-validate the bio while the user picks/types so length and forbidden
   // chars surface inline (red border + ErrorText) inside the picker card.
-  const handleBioChange = (next: string) => {
+  // BioPhrasePicker also reports the picked preset id (null in custom mode);
+  // we mirror both into local state and the signup draft store so the wizard
+  // stays consistent if the user navigates back/forward.
+  const handleBioChange = (next: string, nextPhraseId: string | null) => {
     setBio(next);
+    setPhraseId(nextPhraseId);
     const err = validateVoiceIntro(next);
     setBioError(err ? t(err.key, err.vars) : null);
   };
@@ -63,17 +73,15 @@ export default function SetupStep3() {
     };
   }, []);
 
-  const persistBio = async (nextBio: string | null) => {
+  const persistBio = async (nextBio: string, nextPhraseId: string | null) => {
     if (!profile) return;
-    // Mirror settings/edit-bio.tsx exactly so a user re-editing later sees a
-    // consistent payload shape. We only change voice_intro here.
     await upsertProfile({
       display_name: profile.display_name,
       birth_date: profile.birth_date,
       gender: profile.gender,
       nationality: profile.nationality,
       language: profile.language,
-      voice_intro: nextBio,
+      ...buildVoiceIntroPayload(nextBio, nextPhraseId),
       interests: profile.interests,
     });
   };
@@ -91,7 +99,7 @@ export default function SetupStep3() {
   const handleStart = async () => {
     if (!bio.trim()) {
       try {
-        await persistBio(null);
+        await persistBio('', null);
       } catch {
         // Best-effort skip — don't block app entry if the BE clear hiccups.
       }
@@ -106,7 +114,8 @@ export default function SetupStep3() {
     setBioError(null);
     try {
       draft.setBio(bio.trim());
-      await persistBio(bio.trim());
+      draft.setBioPhraseId(phraseId);
+      await persistBio(bio, phraseId);
       enterApp();
     } catch (e: any) {
       Alert.alert(t('common.error'), e.message);

@@ -69,6 +69,12 @@ export interface ProfileUpsertRequest {
   // Whitelisted scalar code (ko/ja/en/th/hi). Required by BE since mig 009.
   language: string;
   voice_intro?: string | null;
+  // Catalog id of the preset phrase (`BIO_PHRASES[i].id`) when the user picked
+  // a preset, `null` for custom-typed bios. Optional so legacy callers that
+  // only know about `voice_intro` keep working — BE treats absence as null and
+  // falls back to Gemini translation. Introduced by the
+  // voice-intro-preset-bypass sprint to skip Gemini for known catalog entries.
+  voice_intro_phrase_id?: string | null;
   interests?: string[];
 }
 

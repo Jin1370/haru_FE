@@ -18,6 +18,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { colors } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { validateVoiceIntro } from '@/utils/validators';
+import { buildVoiceIntroPayload } from '@/utils/voiceIntroPayload';
 
 export default function EditBioScreen() {
   const { t } = useTranslation();
@@ -26,6 +27,11 @@ export default function EditBioScreen() {
   const voiceReady = profile?.voice_clone_status === 'ready';
 
   const [bio, setBio] = useState(profile?.voice_intro ?? '');
+  // Catalog id of the picked preset (or null for custom-typed bios). Filled
+  // by BioPhrasePicker's initial sync effect once it has resolved `value`
+  // against the catalog. Forwarded to BE via `voice_intro_phrase_id`
+  // (voice-intro-preset-bypass sprint) to skip Gemini for known entries.
+  const [phraseId, setPhraseId] = useState<string | null>(null);
   const [bioError, setBioError] = useState<string | null>(null);
   const [kbHeight, setKbHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -36,9 +42,11 @@ export default function EditBioScreen() {
 
   // Live-validate the voice intro text as the user picks/types it. Empty is
   // allowed (treated as "clear the intro"); only length and forbidden-char
-  // violations surface inline.
-  const handleBioChange = (next: string) => {
+  // violations surface inline. BioPhrasePicker also reports the picked preset
+  // id (null in custom mode); we mirror both into local state.
+  const handleBioChange = (next: string, nextPhraseId: string | null) => {
     setBio(next);
+    setPhraseId(nextPhraseId);
     const err = validateVoiceIntro(next);
     setBioError(err ? t(err.key, err.vars) : null);
   };
@@ -71,7 +79,7 @@ export default function EditBioScreen() {
         gender: profile.gender,
         nationality: profile.nationality,
         language: profile.language,
-        voice_intro: bio.trim() ? bio.trim() : null,
+        ...buildVoiceIntroPayload(bio, phraseId),
         interests: profile.interests,
       });
       router.back();

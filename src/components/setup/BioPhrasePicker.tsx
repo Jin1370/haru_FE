@@ -21,7 +21,12 @@ import {
 
 interface BioPhrasePickerProps {
   value: string;
-  onChange: (text: string) => void;
+  // onChange now also reports the catalog id of the picked preset, or `null`
+  // when the user is in custom mode (or when `value` resolves to no known
+  // preset). Callers forward the id to the BE in `voice_intro_phrase_id` so
+  // the backend can short-circuit Gemini translation by looking up the
+  // server-side catalog (voice-intro-preset-bypass sprint, Phase 3).
+  onChange: (text: string, phraseId: string | null) => void;
   // Profile language used for both displaying the localized preset body and
   // the text written back to `bio`. Keeping these aligned ensures the cloned
   // voice synthesizes the same language it was trained on.
@@ -80,35 +85,42 @@ export function BioPhrasePicker({
   // when the user's language changes. If the stored bio matches a preset in a
   // different language, promote it to the current-language version so the
   // saved bio stays aligned with the voice clone's language.
+  //
+  // The phraseId arg on onChange must be kept consistent with `value` so the
+  // parent's two state slots (text + phraseId) stay aligned through async
+  // profile loads. Re-emit is idempotent because the parent's setters short
+  // out on identical values.
   useEffect(() => {
     const preset = findPresetByText(value);
     if (preset) {
       setSelectedId(preset.id);
       const localized = getBioPhraseText(preset, language);
-      if (localized !== value) onChangeRef.current(localized);
+      if (localized !== value) onChangeRef.current(localized, preset.id);
+      else onChangeRef.current(value, preset.id);
       return;
     }
     if (value.length > 0) {
       setSelectedId('custom');
       setCustomText(value);
+      onChangeRef.current(value, null);
     }
   }, [value, language]);
 
   const handleSelectPreset = (id: string, text: string) => {
     if (disabled) return;
     setSelectedId(id);
-    onChange(text);
+    onChange(text, id);
   };
 
   const handleSelectCustom = () => {
     if (disabled) return;
     setSelectedId('custom');
-    onChange(customText);
+    onChange(customText, null);
   };
 
   const handleCustomTextChange = (text: string) => {
     setCustomText(text);
-    if (selectedId === 'custom') onChange(text);
+    if (selectedId === 'custom') onChange(text, null);
   };
 
   return (
