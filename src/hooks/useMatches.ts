@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
+import useSWR from 'swr';
 import * as matchService from '@/services/matches';
 import {
   subscribeToAllMessages,
@@ -7,9 +8,12 @@ import {
 } from '@/services/realtime';
 import { photoAccessStore } from '@/stores/photoAccess';
 import { useAuthStore } from '@/stores/authStore';
+import { matchesKey } from '@/lib/swr';
 import { computeBackoffDelay } from '@/utils/backoff';
 import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
 import type { Message, MatchListItem } from '@/types';
+
+const PAGE_SIZE = 20;
 
 // Push each match's photo_access into the registry so any screen (Matches tab,
 // Chat screen, profile detail) can render consistent blur state without the
@@ -61,53 +65,83 @@ function applyIncomingMessage(
 
 export function useMatches() {
   const myUserId = useAuthStore((s) => s.userId);
-  const [matches, setMatches] = useState<MatchListItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const swrKey = myUserId ? matchesKey(myUserId) : null;
+
+  const {
+    data,
+    mutate,
+    isValidating,
+    error: swrError,
+  } = useSWR<MatchListItem[]>(
+    swrKey,
+    () => matchService.getMatches(PAGE_SIZE),
+    { onSuccess: ingestMatches },
+  );
+
+  const [extraPages, setExtraPages] = useState<MatchListItem[]>([]);
   const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const loadingMore = useRef(false);
+  // Mirror state into refs so loadMore can read the freshest cursor without
+  // depending on closure values. Prevents the rare race where extraPages was
+  // just reset by a focus-revalidate but the closure still sees the old tail.
+  const dataRef = useRef<MatchListItem[] | undefined>(data);
+  const extraPagesRef = useRef<MatchListItem[]>(extraPages);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+  useEffect(() => {
+    extraPagesRef.current = extraPages;
+  }, [extraPages]);
+
+  // Drop the paginated tail whenever the first page revalidates — its cursors
+  // are stale relative to the new head and would re-fetch overlapping rows.
+  // Side effect: a focus-triggered revalidate resets pages 2+ that the user
+  // had loaded. Acceptable trade-off — fresh head matters more than scroll
+  // position, and SWR's dedupingInterval absorbs same-second revalidates.
+  useEffect(() => {
+    if (data) {
+      setExtraPages([]);
+      setHasMore(data.length === PAGE_SIZE);
+    }
+  }, [data]);
+
+  const matches = data ? [...data, ...extraPages] : [];
 
   const loadMatches = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await matchService.getMatches(20);
-      ingestMatches(data);
-      setMatches(data);
-      setHasMore(data.length === 20);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await mutate();
+  }, [mutate]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore.current || !hasMore) return;
     loadingMore.current = true;
     try {
-      const last = matches[matches.length - 1];
-      if (!last) return;
-      const data = await matchService.getMatches(20, last.created_at);
-      ingestMatches(data);
-      setMatches((prev) => [...prev, ...data]);
-      setHasMore(data.length === 20);
+      const tailExtra = extraPagesRef.current;
+      const tailData = dataRef.current;
+      const tail =
+        tailExtra.length > 0
+          ? tailExtra[tailExtra.length - 1]
+          : tailData?.[tailData.length - 1];
+      if (!tail) return;
+      const newPage = await matchService.getMatches(PAGE_SIZE, tail.created_at);
+      ingestMatches(newPage);
+      setExtraPages((prev) => [...prev, ...newPage]);
+      setHasMore(newPage.length === PAGE_SIZE);
     } catch (e: any) {
-      setError(e.message);
+      setLoadMoreError(e.message);
     } finally {
       loadingMore.current = false;
     }
-  }, [matches, hasMore]);
+  }, [hasMore]);
 
   // List-level Realtime subscription: mirror the per-match pattern from
   // chat/[matchId].tsx so the matches tab shows fresh last_message + unread
   // counts without a manual pull-to-refresh.
   //
   // RLS restricts the INSERT events to messages in matches the user is part
-  // of, so the unfiltered subscription is safe. The handler ignores messages
-  // for matches not yet in the local list (those will appear next time
-  // loadMatches() runs — typically when the user pulls to refresh or the
-  // app foregrounds).
+  // of, so the unfiltered subscription is safe. The patch only touches the
+  // SWR-owned first page; messages for paginated rows surface on next
+  // revalidate (older pages are by-definition less active).
   useEffect(() => {
     if (!myUserId) return;
     let cancelled = false;
@@ -126,7 +160,15 @@ export function useMatches() {
       await subscribeToAllMessages(
         (message) => {
           if (cancelled) return;
-          setMatches((prev) => applyIncomingMessage(prev, message, myUserId));
+          // Patch both the SWR-owned first page and the locally-paginated tail.
+          // Either set is a no-op if the message's match isn't in that slice
+          // (applyIncomingMessage returns prev unchanged on idx === -1), so
+          // exactly one of the two updates fires per message.
+          mutate(
+            (prev) => applyIncomingMessage(prev ?? [], message, myUserId),
+            { revalidate: false },
+          );
+          setExtraPages((prev) => applyIncomingMessage(prev, message, myUserId));
         },
         (status) => {
           if (cancelled) return;
@@ -148,14 +190,12 @@ export function useMatches() {
 
     connect();
 
-    // Foregrounding can drop the realtime socket on Android; reconnect and
-    // re-fetch so the user sees up-to-date rows after a long backgrounded
-    // pause. Mirrors the chat-screen pattern.
+    // Foregrounding on Android can drop the realtime socket. SWR's initFocus
+    // re-validates the list itself; we only need to re-establish the socket.
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         retryAttempt = 0;
         connect();
-        loadMatches();
       }
     });
 
@@ -165,7 +205,9 @@ export function useMatches() {
       subscription.remove();
       unsubscribeFromAllMessages();
     };
-  }, [myUserId, loadMatches]);
+  }, [myUserId, mutate]);
 
-  return { matches, loading, hasMore, error, loadMatches, loadMore };
+  const error = swrError ? (swrError as Error).message : loadMoreError;
+
+  return { matches, loading: isValidating, hasMore, error, loadMatches, loadMore };
 }

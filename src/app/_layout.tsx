@@ -9,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '@/stores/authStore';
 import { registerOnSessionExpired } from '@/services/api';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { SWRConfigProvider } from '@/lib/swr';
 import { PRETENDARD_ASSETS, fonts } from '@/constants/fonts';
 import '@/i18n';
 
@@ -53,12 +54,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(main)" />
-          <Stack.Screen name="index" />
-        </Stack>
+        <SWRConfigProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(main)" />
+            <Stack.Screen name="index" />
+          </Stack>
+        </SWRConfigProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

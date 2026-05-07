@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSWRConfig } from 'swr';
 import * as discoverService from '@/services/discover';
 import { photoAccessStore } from '@/stores/photoAccess';
 import { useAuthStore } from '@/stores/authStore';
+import { matchesKey } from '@/lib/swr';
 import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
 import {
   BATCH_SIZE,
@@ -21,6 +23,7 @@ function ingestCandidates(candidates: DiscoverCandidate[]) {
 
 export function useDiscover() {
   const userId = useAuthStore((s) => s.userId);
+  const { mutate: globalMutate } = useSWRConfig();
   const [candidates, setCandidates] = useState<DiscoverCandidate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,12 +138,17 @@ export function useDiscover() {
       const res = await discoverService.swipe({ swiped_id: swipedId, direction });
       setCandidates((prev) => prev.filter((c) => c.id !== swipedId));
       setDailyCount((c) => Math.min(MAX_PER_DAY, c + 1));
+      // A new mutual match means the matches list has a new row — drop the
+      // SWR cache so the Matches tab shows it immediately on next view.
+      if (res.match && userId) {
+        globalMutate(matchesKey(userId));
+      }
       return res;
     } catch (e: any) {
       setError(e.message);
       return null;
     }
-  }, []);
+  }, [userId, globalMutate]);
 
   return {
     candidates,
