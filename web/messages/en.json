@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "title": "voicemate — Voice-first cross-language dating",
+    "description": "First impressions through voice intros. Messages auto-translated in the sender's cloned voice."
+  },
+  "hero": {
+    "eyebrow": "VOICE-FIRST DATING",
+    "title": "Real first impressions, in their voice",
+    "subtitle": "Hear a short voice intro before you swipe. Messages are translated into your match's language and delivered in your own voice."
+  },
+  "voiceIntro": {
+    "label": "WHY 1",
+    "title": "Voice intros",
+    "body": "More than a photo. Hear a one-line voice intro while browsing — and decide with your ears."
+  },
+  "translation": {
+    "label": "WHY 2",
+    "title": "Auto-translation + cloned voice",
+    "body": "Your message arrives in your match's language — synthesized in your own cloned voice. Real conversation across languages.",
+    "originalLabel": "You (English)",
+    "originalSample": "Beautiful weather today — want to take a walk?",
+    "translatedLabel": "Delivered (Korean, your voice)",
+    "translatedSample": "오늘 날씨 좋네요. 산책하실래요?"
+  },
+  "cta": {
+    "title": "Start with voicemate",
+    "body": "Available on iOS and Android.",
+    "appStore": "Download on the App Store",
+    "playStore": "Get it on Google Play",
+    "disclaimer": "Must be 18 or older."
+  }
+}

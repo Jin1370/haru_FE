@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "title": "voicemate — 声でつながるクロスランゲージ・デーティング",
+    "description": "ボイスイントロで第一印象を。送信者のクローン音声で自動翻訳されるメッセージ。"
+  },
+  "hero": {
+    "eyebrow": "VOICE-FIRST DATING",
+    "title": "声から始まる、本当の第一印象",
+    "subtitle": "短いボイスイントロで相手を知り、メッセージは相手の言語に翻訳され、あなた自身の声で届きます。"
+  },
+  "voiceIntro": {
+    "label": "特長 1",
+    "title": "ボイスイントロ",
+    "body": "写真の向こうの本当の第一印象。マッチング探索で短い音声を聴いて決められる。"
+  },
+  "translation": {
+    "label": "特長 2",
+    "title": "自動翻訳 + クローン音声",
+    "body": "あなたのメッセージが相手の言語に翻訳され、あなた自身のクローン音声で届きます。言語が違っても、トーンの伝わる会話を。",
+    "originalLabel": "あなた (日本語)",
+    "originalSample": "今日は天気がいいですね、散歩しませんか?",
+    "translatedLabel": "相手に届く (韓国語、あなたの声)",
+    "translatedSample": "오늘 날씨 좋네요. 산책하실래요?"
+  },
+  "cta": {
+    "title": "今すぐ voicemate を始める",
+    "body": "iOS と Android で利用可能。",
+    "appStore": "App Store からダウンロード",
+    "playStore": "Google Play で入手",
+    "disclaimer": "18歳以上の方のみご利用いただけます。"
+  }
+}

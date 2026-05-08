@@ -8,6 +8,7 @@ module.exports = [
       'dist/**',
       '.expo/**',
       'web-build/**',
+      'web/**',
       '*.config.js',
     ],
   },

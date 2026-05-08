@@ -2,6 +2,7 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/*.test.ts', '**/*.test.tsx'],
+  testPathIgnorePatterns: ['/node_modules/', '/web/'],
   setupFiles: ['<rootDir>/jest.setup.js'],
   transform: {
     '^.+\\.(ts|tsx|js|jsx)$': ['babel-jest', { presets: ['babel-preset-expo'] }],

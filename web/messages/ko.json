@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "title": "voicemate — 보이스로 연결되는 데이팅",
+    "description": "보이스 인트로로 첫인상을. 송신자의 클론 보이스로 자동 번역되는 메시지."
+  },
+  "hero": {
+    "eyebrow": "VOICE-FIRST DATING",
+    "title": "목소리로 시작하는 진짜 첫인상",
+    "subtitle": "보이스 인트로 한마디로 호감을 가늠하고, 메시지는 상대 언어로 자동 번역되어 당신의 목소리로 도착합니다."
+  },
+  "voiceIntro": {
+    "label": "차별점 1",
+    "title": "보이스 인트로",
+    "body": "프로필 사진 너머의 진짜 첫인상. 매칭 탐색에서 한마디 음성을 듣고 결정하세요."
+  },
+  "translation": {
+    "label": "차별점 2",
+    "title": "자동 번역 + 클론 보이스",
+    "body": "내 메시지가 상대의 언어로 번역되어, 다시 내 목소리로 합성되어 도착합니다. 언어가 달라도 톤이 살아있는 대화.",
+    "originalLabel": "원문 (한국어)",
+    "originalSample": "오늘 날씨 너무 좋네요, 산책하실래요?",
+    "translatedLabel": "상대에게 도착 (일본어, 내 목소리)",
+    "translatedSample": "今日は天気がとても良いですね、散歩しませんか?"
+  },
+  "cta": {
+    "title": "지금 voicemate를 시작하세요",
+    "body": "iOS와 Android에서 사용 가능합니다.",
+    "appStore": "App Store에서 다운로드",
+    "playStore": "Google Play에서 다운로드",
+    "disclaimer": "만 18세 이상 사용 가능."
+  }
+}
