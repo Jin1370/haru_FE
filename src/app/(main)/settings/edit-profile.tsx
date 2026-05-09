@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 import { FormField } from '@/components/ui/FormField';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { Button } from '@/components/ui/Button';
@@ -39,6 +40,10 @@ export default function EditProfileScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { profile, loading, upsertProfile } = useProfile();
+  // Lift the absolute footer above the keyboard and extend ScrollView
+  // paddingBottom by kbHeight (root KeyboardProvider feeds a unified value
+  // for both platforms — keeps the layout math identical everywhere).
+  const kbHeight = useKeyboardState((s) => s.height);
 
   const [form, setForm] = useState<{
     display_name: string;
@@ -191,7 +196,10 @@ export default function EditProfileScreen() {
       />
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom + 88 }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 24 + insets.bottom + 88 + kbHeight },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <View onLayout={onFieldLayout('display_name')}>
@@ -343,6 +351,11 @@ export default function EditProfileScreen() {
         ))}
       </ScrollView>
 
+      {/* Footer is intentionally pinned at bottom: 0 (no kbHeight lift) so the
+          Save button stays put when the keyboard opens — the user only needs
+          the focused FormField visible above the keyboard, not the Save CTA.
+          ScrollView paddingBottom still adds kbHeight so the input can be
+          scrolled above the keyboard line. */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         <Button title={t('common.save')} onPress={handleSave} loading={loading} />
       </View>

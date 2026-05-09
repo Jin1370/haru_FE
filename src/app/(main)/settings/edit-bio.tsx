@@ -1,15 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Keyboard,
-  Platform,
-} from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { BioPhrasePicker } from '@/components/setup/BioPhrasePicker';
@@ -33,8 +27,6 @@ export default function EditBioScreen() {
   // (voice-intro-preset-bypass sprint) to skip Gemini for known entries.
   const [phraseId, setPhraseId] = useState<string | null>(null);
   const [bioError, setBioError] = useState<string | null>(null);
-  const [kbHeight, setKbHeight] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (profile) setBio(profile.voice_intro ?? '');
@@ -50,21 +42,6 @@ export default function EditBioScreen() {
     const err = validateVoiceIntro(next);
     setBioError(err ? t(err.key, err.vars) : null);
   };
-
-  useEffect(() => {
-    // iOS-only: Android's adjustResize already shrinks the viewport so the
-    // absolute footer floats above the keyboard at bottom: 0. Adding kbHeight
-    // on Android would double-shift the footer above the keyboard.
-    if (Platform.OS !== 'ios') return;
-    const onShow = Keyboard.addListener('keyboardWillShow', (e) =>
-      setKbHeight(e.endCoordinates.height),
-    );
-    const onHide = Keyboard.addListener('keyboardWillHide', () => setKbHeight(0));
-    return () => {
-      onShow.remove();
-      onHide.remove();
-    };
-  }, []);
 
   const handleSave = async () => {
     if (!profile) return;
@@ -99,13 +76,16 @@ export default function EditBioScreen() {
         title={t('profile.editBio')}
         onBack={() => router.back()}
       />
-      <ScrollView
-        ref={scrollRef}
+      {/* KeyboardAwareScrollView auto-scrolls the focused TextInput above the
+          keyboard — no manual scrollToEnd / onFocus wiring needed. bottomOffset
+          adds breathing room between the input bottom and the keyboard top. */}
+      <KeyboardAwareScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: 24 + Math.max(kbHeight, insets.bottom) + 88 },
+          { paddingBottom: 24 + insets.bottom + 88 },
         ]}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={20}
       >
         <Text style={styles.subtitle}>{t('profile.editBioSubtitle')}</Text>
         <BioPhrasePicker
@@ -125,14 +105,13 @@ export default function EditBioScreen() {
             />
           </View>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
-      <View
-        style={[
-          styles.footer,
-          { paddingBottom: Math.max(kbHeight, insets.bottom) + 12 },
-        ]}
-      >
+      {/* Footer stays pinned at the bottom (no kbHeight lift) — the Save
+          button intentionally sits behind the keyboard while typing. The
+          ScrollView paddingBottom above already includes kbHeight, so the
+          custom-input card can be scrolled above the keyboard line. */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         <Button
           title={t('common.save')}
           onPress={handleSave}

@@ -18,10 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import CountryFlag from 'react-native-country-flag';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  useKeyboardState,
-  useResizeMode,
-} from 'react-native-keyboard-controller';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 import { ChatBubble } from '@/components/chat/ChatBubble';
 import { AudioPlayer } from '@/components/chat/AudioPlayer';
 import { IntimacyGauge } from '@/components/chat/IntimacyGauge';
@@ -166,9 +163,8 @@ export default function ChatScreen() {
   // (including OEM suggestion / IME menu bars on Android — Samsung One UI
   // etc.) on both platforms. The previous manual RN Keyboard listener
   // missed that on Samsung devices, leaving the input dock partially
-  // hidden. useResizeMode keeps Android in adjustResize at runtime so the
-  // visible keyboard height is consistent with viewport behavior.
-  useResizeMode();
+  // hidden. Activity-level adjustResize is set once at the root layout
+  // (useResizeMode) so kbHeight here is consistent with viewport behavior.
   const keyboardOpen = useKeyboardState((s) => s.isVisible);
   const kbHeight = useKeyboardState((s) => s.height);
   const [newMessagesCount, setNewMessagesCount] = useState(0);

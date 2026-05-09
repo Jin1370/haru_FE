@@ -43,7 +43,7 @@ export default {
         step2Subtitle: "ボイスチャットに使う声を登録します。",
         step2SkipWarning: "声を登録しないと、相手の探索が制限されます。",
         step3Title: "ボイスひとこと",
-        step3Subtitle: "選んだひとことが、登録した声で自動再生されます。",
+        step3Subtitle: "選んだひとことが登録された声で自動生成されます。",
         step3VoiceLockedAutoSkip: "声がまだ登録されていないので、ボイスひとことはスキップします。",
         step4Title: "マッチング設定",
         step4Subtitle: "どんな相手に出会いたいか教えてください。後で変更できます。",

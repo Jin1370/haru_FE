@@ -12,6 +12,7 @@ import { router, useNavigation, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 import { FormField } from '@/components/ui/FormField';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { Button } from '@/components/ui/Button';
@@ -41,6 +42,12 @@ export default function SetupStep1() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const draft = useSignupDraftStore();
+  // Lift the absolute footer above the keyboard and extend ScrollView
+  // paddingBottom by kbHeight so the focused FormField scrolls into view
+  // on iOS (Android's adjustResize already shrinks the viewport, but the
+  // KeyboardProvider feeds the same kbHeight on both platforms — using it
+  // uniformly keeps the layout math identical everywhere).
+  const kbHeight = useKeyboardState((s) => s.height);
 
   // Wizard entry: swipe-back / hardware-back = logout. Focus-gated so the
   // listeners only fire while step1 is the visible screen — otherwise step1
@@ -198,7 +205,10 @@ export default function SetupStep1() {
       />
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom + 88 }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 24 + insets.bottom + 88 + kbHeight },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
       <View onLayout={onFieldLayout('display_name')}>
@@ -359,6 +369,10 @@ export default function SetupStep1() {
 
       </ScrollView>
 
+      {/* Footer stays pinned at bottom: 0 — the Next button intentionally sits
+          behind the keyboard while typing. The ScrollView paddingBottom above
+          already includes kbHeight so the focused FormField can be scrolled
+          above the keyboard line. */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         <Button title={t('common.next')} onPress={handleNext} />
       </View>

@@ -43,7 +43,7 @@ export default {
         step2Subtitle: "음성 채팅에 사용할 목소리를 등록해요.",
         step2SkipWarning: "내 목소리를 등록하지 않으면 매칭 상대 탐색이 제한돼요.",
         step3Title: "보이스 한마디",
-        step3Subtitle: "고른 한마디가 등록한 내 목소리로 자동 변환돼요.",
+        step3Subtitle: "고른 한마디가 등록된 목소리로 자동 생성돼요.",
         step3VoiceLockedAutoSkip: "음성이 아직 등록되지 않아 보이스 한마디는 건너뛸게요.",
         step4Title: "매칭 선호 설정",
         step4Subtitle: "어떤 사람을 만나고 싶은지 알려주세요. 나중에 바꿀 수 있어요.",

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as blockService from '@/services/block';
 import * as reportService from '@/services/report';
 import { ApiRequestError } from '@/services/api';
@@ -187,7 +188,15 @@ export function MatchActionsSheet({
         animationType="fade"
         onRequestClose={closeReport}
       >
-        <View style={styles.sheetBackdrop}>
+        {/* KeyboardAvoidingView from react-native-keyboard-controller animates
+            the centered card up by the visible keyboard height (incl. OEM IME
+            bars on Android), so the multi-line description input is never
+            covered by the keyboard. behavior="padding" works on both platforms
+            because the root activity is in adjustResize mode. */}
+        <KeyboardAvoidingView
+          behavior="padding"
+          style={styles.sheetBackdrop}
+        >
           <Pressable style={StyleSheet.absoluteFill} onPress={closeReport} />
           <View style={styles.reportCard}>
             <View style={styles.reportHeaderRow}>
@@ -255,7 +264,7 @@ export function MatchActionsSheet({
               <Text style={styles.reportSubmitText}>{t('matches.report.submit')}</Text>
             </Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );

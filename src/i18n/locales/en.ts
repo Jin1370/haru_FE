@@ -43,7 +43,7 @@ export default {
     step2Subtitle: 'Register the voice that will be used in voice chats.',
     step2SkipWarning: "Without registering your voice, you can't discover potential matches.",
     step3Title: 'Voice Line',
-    step3Subtitle: 'The line you pick is auto-generated with your registered voice.',
+    step3Subtitle: 'Your chosen line is auto-generated with your registered voice.',
     step3VoiceLockedAutoSkip: "We'll skip the voice line for now since your voice isn't registered yet.",
     step4Title: 'Matching Preferences',
     step4Subtitle: 'Tell us who you want to meet. You can change this later.',

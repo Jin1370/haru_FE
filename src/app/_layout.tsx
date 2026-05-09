@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { KeyboardProvider, useResizeMode } from 'react-native-keyboard-controller';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '@/stores/authStore';
@@ -27,6 +27,26 @@ function applyDefaultFont() {
   const inputAny = TextInput as unknown as { defaultProps?: { style?: unknown } };
   inputAny.defaultProps = inputAny.defaultProps ?? {};
   inputAny.defaultProps.style = [{ fontFamily: fonts.pixel }, inputAny.defaultProps.style];
+}
+
+function RootShell() {
+  // Force adjustResize at the activity level once for the whole tree. Every
+  // input screen below uses useKeyboardState to manually offset for the
+  // visible keyboard height, so we need a consistent window mode underneath.
+  useResizeMode();
+  return (
+    <SafeAreaProvider>
+      <SWRConfigProvider>
+        <StatusBar style="dark" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(main)" />
+          <Stack.Screen name="index" />
+        </Stack>
+        <AlertHost />
+      </SWRConfigProvider>
+    </SafeAreaProvider>
+  );
 }
 
 export default function RootLayout() {
@@ -56,17 +76,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
-        <SafeAreaProvider>
-          <SWRConfigProvider>
-            <StatusBar style="dark" />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(main)" />
-              <Stack.Screen name="index" />
-            </Stack>
-            <AlertHost />
-          </SWRConfigProvider>
-        </SafeAreaProvider>
+        <RootShell />
       </KeyboardProvider>
     </GestureHandlerRootView>
   );

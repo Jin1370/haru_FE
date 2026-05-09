@@ -2,8 +2,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Keyboard,
-  Platform,
   Pressable,
   Image,
   useWindowDimensions,
@@ -14,6 +12,7 @@ import Constants from 'expo-constants';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 import { Button } from '@/components/ui/Button';
 import { FormField } from '@/components/ui/FormField';
 import { GoogleLoginButton } from '@/components/ui/GoogleLoginButton';
@@ -44,7 +43,11 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>(NO_ERRORS);
-  const [kbHeight, setKbHeight] = useState(0);
+  // Activity-level adjustResize is set at root (_layout.tsx via useResizeMode),
+  // and KeyboardProvider exposes the visual keyboard height — including OEM
+  // IME menu bars on Android — through useKeyboardState. We add kbHeight as
+  // bottom padding so the sheet floats above the keyboard on every platform.
+  const kbHeight = useKeyboardState((s) => s.height);
 
   // Top-anchored cover-fit background. Mimics CSS object-fit: cover with
   // object-position: top — ensures full coverage and clips overflow from
@@ -68,24 +71,6 @@ export default function LoginScreen() {
       height: scaledH,
     };
   }, [screenW, screenH]);
-
-  // Manual keyboard tracking is iOS-only: Android's adjustResize already
-  // shrinks the viewport, so adding kbHeight on top double-shifts the sheet
-  // above the keyboard. iOS keeps the viewport full-screen, so the manual
-  // padding is still required to keep the sheet visible above the keyboard.
-  useEffect(() => {
-    if (Platform.OS !== 'ios') return;
-    const onShow = Keyboard.addListener('keyboardWillShow', (e) => {
-      setKbHeight(e.endCoordinates.height);
-    });
-    const onHide = Keyboard.addListener('keyboardWillHide', () => {
-      setKbHeight(0);
-    });
-    return () => {
-      onShow.remove();
-      onHide.remove();
-    };
-  }, []);
 
   // Toggling between login and signup resets prior errors so the new mode's
   // form starts clean — otherwise a "wrong password" inline message would

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -73,6 +73,11 @@ export function BioPhrasePicker({
     initialPreset?.id ?? (initialIsCustom ? 'custom' : null),
   );
   const [customText, setCustomText] = useState(initialIsCustom ? value : '');
+  // Ref to the custom TextInput so we can programmatically focus it the moment
+  // the user taps the custom card. Without this the user must tap twice — once
+  // to flip selectedId='custom' (the wrapping Pressable wins because the input
+  // is editable=false initially), then again to focus the now-editable input.
+  const customInputRef = useRef<TextInput>(null);
 
   // Hold the latest onChange in a ref so the resync effect doesn't re-fire on
   // every parent render (callers like setup/profile.tsx pass an inline arrow).
@@ -116,6 +121,10 @@ export function BioPhrasePicker({
     if (disabled) return;
     setSelectedId('custom');
     onChange(customText, null);
+    // Focus on the next tick so the input has flipped to editable=true.
+    // Triggers the onFocus handler so KeyboardAwareScrollView (or any focus
+    // listener wired by the caller) lifts the input above the keyboard.
+    setTimeout(() => customInputRef.current?.focus(), 0);
   };
 
   const handleCustomTextChange = (text: string) => {
@@ -193,6 +202,7 @@ export function BioPhrasePicker({
           ) : null}
         </View>
         <CustomInput
+          ref={customInputRef}
           value={customText}
           onChangeText={handleCustomTextChange}
           editable={!disabled && selectedId === 'custom'}
@@ -212,19 +222,17 @@ export function BioPhrasePicker({
   );
 }
 
-function CustomInput({
-  value,
-  onChangeText,
-  editable,
-  placeholder,
-  onFocus,
-}: Pick<TextInputProps, 'value' | 'onChangeText' | 'editable' | 'placeholder' | 'onFocus'>) {
+const CustomInput = forwardRef<
+  TextInput,
+  Pick<TextInputProps, 'value' | 'onChangeText' | 'editable' | 'placeholder' | 'onFocus'>
+>(function CustomInput({ value, onChangeText, editable, placeholder, onFocus }, ref) {
   // RN's native placeholder loses fontFamily on `multiline` + `editable={false}`
   // TextInputs (the state this field starts in until the user taps the card),
   // so render a Text overlay instead of relying on the `placeholder` prop.
   return (
     <View style={styles.customInputWrap}>
       <TextInput
+        ref={ref}
         value={value}
         onChangeText={onChangeText}
         editable={editable}
@@ -240,7 +248,7 @@ function CustomInput({
       ) : null}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

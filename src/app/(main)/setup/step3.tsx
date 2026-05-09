@@ -1,15 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Keyboard,
-  Platform,
-} from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { BioPhrasePicker } from '@/components/setup/BioPhrasePicker';
@@ -17,7 +11,6 @@ import { useProfile } from '@/hooks/useProfile';
 import { useSignupDraftStore } from '@/stores/signupDraftStore';
 import { showAlert } from '@/stores/alertStore';
 import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
 import { validateVoiceIntro } from '@/utils/validators';
 import { buildVoiceIntroPayload } from '@/utils/voiceIntroPayload';
 
@@ -47,8 +40,6 @@ export default function SetupStep3() {
   // `voice_intro_phrase_id` (voice-intro-preset-bypass sprint).
   const [phraseId, setPhraseId] = useState<string | null>(draft.bioPhraseId);
   const [bioError, setBioError] = useState<string | null>(null);
-  const [kbHeight, setKbHeight] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
 
   // Live-validate the bio while the user picks/types so length and forbidden
   // chars surface inline (red border + ErrorText) inside the picker card.
@@ -61,21 +52,6 @@ export default function SetupStep3() {
     const err = validateVoiceIntro(next);
     setBioError(err ? t(err.key, err.vars) : null);
   };
-
-  useEffect(() => {
-    // iOS-only: Android's adjustResize already shrinks the ScrollView so an
-    // extra kbHeight padding would double up. iOS keeps the viewport full-
-    // screen, so manual padding is still required to keep input above kb.
-    if (Platform.OS !== 'ios') return;
-    const onShow = Keyboard.addListener('keyboardWillShow', (e) =>
-      setKbHeight(e.endCoordinates.height),
-    );
-    const onHide = Keyboard.addListener('keyboardWillHide', () => setKbHeight(0));
-    return () => {
-      onShow.remove();
-      onHide.remove();
-    };
-  }, []);
 
   const persistBio = async (nextBio: string, nextPhraseId: string | null) => {
     if (!profile) return;
@@ -144,15 +120,17 @@ export default function SetupStep3() {
         subtitle={t('signupWizard.step3Subtitle')}
         onBack={() => router.back()}
       />
-      <ScrollView
-        ref={scrollRef}
+      {/* KeyboardAwareScrollView auto-scrolls the focused TextInput above the
+          keyboard (no manual scrollToEnd / onFocus wiring needed). bottomOffset
+          adds breathing room between the input bottom and the keyboard top. */}
+      <KeyboardAwareScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: 24 + Math.max(kbHeight, insets.bottom) },
+          { paddingBottom: 24 + insets.bottom + 88 },
         ]}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={20}
       >
-        <Text style={styles.subtitle}>{t('profile.editBioSubtitle')}</Text>
         <BioPhrasePicker
           value={bio}
           onChange={handleBioChange}
@@ -160,21 +138,20 @@ export default function SetupStep3() {
           disabled={!voiceReady}
           lockedHint={!voiceReady ? t('setupProfile.bioLockedHint') : undefined}
           error={bioError}
-          onCustomFocus={() => {
-            // Wait for keyboard show animation + paddingBottom re-render before
-            // scrolling so the input lands above the keyboard, not under it.
-            setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350);
-          }}
         />
+      </KeyboardAwareScrollView>
 
-        <View style={styles.actions}>
-          <Button
-            title={t(hasBioInput ? 'signupWizard.startHaru' : 'signupWizard.skipAndStart')}
-            onPress={handleStart}
-            loading={loading}
-          />
-        </View>
-      </ScrollView>
+      {/* Footer stays pinned at bottom: 0 — the start/skip CTA intentionally
+          sits behind the keyboard while typing the custom bio. ScrollView
+          paddingBottom above already includes kbHeight so the custom input
+          card can be scrolled above the keyboard line. */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+        <Button
+          title={t(hasBioInput ? 'signupWizard.startHaru' : 'signupWizard.skipAndStart')}
+          onPress={handleStart}
+          loading={loading}
+        />
+      </View>
     </View>
   );
 }
@@ -182,12 +159,15 @@ export default function SetupStep3() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, paddingBottom: 40 },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    lineHeight: 20,
-    marginBottom: 16,
+  footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: colors.background,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
-  actions: { gap: 10, marginTop: 24 },
 });
