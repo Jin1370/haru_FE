@@ -19,15 +19,15 @@ export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 // Reference points:
 //   true silence/studio    : -60 이하
 //   quiet office ambient    : -50 ~ -45
-//   noisy office ambient    : -40 ~ -35   ← 이 구간이 통과되면 클론 품질이 망가짐
+//   noisy office ambient    : -40 ~ -35   ← 이 구간 상단(-35) 을 임계로 사용
 //   whisper at close range  : -30 ~ -25
 //   normal speech (~30cm)   : -25 ~ -15
 //   loud speech near mic    : -15 ~ -5
-// 임계는 ambient-only(소음만) 녹음을 확실히 거부하면서 정상 발화는 통과시키는
-// 지점으로 잡았다. -30 미만은 평균적으로 발화 강도가 부족해 PVC 클론 품질이
-// 떨어진다. 녹음 프리셋(현재 HIGH_QUALITY, 44.1 kHz / AAC)을 바꾸면 dBFS
-// 분포가 달라질 수 있으니 그때 재튜닝.
-export const MIN_AVG_METERING_DB = -30;
+// ambient-only(소음만) 녹음을 거부하면서 작은 목소리·속삭임 정상 발화는
+// 통과시키는 절충점. -30 으로는 약한 발화도 너무 자주 거부돼 사용자
+// 컴플레인이 있어 -35 로 완화. 녹음 프리셋(현재 HIGH_QUALITY,
+// 44.1 kHz / AAC)을 바꾸면 dBFS 분포가 달라질 수 있으니 그때 재튜닝.
+export const MIN_AVG_METERING_DB = -35;
 // Fallback bitrate gate for the rare case where metering is reliable but the
 // audio engine produced an unusually small file (e.g. extreme silence
 // compression). 7000 bytes/s × 10 s minimum = ~70 KB. Real HIGH_QUALITY AAC
