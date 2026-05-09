@@ -11,8 +11,11 @@ export async function getMatches(
   return api.get<MatchListItem[]>(path);
 }
 
-export async function unmatch(matchId: string): Promise<{ status: string }> {
-  return api.delete<{ status: string }>(`/api/matches/${matchId}`);
+// 본인 목록에서만 매치를 숨김 (mig 013). tombstone (unmatched_at 또는
+// partner.deleted_at) 인 매치만 허용 — 활성 매치는 BE 가 400 MATCH_ACTIVE
+// 으로 거부. 멱등 — 이미 숨겨진 매치를 다시 hide 해도 204.
+export async function hideMatch(matchId: string): Promise<void> {
+  await api.post<void>(`/api/matches/${matchId}/hide`);
 }
 
 // BE's MatchPartner DTO omits birth_date/interests/voice_intro_audio_url. We pull those

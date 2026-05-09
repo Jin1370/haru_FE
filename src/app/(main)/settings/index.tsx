@@ -13,6 +13,7 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const logout = useAuthStore((s) => s.logout);
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
 
   const handleLogout = () => {
     showAlert({
@@ -25,6 +26,29 @@ export default function SettingsScreen() {
       onConfirm: async () => {
         await logout();
         router.replace('/');
+      },
+    });
+  };
+
+  const handleDeleteAccount = () => {
+    showAlert({
+      variant: 'confirm',
+      title: t('settings.deleteAccountTitle'),
+      message: t('settings.deleteAccountConfirm'),
+      cancelText: t('common.cancel'),
+      confirmText: t('settings.deleteAccount'),
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await deleteAccount();
+          router.replace('/');
+        } catch (e: unknown) {
+          showAlert({
+            variant: 'error',
+            title: t('common.error'),
+            message: e instanceof Error ? e.message : String(e),
+          });
+        }
       },
     });
   };
@@ -60,6 +84,12 @@ export default function SettingsScreen() {
           variant="danger"
           onPress={handleLogout}
           style={{ marginTop: 24 }}
+        />
+        <Button
+          title={t('settings.deleteAccount')}
+          variant="danger"
+          onPress={handleDeleteAccount}
+          style={{ marginTop: 10 }}
         />
       </ScrollView>
     </View>

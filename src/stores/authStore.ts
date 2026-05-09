@@ -6,7 +6,12 @@ import {
   getRefreshToken,
   ApiRequestError,
 } from '@/services/api';
-import { loginWithGoogle, loginWithEmail as loginEmailApi, signupWithEmail as signupEmailApi } from '@/services/auth';
+import {
+  loginWithGoogle,
+  loginWithEmail as loginEmailApi,
+  signupWithEmail as signupEmailApi,
+  deleteAccount as deleteAccountApi,
+} from '@/services/auth';
 import { getMyProfile } from '@/services/profile';
 import type { Profile } from '@/types';
 
@@ -22,6 +27,7 @@ interface AuthState {
   emailLogin: (email: string, password: string) => Promise<void>;
   emailSignup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   tryAutoLogin: () => Promise<void>;
   loadProfile: () => Promise<void>;
   setProfile: (profile: Profile) => void;
@@ -72,6 +78,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    await clearTokens();
+    set({
+      isAuthenticated: false,
+      userId: null,
+      email: null,
+      profile: null,
+      hasProfile: false,
+    });
+  },
+
+  // Mirror logout's local-state wipe but call BE first. If BE fails we keep
+  // the session intact so the user can retry / surface the error — the local
+  // state stays consistent with the server.
+  deleteAccount: async () => {
+    await deleteAccountApi();
     await clearTokens();
     set({
       isAuthenticated: false,

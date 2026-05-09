@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as blockService from '@/services/block';
 import * as reportService from '@/services/report';
+import { hideMatch } from '@/services/matches';
 import { ApiRequestError } from '@/services/api';
 import { showAlert } from '@/stores/alertStore';
 import { ErrorText } from '@/components/ui/ErrorText';
@@ -33,21 +34,36 @@ const REPORT_REASONS: ReportReason[] = [
 
 interface MatchActionsSheetProps {
   visible: boolean;
+  matchId: string | null;
   partnerId: string | null;
   partnerName: string;
+  // Tombstone state of the source row. Passed as two flags so the action
+  // list can branch:
+  //   * partnerDeleted (account gone) → "목록에서 삭제" only — there is
+  //     no reachable account to report or further interact with.
+  //   * isUnmatched (match ended, partner still active) → keep report
+  //     (safety evidence still useful) + "목록에서 삭제".
+  //   * neither → active match: mute / report / unmatch.
+  partnerDeleted?: boolean;
+  isUnmatched?: boolean;
   onClose: () => void;
-  // Fired after a destructive action (unmatch/report) resolves successfully.
-  // Caller decides the follow-up — refresh a list, navigate back, etc.
+  // Fired after a destructive action (unmatch/report/hide) resolves
+  // successfully. Caller decides the follow-up — refresh a list, navigate
+  // back, etc.
   onResolved?: () => void;
 }
 
 export function MatchActionsSheet({
   visible,
+  matchId,
   partnerId,
   partnerName,
+  partnerDeleted,
+  isUnmatched,
   onClose,
   onResolved,
 }: MatchActionsSheetProps) {
+  const isTombstone = partnerDeleted || isUnmatched;
   const { t } = useTranslation();
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState<ReportReason | null>(null);
@@ -96,6 +112,29 @@ export function MatchActionsSheet({
       onConfirm: async () => {
         try {
           await blockService.blockUser(partnerId);
+          onResolved?.();
+        } catch (e: any) {
+          showAlert({ variant: 'error', title: t('common.error'), message: e?.message ?? '' });
+        }
+      },
+    });
+  };
+
+  const handleHidePress = () => {
+    if (!matchId) return;
+    onClose();
+    showAlert({
+      variant: 'confirm',
+      title: t('matches.actions.hide'),
+      message: t('matches.actions.hideConfirm'),
+      cancelText: t('common.cancel'),
+      // 한국어 "목록에서 삭제" 가 confirm 버튼 폭 안에서 줄바꿈을 일으켜
+      // 짧은 라벨로 대체. 시트의 진입 라벨에는 풀 표현이 그대로 노출됨.
+      confirmText: t('common.delete'),
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await hideMatch(matchId);
           onResolved?.();
         } catch (e: any) {
           showAlert({ variant: 'error', title: t('common.error'), message: e?.message ?? '' });
@@ -154,29 +193,49 @@ export function MatchActionsSheet({
               {partnerName}
             </Text>
             <View style={styles.sheetDivider} />
-            <Pressable
-              style={({ pressed }) => [styles.sheetItem, pressed && styles.sheetItemPressed]}
-              onPress={handleMutePress}
-            >
-              <Ionicons name="notifications-off-outline" size={20} color={colors.text} />
-              <Text style={styles.sheetItemText}>{t('matches.actions.mute')}</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.sheetItem, pressed && styles.sheetItemPressed]}
-              onPress={handleReportPress}
-            >
-              <Ionicons name="flag-outline" size={20} color={colors.text} />
-              <Text style={styles.sheetItemText}>{t('matches.actions.report')}</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.sheetItem, pressed && styles.sheetItemPressed]}
-              onPress={handleUnmatchPress}
-            >
-              <Ionicons name="heart-dislike-outline" size={20} color={colors.error} />
-              <Text style={[styles.sheetItemText, styles.sheetItemDanger]}>
-                {t('matches.actions.unmatch')}
-              </Text>
-            </Pressable>
+            {/* Active match: mute / report / unmatch.
+                Unmatched (partner still active): report + 목록에서 삭제.
+                Partner deleted: 목록에서 삭제 only — there is no reachable
+                account to report or further interact with. */}
+            {!isTombstone && (
+              <Pressable
+                style={({ pressed }) => [styles.sheetItem, pressed && styles.sheetItemPressed]}
+                onPress={handleMutePress}
+              >
+                <Ionicons name="notifications-off-outline" size={20} color={colors.text} />
+                <Text style={styles.sheetItemText}>{t('matches.actions.mute')}</Text>
+              </Pressable>
+            )}
+            {!partnerDeleted && (
+              <Pressable
+                style={({ pressed }) => [styles.sheetItem, pressed && styles.sheetItemPressed]}
+                onPress={handleReportPress}
+              >
+                <Ionicons name="flag-outline" size={20} color={colors.text} />
+                <Text style={styles.sheetItemText}>{t('matches.actions.report')}</Text>
+              </Pressable>
+            )}
+            {isTombstone ? (
+              <Pressable
+                style={({ pressed }) => [styles.sheetItem, pressed && styles.sheetItemPressed]}
+                onPress={handleHidePress}
+              >
+                <Ionicons name="trash-outline" size={20} color={colors.error} />
+                <Text style={[styles.sheetItemText, styles.sheetItemDanger]}>
+                  {t('matches.actions.hide')}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [styles.sheetItem, pressed && styles.sheetItemPressed]}
+                onPress={handleUnmatchPress}
+              >
+                <Ionicons name="heart-dislike-outline" size={20} color={colors.error} />
+                <Text style={[styles.sheetItemText, styles.sheetItemDanger]}>
+                  {t('matches.actions.unmatch')}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </Modal>

@@ -17,6 +17,20 @@ export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
   const { t } = useTranslation();
   const partner = item.partner;
   const hasUnread = item.unread_count > 0;
+  // Tombstone states:
+  //   * partner.deleted_at  (mig 012) → "탈퇴한 사용자"
+  //   * item.unmatched_at   (mig 013) → "매치 종료"
+  // Both suppress avatar photo + the unread ring; deletion takes precedence
+  // when both apply (the partner is gone regardless of the match status).
+  const isDeleted = !!partner?.deleted_at;
+  const isUnmatched = !!item.unmatched_at;
+  const isTombstone = isDeleted || isUnmatched;
+  const displayName = isDeleted
+    ? t('common.deletedUser')
+    : (partner?.display_name || t('matches.unknown'));
+  const lastMessageText = isUnmatched && !item.last_message
+    ? t('matches.tombstone.unmatched')
+    : (item.last_message?.original_text ?? t('matches.startConversation'));
 
   return (
     <Pressable
@@ -27,15 +41,15 @@ export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
     >
       <ProfilePhoto
         userId={partner?.id}
-        uri={partner?.photos[0]}
+        uri={isTombstone ? undefined : partner?.photos[0]}
         size={54}
         variant="avatar"
-        ringed={hasUnread}
+        ringed={hasUnread && !isTombstone}
       />
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.name} numberOfLines={1}>
-            {partner?.display_name ?? t('matches.unknown')}
+            {displayName}
           </Text>
           {item.last_message && (
             <Text style={styles.time}>
@@ -45,12 +59,16 @@ export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
         </View>
         <View style={styles.messageRow}>
           <Text
-            style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]}
+            style={[
+              styles.lastMessage,
+              hasUnread && !isTombstone && styles.lastMessageUnread,
+              isTombstone && styles.lastMessageTombstone,
+            ]}
             numberOfLines={1}
           >
-            {item.last_message?.original_text ?? t('matches.startConversation')}
+            {lastMessageText}
           </Text>
-          {hasUnread && (
+          {hasUnread && !isTombstone && (
             <LinearGradient
               colors={[...gradients.primary]}
               start={{ x: 0, y: 0 }}
@@ -129,6 +147,12 @@ const styles = StyleSheet.create({
   lastMessageUnread: {
     color: colors.text,
     fontFamily: fonts.medium,
+  },
+  lastMessageTombstone: {
+    // Galmuri11(픽셀 폰트)에는 italic 변형이 없어 fontStyle: 'italic' 을
+    // 주면 RN 이 시스템 폰트로 폴백되어 픽셀 톤이 깨진다. 색만 약하게
+    // 두어 구분.
+    color: colors.textLight,
   },
   badge: {
     borderRadius: 11,

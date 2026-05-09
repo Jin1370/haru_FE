@@ -33,6 +33,7 @@ export default {
     back: 'Back',
     options: 'Options',
     ageSuffix: '{{age}} y/o',
+    deletedUser: 'Former member',
   },
 
   signupWizard: {
@@ -135,8 +136,13 @@ export default {
       mute: 'Mute notifications',
       unmatch: 'Unmatch',
       report: 'Report',
+      hide: 'Remove from list',
       muteComingSoon: 'Notification settings coming soon.',
-      unmatchConfirm: "Unmatch {{name}}?\n\nYour entire conversation history will disappear for both of you, and this cannot be undone.",
+      unmatchConfirm: "Unmatch {{name}}?\n\nThe chat will disappear from your list and you will no longer be able to exchange messages.",
+      hideConfirm: 'Remove this chat from your list?\n\nYou will no longer be able to revisit the past conversation, and this cannot be undone.',
+    },
+    tombstone: {
+      unmatched: 'This match has ended',
     },
     report: {
       title: 'Report',
@@ -213,6 +219,8 @@ export default {
   chat: {
     title: 'Chat',
     typeMessage: 'Type a message...',
+    partnerDeletedNotice: 'This person has left the app — you can no longer send messages.',
+    matchEndedNotice: 'This match has ended — you can no longer send messages.',
     playbackError: 'Playback Error',
     intimacy: 'Intimacy',
     intimacyUntilMain: '{{count}} more to unlock main photo',
@@ -456,6 +464,9 @@ export default {
     title: 'Settings',
     languageSettings: 'Language',
     changePassword: 'Change Password',
+    deleteAccount: 'Delete Account',
+    deleteAccountTitle: 'Delete Account',
+    deleteAccountConfirm: "Are you sure you want to delete your account? Your profile, matches, and messages will be permanently erased and can't be recovered.",
   },
 
   changePassword: {

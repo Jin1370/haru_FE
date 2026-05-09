@@ -33,6 +33,7 @@ export default {
         back: "뒤로",
         options: "옵션",
         ageSuffix: "{{age}}세",
+        deletedUser: "탈퇴한 사용자",
     },
 
     signupWizard: {
@@ -134,8 +135,13 @@ export default {
             mute: "알림 끄기",
             unmatch: "언매치",
             report: "신고하기",
+            hide: "목록에서 삭제",
             muteComingSoon: "알림 설정은 곧 추가됩니다.",
-            unmatchConfirm: "{{name}}님과의 매치를 해제할까요?\n\n두 사람의 모든 대화 내역이 양쪽 모두에게서 사라지며, 이 작업은 되돌릴 수 없습니다.",
+            unmatchConfirm: "{{name}}님과의 매치를 해제할까요?\n\n채팅이 내 목록에서 사라지고 더 이상 메시지를 주고받을 수 없게 돼요.",
+            hideConfirm: "이 채팅을 목록에서 삭제할까요?\n\n옛 대화 내용을 다시 볼 수 없게 되며, 이 작업은 되돌릴 수 없습니다.",
+        },
+        tombstone: {
+            unmatched: "매치가 종료되었어요",
         },
         report: {
             title: "신고하기",
@@ -212,6 +218,8 @@ export default {
     chat: {
         title: "채팅",
         typeMessage: "메시지를 입력하세요...",
+        partnerDeletedNotice: "상대방이 탈퇴해 더 이상 메시지를 보낼 수 없어요.",
+        matchEndedNotice: "매치가 종료되어 더 이상 메시지를 보낼 수 없어요.",
         playbackError: "재생 오류",
         intimacy: "친밀도",
         intimacyUntilMain: "메인 사진 공개까지 {{count}}회",
@@ -457,6 +465,9 @@ export default {
         title: "설정",
         languageSettings: "언어 설정",
         changePassword: "비밀번호 변경",
+        deleteAccount: "회원 탈퇴",
+        deleteAccountTitle: "회원 탈퇴",
+        deleteAccountConfirm: "정말 탈퇴하시겠어요? 프로필·매치·메시지 등 모든 데이터가 영구적으로 삭제되고 복구할 수 없어요.",
     },
 
     changePassword: {

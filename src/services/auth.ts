@@ -23,3 +23,10 @@ export async function changePassword(currentPassword: string, newPassword: strin
     new_password: newPassword,
   });
 }
+
+// 회원 탈퇴 — BE 가 auth.users 삭제(전 데이터 cascade)하고 204 반환.
+// 호출자는 이어서 토큰 정리 + 라우터 reset 책임. authStore.deleteAccount 가
+// 그 wiring 을 담당한다.
+export async function deleteAccount(): Promise<void> {
+  await api.delete<void>('/api/auth/account');
+}

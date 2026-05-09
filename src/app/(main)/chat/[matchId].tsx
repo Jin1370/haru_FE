@@ -103,6 +103,13 @@ export default function ChatScreen() {
   const [partnerBirthDate, setPartnerBirthDate] = useState<string | null>(null);
   const [partnerNationality, setPartnerNationality] = useState<string | null>(null);
   const [partnerLanguage, setPartnerLanguage] = useState<string | null>(null);
+  // Tombstone markers:
+  //   * partnerDeleted (mig 012) — partner removed their account
+  //   * matchUnmatched (mig 013) — match was ended via block / report
+  // Both flags disable the composer and suppress the profile modal entry.
+  // partnerDeleted also rewrites the header label to "탈퇴한 사용자".
+  const [partnerDeleted, setPartnerDeleted] = useState(false);
+  const [matchUnmatched, setMatchUnmatched] = useState(false);
   const [partnerModalOpen, setPartnerModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   // Photo-access unlock popup state. `unlockEvent` is null when there's no
@@ -124,6 +131,22 @@ export default function ChatScreen() {
         const found = list.find((m) => m.match_id === matchId);
         const partner = found?.partner;
         if (!partner) return;
+        const deleted = !!partner.deleted_at;
+        const unmatched = !!found?.unmatched_at;
+        setPartnerDeleted(deleted);
+        setMatchUnmatched(unmatched);
+        if (deleted) {
+          // Wipe any seeded partner state so the header doesn't briefly show
+          // a stale name/photo from the navigation params before the FE
+          // realises this is a tombstone row.
+          setPartnerPhoto(null);
+          setPartnerName(null);
+          setPartnerId(partner.id);
+          setPartnerPhotos([]);
+          setPartnerNationality(null);
+          setPartnerLanguage(null);
+          return;
+        }
         if (!partnerPhoto && partner.photos[0]) setPartnerPhoto(partner.photos[0]);
         if (!partnerName && partner.display_name) setPartnerName(partner.display_name);
         setPartnerId(partner.id);
@@ -381,7 +404,15 @@ export default function ChatScreen() {
           partnerId={partnerId}
           partnerPhoto={partnerPhoto}
           showAvatar={showAvatar}
-          onAvatarPress={() => setPartnerModalOpen(true)}
+          onAvatarPress={() => {
+            // Tombstone partner has nothing meaningful in the profile modal
+            // (cleared name/photos/interests/voice intro), so suppress the
+            // avatar tap entirely. For unmatched-but-active partners we
+            // also suppress — the match is over, opening the profile to
+            // re-engage doesn't fit the ended state.
+            if (partnerDeleted || matchUnmatched) return;
+            setPartnerModalOpen(true);
+          }}
           onRetryAudio={retryAudio}
         />
         {showDateSeparator && (
@@ -416,7 +447,9 @@ export default function ChatScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: partnerName ?? t('chat.title'),
+          title: partnerDeleted
+            ? t('common.deletedUser')
+            : (partnerName ?? t('chat.title')),
           headerRight: () => (
             <Pressable
               onPress={() => setMenuOpen(true)}
@@ -494,69 +527,96 @@ export default function ChatScreen() {
             },
           ]}
         >
-          {emotionPickerOpen && (
-            <View style={styles.emotionRowWrapper}>
-              <EmotionChipRow
-                value={selectedEmotion}
-                onSelect={handleEmotionSelect}
-              />
-            </View>
-          )}
-          {composerError ? (
-            <View style={styles.composerErrorWrapper}>
-              <ErrorText testID="chat-composer-error">{composerError}</ErrorText>
-            </View>
-          ) : null}
-          <View
-            style={[
-              styles.inputBar,
-              {
-                paddingBottom: bottomSafePad,
-              },
-            ]}
-          >
-            <EmotionPicker
-              value={selectedEmotion}
-              expanded={emotionPickerOpen}
-              onToggleExpanded={() => setEmotionPickerOpen((v) => !v)}
-            />
-            <TextInput
-              style={styles.input}
-              value={text}
-              onChangeText={(v) => {
-                setText(v);
-                // Clear the inline error as soon as the user starts editing
-                // so the message doesn't linger past the correction.
-                if (composerError) setComposerError(null);
-              }}
-              placeholder={t('chat.typeMessage')}
-              placeholderTextColor={colors.textLight}
-              // Match the validator's 500-char rule at the input layer so
-              // typing/pasting beyond the cap is dropped natively (RN
-              // truncates pasted strings to maxLength). The validator's
-              // messageTooLong path stays as a safety net for legacy data.
-              maxLength={500}
-              multiline
-            />
-            <Pressable
-              onPress={handleSend}
-              disabled={!text.trim() || sending}
-              style={({ pressed }) => [
-                styles.sendShell,
-                pressed && { transform: [{ scale: 0.94 }] },
-                (!text.trim() || sending) && styles.sendBtnDisabled,
+          {(partnerDeleted || matchUnmatched) ? (
+            // Tombstone match — either the partner is gone (mig 012) or the
+            // match itself ended via block/report (mig 013). Either way the
+            // composer is replaced with a static notice. The history above
+            // remains scrollable. Partner-deletion takes precedence in the
+            // copy because that's the more terminal state.
+            <View
+              style={[
+                styles.tombstoneNotice,
+                { paddingBottom: bottomSafePad },
               ]}
             >
-              <LinearGradient
-                colors={[...gradients.primary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.sendBtn}
+              <Ionicons
+                name="information-circle-outline"
+                size={16}
+                color={colors.textSecondary}
+              />
+              <Text style={styles.tombstoneNoticeText}>
+                {partnerDeleted
+                  ? t('chat.partnerDeletedNotice')
+                  : t('chat.matchEndedNotice')}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {emotionPickerOpen && (
+                <View style={styles.emotionRowWrapper}>
+                  <EmotionChipRow
+                    value={selectedEmotion}
+                    onSelect={handleEmotionSelect}
+                  />
+                </View>
+              )}
+              {composerError ? (
+                <View style={styles.composerErrorWrapper}>
+                  <ErrorText testID="chat-composer-error">{composerError}</ErrorText>
+                </View>
+              ) : null}
+              <View
+                style={[
+                  styles.inputBar,
+                  {
+                    paddingBottom: bottomSafePad,
+                  },
+                ]}
               >
-                <Ionicons name="send" size={20} color={colors.white} />
-              </LinearGradient>
-            </Pressable>
-          </View>
+                <EmotionPicker
+                  value={selectedEmotion}
+                  expanded={emotionPickerOpen}
+                  onToggleExpanded={() => setEmotionPickerOpen((v) => !v)}
+                />
+                <TextInput
+                  style={styles.input}
+                  value={text}
+                  onChangeText={(v) => {
+                    setText(v);
+                    // Clear the inline error as soon as the user starts editing
+                    // so the message doesn't linger past the correction.
+                    if (composerError) setComposerError(null);
+                  }}
+                  placeholder={t('chat.typeMessage')}
+                  placeholderTextColor={colors.textLight}
+                  // Match the validator's 500-char rule at the input layer so
+                  // typing/pasting beyond the cap is dropped natively (RN
+                  // truncates pasted strings to maxLength). The validator's
+                  // messageTooLong path stays as a safety net for legacy data.
+                  maxLength={500}
+                  multiline
+                />
+                <Pressable
+                  onPress={handleSend}
+                  disabled={!text.trim() || sending}
+                  style={({ pressed }) => [
+                    styles.sendShell,
+                    pressed && { transform: [{ scale: 0.94 }] },
+                    (!text.trim() || sending) && styles.sendBtnDisabled,
+                  ]}
+                >
+                  <LinearGradient
+                    colors={[...gradients.primary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.sendBtn}
+                  >
+                    <Ionicons name="send" size={20} color={colors.white} />
+                  </LinearGradient>
+                </Pressable>
+              </View>
+            </>
+          )}
         </View>
       </View>
 
@@ -660,8 +720,15 @@ export default function ChatScreen() {
 
       <MatchActionsSheet
         visible={menuOpen}
+        matchId={matchId ?? null}
         partnerId={partnerId}
-        partnerName={partnerName ?? t('matches.unknown')}
+        partnerName={
+          partnerDeleted
+            ? t('common.deletedUser')
+            : (partnerName ?? t('matches.unknown'))
+        }
+        partnerDeleted={partnerDeleted}
+        isUnmatched={matchUnmatched}
         onClose={() => setMenuOpen(false)}
         onResolved={() => router.back()}
       />
@@ -731,6 +798,23 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     borderTopWidth: 0.5,
     borderTopColor: colors.borderSoft,
+  },
+  tombstoneNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    backgroundColor: colors.card,
+    borderTopWidth: 0.5,
+    borderTopColor: colors.borderSoft,
+  },
+  tombstoneNoticeText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontFamily: fonts.medium,
+    letterSpacing: 0.2,
   },
   input: {
     flex: 1,

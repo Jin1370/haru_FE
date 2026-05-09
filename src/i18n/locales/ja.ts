@@ -33,6 +33,7 @@ export default {
         back: "戻る",
         options: "オプション",
         ageSuffix: "{{age}}歳",
+        deletedUser: "退会したユーザー",
     },
 
     signupWizard: {
@@ -134,8 +135,13 @@ export default {
             mute: "通知をオフ",
             unmatch: "マッチ解除",
             report: "通報する",
+            hide: "リストから削除",
             muteComingSoon: "通知設定はまもなく追加されます。",
-            unmatchConfirm: "{{name}}さんとのマッチを解除しますか？\n\nお互いの会話履歴がすべて両方の画面から消え、この操作は元に戻せません。",
+            unmatchConfirm: "{{name}}さんとのマッチを解除しますか？\n\nチャットがリストから消え、これ以上メッセージのやり取りができなくなります。",
+            hideConfirm: "このチャットをリストから削除しますか？\n\n過去の会話を再び閲覧することはできなくなり、この操作は元に戻せません。",
+        },
+        tombstone: {
+            unmatched: "マッチが終了しました",
         },
         report: {
             title: "通報する",
@@ -212,6 +218,8 @@ export default {
     chat: {
         title: "チャット",
         typeMessage: "メッセージを入力してください...",
+        partnerDeletedNotice: "相手が退会したため、これ以上メッセージを送信できません。",
+        matchEndedNotice: "マッチが終了したため、これ以上メッセージを送信できません。",
         playbackError: "再生エラー",
         intimacy: "親密度",
         intimacyUntilMain: "メイン写真公開まであと{{count}}回",
@@ -457,6 +465,9 @@ export default {
         title: "設定",
         languageSettings: "言語設定",
         changePassword: "パスワード変更",
+        deleteAccount: "退会する",
+        deleteAccountTitle: "退会する",
+        deleteAccountConfirm: "本当に退会しますか？プロフィール・マッチ・メッセージなど、すべてのデータが完全に削除され、復元できません。",
     },
 
     changePassword: {

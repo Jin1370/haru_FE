@@ -152,6 +152,11 @@ export interface MatchPartner {
   photos: string[];
   nationality: string;
   language: string;
+  // Tombstone marker (mig 012). When non-null the partner has deleted their
+  // account; FE renders the row with a localized "탈퇴한 사용자" label and
+  // suppresses photos/voice intro instead of letting the cleared fields
+  // surface as an empty name + missing avatar.
+  deleted_at: string | null;
 }
 
 export interface PartnerDetail {
@@ -163,6 +168,12 @@ export interface PartnerDetail {
 export interface MatchListItem {
   match_id: string;
   created_at: string;
+  // Tombstone marker for ended chats (mig 013). When non-null the match has
+  // been ended via block / unmatch / report — FE renders the row with a
+  // "매치 종료" label and the chat composer is read-only. Distinct from
+  // partner.deleted_at: a match can be unmatched without the partner ever
+  // deleting their account, and vice versa.
+  unmatched_at: string | null;
   partner: MatchPartner | null;
   last_message: {
     id: string;

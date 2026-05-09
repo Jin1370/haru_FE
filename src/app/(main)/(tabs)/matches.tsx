@@ -25,22 +25,28 @@ export default function MatchesScreen() {
     }, [loadMatches]),
   );
 
-  const renderItem = useCallback(({ item }: { item: MatchListItem }) => (
-    <MatchItem
-      item={item}
-      onPress={() =>
-        router.push({
-          pathname: '/(main)/chat/[matchId]',
-          params: {
-            matchId: item.match_id,
-            partnerPhoto: item.partner?.photos[0] ?? '',
-            partnerName: item.partner?.display_name ?? '',
-          },
-        })
-      }
-      onLongPress={() => setActionTarget(item)}
-    />
-  ), []);
+  const renderItem = useCallback(({ item }: { item: MatchListItem }) => {
+    // Don't seed partnerPhoto/partnerName from a tombstone partner — let the
+    // chat screen render its own "탈퇴한 사용자" fallback once it sees
+    // partner.deleted_at on its own /api/matches fetch.
+    const isDeleted = !!item.partner?.deleted_at;
+    return (
+      <MatchItem
+        item={item}
+        onPress={() =>
+          router.push({
+            pathname: '/(main)/chat/[matchId]',
+            params: {
+              matchId: item.match_id,
+              partnerPhoto: isDeleted ? '' : (item.partner?.photos[0] ?? ''),
+              partnerName: isDeleted ? '' : (item.partner?.display_name ?? ''),
+            },
+          })
+        }
+        onLongPress={() => setActionTarget(item)}
+      />
+    );
+  }, []);
 
   const renderEmpty = () => {
     if (loading) return null;
@@ -80,8 +86,15 @@ export default function MatchesScreen() {
 
       <MatchActionsSheet
         visible={actionTarget !== null}
+        matchId={actionTarget?.match_id ?? null}
         partnerId={actionTarget?.partner?.id ?? null}
-        partnerName={actionTarget?.partner?.display_name ?? t('matches.unknown')}
+        partnerName={
+          actionTarget?.partner?.deleted_at
+            ? t('common.deletedUser')
+            : (actionTarget?.partner?.display_name || t('matches.unknown'))
+        }
+        partnerDeleted={!!actionTarget?.partner?.deleted_at}
+        isUnmatched={!!actionTarget?.unmatched_at}
         onClose={() => setActionTarget(null)}
         onResolved={loadMatches}
       />
