@@ -87,6 +87,8 @@ export default {
         passwordRequired: "パスワードを入力してください",
         passwordWrong: "パスワードを再度入力してください",
         passwordFormat: "8文字以上で、英字と数字を両方含めてください",
+        currentPasswordWrong: "現在のパスワードが一致しません",
+        samePassword: "現在のパスワードと異なるパスワードを設定してください",
         displayNameRequired: "必須項目です。",
         displayNameTrimmed: "名前の前後にスペースを入れずに入力してください",
         displayNameTooLong: "名前は{{max}}文字以内で入力してください",
@@ -454,6 +456,18 @@ export default {
     settings: {
         title: "設定",
         languageSettings: "言語設定",
+        changePassword: "パスワード変更",
+    },
+
+    changePassword: {
+        title: "パスワード変更",
+        currentPassword: "現在のパスワード",
+        currentPasswordPlaceholder: "現在のパスワードを入力",
+        newPassword: "新しいパスワード",
+        newPasswordPlaceholder: "新しいパスワード (8文字以上、英字+数字)",
+        submit: "変更する",
+        successTitle: "パスワードを変更しました",
+        successBody: "次回のログインから新しいパスワードを使用してください。",
     },
 
     languageSettings: {

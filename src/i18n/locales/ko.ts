@@ -87,6 +87,8 @@ export default {
         passwordRequired: "비밀번호를 입력해주세요",
         passwordWrong: "비밀번호를 다시 입력하세요",
         passwordFormat: "8자 이상, 영문과 숫자를 모두 포함해주세요",
+        currentPasswordWrong: "현재 비밀번호가 일치하지 않아요",
+        samePassword: "현재 비밀번호와 다른 비밀번호로 설정해주세요",
         displayNameRequired: "필수 항목입니다.",
         displayNameTrimmed: "이름 앞뒤에 공백 없이 입력해주세요",
         displayNameTooLong: "이름은 {{max}}자 이내로 입력해주세요",
@@ -454,6 +456,18 @@ export default {
     settings: {
         title: "설정",
         languageSettings: "언어 설정",
+        changePassword: "비밀번호 변경",
+    },
+
+    changePassword: {
+        title: "비밀번호 변경",
+        currentPassword: "현재 비밀번호",
+        currentPasswordPlaceholder: "현재 비밀번호를 입력하세요",
+        newPassword: "새 비밀번호",
+        newPasswordPlaceholder: "새 비밀번호 (8자 이상, 영문+숫자)",
+        submit: "변경하기",
+        successTitle: "비밀번호가 변경되었어요",
+        successBody: "다음 로그인부터 새 비밀번호를 사용해주세요.",
     },
 
     languageSettings: {

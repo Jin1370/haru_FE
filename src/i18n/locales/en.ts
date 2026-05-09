@@ -87,6 +87,8 @@ export default {
     passwordRequired: 'Please enter your password',
     passwordWrong: 'Incorrect password — please try again',
     passwordFormat: '8+ characters with at least one letter and one number',
+    currentPasswordWrong: 'Current password is incorrect',
+    samePassword: 'Please choose a password different from the current one',
     displayNameRequired: 'Required',
     displayNameTrimmed: 'No leading or trailing spaces',
     displayNameTooLong: 'Must be {{max}} characters or fewer',
@@ -453,6 +455,18 @@ export default {
   settings: {
     title: 'Settings',
     languageSettings: 'Language',
+    changePassword: 'Change Password',
+  },
+
+  changePassword: {
+    title: 'Change Password',
+    currentPassword: 'Current Password',
+    currentPasswordPlaceholder: 'Enter your current password',
+    newPassword: 'New Password',
+    newPasswordPlaceholder: 'New password (8+ chars, letters & numbers)',
+    submit: 'Change Password',
+    successTitle: 'Password changed',
+    successBody: 'Use your new password the next time you sign in.',
   },
 
   languageSettings: {

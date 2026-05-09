@@ -47,6 +47,10 @@ export default function SettingsScreen() {
             onPress={() => router.push('/(main)/settings/voice')}
           />
           <MenuCardButton
+            label={t('settings.changePassword')}
+            onPress={() => router.push('/(main)/settings/change-password')}
+          />
+          <MenuCardButton
             label={t('settings.languageSettings')}
             onPress={() => router.push('/(main)/settings/language')}
           />

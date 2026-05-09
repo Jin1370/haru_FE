@@ -241,7 +241,7 @@ const CustomInput = forwardRef<
         style={[{ fontFamily: fonts.pixel }, styles.customInput]}
         onFocus={onFocus}
       />
-      {value.length === 0 && placeholder ? (
+      {(value?.length ?? 0) === 0 && placeholder ? (
         <Text style={styles.customPlaceholder} pointerEvents="none">
           {placeholder}
         </Text>
