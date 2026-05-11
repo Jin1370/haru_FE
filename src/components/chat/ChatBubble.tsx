@@ -28,7 +28,10 @@ export function ChatBubble({
   onAvatarPress,
   onRetryAudio,
 }: ChatBubbleProps) {
-  const showTranslation = !isMine && message.translated_text;
+  const showTranslation =
+    !isMine &&
+    !!message.translated_text &&
+    message.translated_text !== message.original_text;
 
   const inner = (
     <>
