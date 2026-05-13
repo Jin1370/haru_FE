@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "698432210839",
+    "project_id": "haru-3b4da",
+    "storage_bucket": "haru-3b4da.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:698432210839:android:2d7eaf267fdc09c84ee6d2",
+        "android_client_info": {
+          "package_name": "com.voicemate.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwRdQrDbrbMBWkUy_xcHxqv_J-8sdu1xM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

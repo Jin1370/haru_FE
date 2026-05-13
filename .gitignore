@@ -19,6 +19,12 @@ android/
 credentials/
 *.pem
 *.key
+# Firebase Admin SDK service account key — server secret, never commit.
+# (Public client identifiers like google-services.json / GoogleService-Info.plist
+# ARE committed because EAS Build only uploads git-tracked files and Firebase
+# permissions are enforced server-side via Security Rules, not by hiding the
+# client config.)
+*-firebase-adminsdk-*.json
 
 # IDE / tooling
 .vscode/
