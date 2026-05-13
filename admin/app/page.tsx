@@ -784,14 +784,13 @@ function DiscoverPane({ account }: { account: DevAccount }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
-  const [cursor, setCursor] = useState(0);
+  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
 
   const refresh = useCallback(() => {
     setLoading(true);
     setError(null);
     setActionMsg(null);
-    setCursor(0);
-    getDiscover(account.user_id, 10)
+    getDiscover(account.user_id, 20)
       .then(setCards)
       .catch((err) => setError(err instanceof Error ? err.message : 'Unknown error'))
       .finally(() => setLoading(false));
@@ -801,14 +800,13 @@ function DiscoverPane({ account }: { account: DevAccount }) {
     refresh();
   }, [refresh]);
 
-  const current = cards[cursor];
-
-  const handleSwipe = async (direction: 'like' | 'pass') => {
-    if (!current) return;
+  const handleSwipe = async (card: DiscoverCard, direction: 'like' | 'pass') => {
+    if (busyIds.has(card.id)) return;
+    setBusyIds((prev) => new Set(prev).add(card.id));
     setActionMsg(null);
     try {
-      const result = (await swipe(account.user_id, current.id, direction)) as
-        | { matched?: boolean; match?: unknown }
+      const result = (await swipe(account.user_id, card.id, direction)) as
+        | { matched?: boolean }
         | unknown;
       if (
         direction === 'like' &&
@@ -817,170 +815,217 @@ function DiscoverPane({ account }: { account: DevAccount }) {
         'matched' in result &&
         (result as { matched: boolean }).matched
       ) {
-        setActionMsg(`매치 성사! ${current.display_name}`);
+        setActionMsg(`매치 성사! ${card.display_name}`);
       } else if (direction === 'like') {
-        setActionMsg(`like 전송 (상대 미응답)`);
+        setActionMsg(`Like 전송: ${card.display_name}`);
       } else {
-        setActionMsg(`pass`);
+        setActionMsg(`Pass: ${card.display_name}`);
       }
-      if (cursor < cards.length - 1) {
-        setCursor(cursor + 1);
-      } else {
-        refresh();
-      }
+      // 처리 끝난 카드 제거. 리스트가 빌 때까지 인터랙션 가능.
+      setCards((prev) => prev.filter((c) => c.id !== card.id));
     } catch (err) {
       setActionMsg(err instanceof Error ? err.message : 'swipe failed');
+    } finally {
+      setBusyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(card.id);
+        return next;
+      });
     }
   };
 
-  if (loading) {
-    return (
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* 헤더 */}
       <div
-        className="flex flex-1 items-center justify-center text-sm"
-        style={{ color: C.textSecondary }}
+        className="flex items-center justify-between border-b px-6 py-3"
+        style={{ background: C.card, borderColor: C.border }}
       >
-        디스커버 카드 로딩 중...
+        <span className="text-sm font-semibold" style={{ color: C.text }}>
+          Discover {cards.length > 0 && `(${cards.length})`}
+        </span>
+        <div className="flex items-center gap-3">
+          {actionMsg && (
+            <span className="text-xs" style={{ color: C.textSecondary }}>
+              {actionMsg}
+            </span>
+          )}
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="text-xs transition"
+            style={{ color: C.primary }}
+          >
+            {loading ? '...' : 'refresh'}
+          </button>
+        </div>
       </div>
-    );
-  }
-  if (error) {
-    return (
-      <div
-        className="flex flex-1 items-center justify-center text-sm"
-        style={{ color: C.error }}
-      >
-        {error}
-      </div>
-    );
-  }
-  if (!current) {
-    return (
-      <div
-        className="flex flex-1 flex-col items-center justify-center gap-3 text-sm"
-        style={{ color: C.textSecondary }}
-      >
-        <span>표시할 카드 없음</span>
-        <button
-          onClick={refresh}
-          className="rounded-full border px-4 py-2 text-xs transition"
-          style={{
-            background: C.card,
-            borderColor: C.border,
-            color: C.primary,
-            fontWeight: 600,
-          }}
-        >
-          새로고침
-        </button>
-      </div>
-    );
-  }
 
+      {/* 본문 */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+        {loading && cards.length === 0 && (
+          <div
+            className="flex items-center justify-center py-12 text-sm"
+            style={{ color: C.textSecondary }}
+          >
+            디스커버 카드 로딩 중...
+          </div>
+        )}
+        {error && (
+          <div
+            className="flex items-center justify-center py-6 text-sm"
+            style={{ color: C.error }}
+          >
+            {error}
+          </div>
+        )}
+        {!loading && !error && cards.length === 0 && (
+          <div
+            className="flex flex-col items-center justify-center gap-3 py-12 text-sm"
+            style={{ color: C.textSecondary }}
+          >
+            <span>표시할 카드 없음</span>
+            <button
+              onClick={refresh}
+              className="rounded-full border px-4 py-2 text-xs transition"
+              style={{
+                background: C.card,
+                borderColor: C.border,
+                color: C.primary,
+                fontWeight: 600,
+              }}
+            >
+              새로고침
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3">
+          {cards.map((c) => (
+            <DiscoverRow
+              key={c.id}
+              card={c}
+              busy={busyIds.has(c.id)}
+              onPass={() => handleSwipe(c, 'pass')}
+              onLike={() => handleSwipe(c, 'like')}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DiscoverRow({
+  card,
+  busy,
+  onPass,
+  onLike,
+}: {
+  card: DiscoverCard;
+  busy: boolean;
+  onPass: () => void;
+  onLike: () => void;
+}) {
   const age = (() => {
-    const yr = new Date(current.birth_date).getFullYear();
+    const yr = new Date(card.birth_date).getFullYear();
     return new Date().getFullYear() - yr;
   })();
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-6">
-      <div
-        className="w-full max-w-md overflow-hidden rounded-3xl border"
-        style={{
-          background: C.card,
-          borderColor: C.border,
-          boxShadow: '0 8px 32px rgba(17,24,39,0.08)',
-        }}
-      >
-        {current.photos?.[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={current.photos[0]}
-            alt=""
-            className="aspect-[3/4] w-full object-cover"
-          />
-        ) : (
-          <div
-            className="flex aspect-[3/4] w-full items-center justify-center text-xs"
-            style={{ background: C.surface, color: C.textLight }}
-          >
-            no photo
-          </div>
-        )}
-        <div className="p-5">
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold" style={{ color: C.text }}>
-              {current.display_name}
-            </span>
-            <span className="text-sm" style={{ color: C.textSecondary }}>
-              {age} · {current.language}/{current.nationality}
-            </span>
-          </div>
-          {current.voice_intro && (
-            <div
-              className="mt-2.5 text-sm leading-relaxed"
-              style={{ color: C.text }}
-            >
-              &quot;{current.voice_intro}&quot;
-            </div>
-          )}
-          {current.voice_intro_audio_url && (
-            <audio
-              src={current.voice_intro_audio_url}
-              controls
-              className="mt-3 h-9 w-full"
-            />
-          )}
-          {current.interests?.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {current.interests.map((i) => (
-                <span
-                  key={i}
-                  className="rounded-full px-2.5 py-1 text-xs font-medium"
-                  style={{ background: C.primaryLight, color: C.primaryDark }}
-                >
-                  {i}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
+    <div
+      className="flex items-stretch gap-4 rounded-2xl border p-3 transition"
+      style={{
+        background: C.card,
+        borderColor: C.border,
+        boxShadow: '0 2px 8px rgba(17,24,39,0.04)',
+        opacity: busy ? 0.5 : 1,
+      }}
+    >
+      {/* 사진 */}
+      {card.photos?.[0] ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={card.photos[0]}
+          alt=""
+          className="h-32 w-24 shrink-0 rounded-xl object-cover"
+        />
+      ) : (
         <div
-          className="flex gap-2.5 border-t p-3.5"
-          style={{ borderColor: C.borderSoft }}
+          className="flex h-32 w-24 shrink-0 items-center justify-center rounded-xl text-[10px]"
+          style={{ background: C.surface, color: C.textLight }}
         >
-          <button
-            onClick={() => handleSwipe('pass')}
-            className="flex-1 rounded-full border py-2.5 text-sm font-semibold transition"
-            style={{
-              background: '#FFFFFF',
-              borderColor: C.border,
-              color: C.textSecondary,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = C.cardAlt)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = '#FFFFFF')}
-          >
-            ✗ Pass
-          </button>
-          <button
-            onClick={() => handleSwipe('like')}
-            className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white transition"
-            style={{
-              background: C.primary,
-              boxShadow: '0 4px 14px rgba(2,132,199,0.32)',
-              letterSpacing: '0.3px',
-            }}
-          >
-            ♥ Like
-          </button>
-        </div>
-      </div>
-      {actionMsg && (
-        <div className="mt-4 text-xs" style={{ color: C.textSecondary }}>
-          {actionMsg}
+          no photo
         </div>
       )}
-      <div className="mt-3 text-xs" style={{ color: C.textLight }}>
-        {cursor + 1} / {cards.length}
+
+      {/* 가운데: 이름·나이·언어, 보이스, 관심사 */}
+      <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 py-0.5">
+        <div>
+          <div className="flex items-baseline gap-2">
+            <span className="truncate text-base font-bold" style={{ color: C.text }}>
+              {card.display_name}
+            </span>
+            <span className="shrink-0 text-xs" style={{ color: C.textSecondary }}>
+              {age} · {card.language}/{card.nationality}
+            </span>
+          </div>
+          {card.voice_intro_audio_url && (
+            <audio
+              src={card.voice_intro_audio_url}
+              controls
+              className="mt-2 h-8 w-full max-w-[320px]"
+            />
+          )}
+        </div>
+        {card.interests?.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {card.interests.slice(0, 5).map((i) => (
+              <span
+                key={i}
+                className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                style={{ background: C.primaryLight, color: C.primaryDark }}
+              >
+                {i}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 오른쪽: Skip / Like 버튼 */}
+      <div className="flex shrink-0 flex-col justify-center gap-2">
+        <button
+          onClick={onPass}
+          disabled={busy}
+          className="rounded-full border px-5 py-2 text-xs font-semibold transition disabled:opacity-50"
+          style={{
+            background: '#FFFFFF',
+            borderColor: C.border,
+            color: C.textSecondary,
+            minWidth: '88px',
+          }}
+          onMouseEnter={(e) => {
+            if (!busy) e.currentTarget.style.background = C.cardAlt;
+          }}
+          onMouseLeave={(e) => {
+            if (!busy) e.currentTarget.style.background = '#FFFFFF';
+          }}
+        >
+          ✗ Skip
+        </button>
+        <button
+          onClick={onLike}
+          disabled={busy}
+          className="rounded-full px-5 py-2 text-xs font-semibold text-white transition disabled:opacity-50"
+          style={{
+            background: C.primary,
+            boxShadow: '0 2px 8px rgba(2,132,199,0.28)',
+            minWidth: '88px',
+          }}
+        >
+          ♥ Like
+        </button>
       </div>
     </div>
   );
