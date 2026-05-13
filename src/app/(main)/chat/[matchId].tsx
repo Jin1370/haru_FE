@@ -34,6 +34,7 @@ import {
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
 import { ProfilePhotoGallery } from '@/components/ui/ProfilePhotoGallery';
 import { useChat } from '@/hooks/useChat';
+import { setActiveChatMatchId } from '@/lib/activeChat';
 import { showAlert } from '@/stores/alertStore';
 import { colors, gradients, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
@@ -115,6 +116,15 @@ export default function ChatScreen() {
   // pending announcement; set to 'main' or 'all' the moment the store flips
   // the corresponding flag from false -> true during this session.
   const [unlockEvent, setUnlockEvent] = useState<'main' | 'all' | null>(null);
+
+  // push-notifications follow-up: 이 매치의 채팅창이 활성화된 동안 활성 ref 를
+  // 설정하면 _layout.tsx 의 setNotificationHandler 가 동일 match_id 푸시를 OS
+  // 트레이/배너/사운드 모두 OFF 로 처리. unmount 또는 다른 채팅으로 이동 시 해제.
+  useEffect(() => {
+    if (!matchId) return;
+    setActiveChatMatchId(matchId);
+    return () => setActiveChatMatchId(null);
+  }, [matchId]);
 
   useEffect(() => {
     // BE /api/matches returns only basic MatchPartner fields. We pull the partner

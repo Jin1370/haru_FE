@@ -470,6 +470,12 @@ export default {
     deleteAccount: 'Delete Account',
     deleteAccountTitle: 'Delete Account',
     deleteAccountConfirm: "Are you sure you want to delete your account? Your profile, matches, and messages will be permanently erased and can't be recovered.",
+    notifications: {
+      title: 'Notifications',
+      messages: 'Message notifications',
+      matches: 'Match notifications',
+      permissionDenied: 'Enable notifications in system settings',
+    },
   },
 
   changePassword: {

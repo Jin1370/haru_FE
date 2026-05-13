@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { WizardHeader } from "@/components/setup/WizardHeader";
 import { useProfile, MAX_PHOTOS } from "@/hooks/useProfile";
+import { requestAndRegisterPushToken } from "@/hooks/usePushToken";
 import * as profileService from "@/services/profile";
 import { useSignupDraftStore } from "@/stores/signupDraftStore";
 import { showAlert } from "@/stores/alertStore";
@@ -160,6 +161,9 @@ export default function SetupStep5() {
                 await profileService.uploadPhoto(uri);
             }
             await loadProfile();
+            // push-notifications sprint: 회원가입 직후(프로필 생성 완료) 권한 요청.
+            // 거부되어도 가입 흐름 차단하지 않음 — 사용자는 settings 에서 재허용 가능.
+            await requestAndRegisterPushToken().catch(() => undefined);
             router.push("/(main)/setup/step4");
         } catch (e: any) {
             showAlert({

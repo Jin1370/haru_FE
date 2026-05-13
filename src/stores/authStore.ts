@@ -13,6 +13,7 @@ import {
   deleteAccount as deleteAccountApi,
 } from '@/services/auth';
 import { getMyProfile } from '@/services/profile';
+import { unregisterCurrentPushToken } from '@/hooks/usePushToken';
 import type { Profile } from '@/types';
 
 interface AuthState {
@@ -78,6 +79,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    // push-notifications sprint: 토큰 만료 전 BE 에서 device_token 해제. 실패해도
+    // 로그아웃 흐름은 차단하지 않음 (unregisterCurrentPushToken 내부 silent).
+    await unregisterCurrentPushToken();
     await clearTokens();
     set({
       isAuthenticated: false,

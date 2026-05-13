@@ -23,7 +23,8 @@
       "bundleIdentifier": "com.voicemate.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Voice sample recording for voice clone",
-        "NSPhotoLibraryUsageDescription": "Profile photo selection"
+        "NSPhotoLibraryUsageDescription": "Profile photo selection",
+        "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
@@ -32,11 +33,13 @@
         "backgroundColor": "#6C5CE7"
       },
       "package": "com.voicemate.app",
+      "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "plugins": [
@@ -55,6 +58,12 @@
         }
       ],
       "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "color": "#6C5CE7"
+        }
+      ],
       [
         "@react-native-google-signin/google-signin",
         {

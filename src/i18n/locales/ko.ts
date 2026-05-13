@@ -471,6 +471,12 @@ export default {
         deleteAccount: "회원 탈퇴",
         deleteAccountTitle: "회원 탈퇴",
         deleteAccountConfirm: "정말 탈퇴하시겠어요? 프로필·매치·메시지 등 모든 데이터가 영구적으로 삭제되고 복구할 수 없어요.",
+        notifications: {
+            title: "알림",
+            messages: "메시지 알림",
+            matches: "매칭 알림",
+            permissionDenied: "시스템 설정에서 알림을 허용해주세요",
+        },
     },
 
     changePassword: {

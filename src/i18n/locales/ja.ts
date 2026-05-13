@@ -471,6 +471,12 @@ export default {
         deleteAccount: "退会する",
         deleteAccountTitle: "退会する",
         deleteAccountConfirm: "本当に退会しますか？プロフィール・マッチ・メッセージなど、すべてのデータが完全に削除され、復元できません。",
+        notifications: {
+            title: "通知",
+            messages: "メッセージ通知",
+            matches: "マッチ通知",
+            permissionDenied: "システム設定で通知を許可してください",
+        },
     },
 
     changePassword: {
