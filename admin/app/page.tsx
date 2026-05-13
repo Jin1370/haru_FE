@@ -33,9 +33,9 @@ const C = {
   surface: '#F3F4F6',
   card: '#FFFFFF',
   cardAlt: '#F3F4F6',
-  primary: '#4B5563',
-  primaryLight: '#E5E7EB',
-  primaryDark: '#1F2937',
+  primary: '#0284C7',        // sky-600 — 액센트 (탭/포커스/버튼)
+  primaryLight: '#E0F2FE',   // sky-100 — 선택 상태 배경
+  primaryDark: '#0C4A6E',    // sky-900 — chip 텍스트
   like: '#DC2626',
   text: '#111827',
   textSecondary: '#6B7280',
@@ -140,7 +140,7 @@ function LoginScreen({ onAuthed }: { onAuthed: () => void }) {
           onChange={(e) => setSecret(e.target.value)}
           placeholder="ADMIN_SECRET"
           autoFocus
-          className="w-full rounded-2xl border px-4 py-3 text-base outline-none transition focus:shadow-[0_0_0_3px_rgba(75,85,99,0.18)]"
+          className="w-full rounded-2xl border px-4 py-3 text-base outline-none transition focus:shadow-[0_0_0_3px_rgba(2,132,199,0.18)]"
           style={{
             background: '#FFFFFF',
             borderColor: C.borderSoft,
@@ -159,8 +159,8 @@ function LoginScreen({ onAuthed }: { onAuthed: () => void }) {
           disabled={busy || !secret}
           className="mt-5 w-full rounded-full py-3 text-sm font-semibold text-white transition disabled:opacity-50"
           style={{
-            background: `linear-gradient(135deg, #9CA3AF, ${C.primary})`,
-            boxShadow: busy ? 'none' : `0 6px 18px rgba(75,85,99,0.32)`,
+            background: `linear-gradient(135deg, #38BDF8, ${C.primary})`,
+            boxShadow: busy ? 'none' : `0 6px 18px rgba(2,132,199,0.32)`,
             letterSpacing: '0.3px',
           }}
         >
@@ -710,8 +710,8 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
             disabled={sending || !draft.trim() || !!match.unmatched_at}
             className="rounded-full px-6 py-3 text-sm font-semibold text-white transition disabled:opacity-50"
             style={{
-              background: `linear-gradient(135deg, #9CA3AF, ${C.primary})`,
-              boxShadow: '0 4px 14px rgba(75,85,99,0.32)',
+              background: `linear-gradient(135deg, #38BDF8, ${C.primary})`,
+              boxShadow: '0 4px 14px rgba(2,132,199,0.32)',
               letterSpacing: '0.3px',
             }}
           >
@@ -729,8 +729,6 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
 }
 
 function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean }) {
-  const display =
-    message.translated_text && !isOwn ? message.translated_text : message.original_text;
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -738,9 +736,9 @@ function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean })
         style={
           isOwn
             ? {
-                background: `linear-gradient(135deg, #9CA3AF, ${C.primary})`,
+                background: `linear-gradient(135deg, #38BDF8, ${C.primary})`,
                 color: '#FFFFFF',
-                boxShadow: '0 2px 8px rgba(75,85,99,0.22)',
+                boxShadow: '0 2px 8px rgba(2,132,199,0.22)',
               }
             : {
                 background: C.card,
@@ -749,15 +747,17 @@ function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean })
               }
         }
       >
-        <div className="text-[15px] leading-[1.55] whitespace-pre-wrap break-words">
-          {display}
+        {/* 원문 — 메인. 송수신 양쪽 다 표시. 가독성 위해 17px. */}
+        <div className="text-[17px] leading-[1.5] whitespace-pre-wrap break-words">
+          {message.original_text}
         </div>
+        {/* 번역 — 받은 메시지에 한해 번역이 있으면 작게 아래로. */}
         {message.translated_text && !isOwn && (
           <div
-            className="mt-1.5 text-[11px]"
+            className="mt-1.5 text-[12px] leading-snug"
             style={{ color: C.textLight }}
           >
-            원문: {message.original_text}
+            번역: {message.translated_text}
           </div>
         )}
         <div
@@ -965,8 +965,8 @@ function DiscoverPane({ account }: { account: DevAccount }) {
             onClick={() => handleSwipe('like')}
             className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white transition"
             style={{
-              background: `linear-gradient(135deg, #9CA3AF, ${C.primary})`,
-              boxShadow: '0 4px 14px rgba(75,85,99,0.32)',
+              background: `linear-gradient(135deg, #38BDF8, ${C.primary})`,
+              boxShadow: '0 4px 14px rgba(2,132,199,0.32)',
               letterSpacing: '0.3px',
             }}
           >
