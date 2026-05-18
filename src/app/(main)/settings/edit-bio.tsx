@@ -9,6 +9,7 @@ import { WizardHeader } from '@/components/setup/WizardHeader';
 import { BioPhrasePicker } from '@/components/setup/BioPhrasePicker';
 import { useProfile } from '@/hooks/useProfile';
 import { showAlert } from '@/stores/alertStore';
+import { ApiRequestError } from '@/services/api';
 import { colors } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { validateVoiceIntro } from '@/utils/validators';
@@ -65,7 +66,19 @@ export default function EditBioScreen() {
       });
       router.back();
     } catch (e: any) {
-      showAlert({ variant: 'error', title: t('common.error'), message: e.message });
+      // voice-intro-moderation-unification: 메시지 모더레이션과 동일 패턴.
+      // 사전 키워드 + OpenAI 차단 (422 code='message_blocked') 은 안전 카피
+      // 토스트로 노출하고 입력 텍스트(`bio`) 는 state 에 이미 보존되어 있어
+      // 사용자가 같은 화면에서 재편집 가능. 그 외 422/네트워크 에러는 기존 동선.
+      if (e instanceof ApiRequestError && e.code === 'message_blocked') {
+        showAlert({
+          variant: 'info',
+          title: t('moderation.blocked.title'),
+          message: t('moderation.blocked.toast'),
+        });
+      } else {
+        showAlert({ variant: 'error', title: t('common.error'), message: e.message });
+      }
     }
   };
 
