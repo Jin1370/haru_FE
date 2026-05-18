@@ -103,7 +103,6 @@ export default function ChatScreen() {
   const [partnerBioAudio, setPartnerBioAudio] = useState<string | null>(null);
   const [partnerBirthDate, setPartnerBirthDate] = useState<string | null>(null);
   const [partnerNationality, setPartnerNationality] = useState<string | null>(null);
-  const [partnerLanguage, setPartnerLanguage] = useState<string | null>(null);
   // Tombstone markers:
   //   * partnerDeleted (mig 012) — partner removed their account
   //   * matchUnmatched (mig 013) — match was ended via block / report
@@ -161,7 +160,6 @@ export default function ChatScreen() {
           setPartnerId(partner.id);
           setPartnerPhotos([]);
           setPartnerNationality(null);
-          setPartnerLanguage(null);
           return;
         }
         if (!partnerPhoto && partner.photos[0]) setPartnerPhoto(partner.photos[0]);
@@ -169,7 +167,6 @@ export default function ChatScreen() {
         setPartnerId(partner.id);
         setPartnerPhotos(partner.photos ?? []);
         setPartnerNationality(partner.nationality ?? null);
-        setPartnerLanguage(partner.language ?? null);
         const detail = await matchService.getPartnerDetail(matchId);
         if (cancelled || !detail) return;
         setPartnerInterests(detail.interests);
