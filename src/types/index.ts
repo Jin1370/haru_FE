@@ -41,7 +41,6 @@ export interface Profile {
   interests: string[];
   photos: string[];
   elevenlabs_voice_id: string | null;
-  voice_sample_url: string | null;
   voice_clone_status: 'pending' | 'processing' | 'ready' | 'failed';
   // Mig 011 — optional because BE may transiently emit `{}` right after the
   // migration is applied (before the user re-saves voice_intro). Consumers

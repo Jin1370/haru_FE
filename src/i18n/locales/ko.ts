@@ -435,6 +435,7 @@ export default {
         previewRecording: "녹음을 확인해보세요",
         processing: "음성을 처리 중입니다...",
         ready: "보이스 클론이 준비되었습니다!",
+        cloneReady: "보이스 클론 등록 완료",
         failed: "보이스 클론 생성에 실패했습니다. 다시 시도해주세요.",
         startRecording: "녹음 시작",
         stopRecording: "녹음 중지",

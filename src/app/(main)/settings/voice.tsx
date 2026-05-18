@@ -198,8 +198,11 @@ export default function VoiceSettingsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.statusCard}>
-          {cloneStatus === 'ready' && !isReRecording && authProfile?.voice_sample_url ? (
-            <AudioPlayer url={authProfile.voice_sample_url} showProgressBar tintColor={colors.like} />
+          {cloneStatus === 'ready' && !isReRecording ? (
+            <View style={styles.readyRow}>
+              <Ionicons name="checkmark-circle" size={48} color={colors.like} />
+              <Text style={styles.statusText}>{t('setupVoice.cloneReady')}</Text>
+            </View>
           ) : cloneStatus === 'processing' ? (
             <>
               <Ionicons name="hourglass" size={36} color={colors.primary} />
@@ -227,7 +230,7 @@ export default function VoiceSettingsScreen() {
               <Button title={t('setupVoice.uploadVoice')} onPress={handleUpload} loading={voiceLoading} />
               <Button title={t('setupVoice.reRecord')} variant="outline" onPress={clear} />
               {isReRecording && (
-                <Button title={t('common.cancel')} variant="secondary" onPress={handleCancelReRecord} />
+                <Button title={t('common.cancel')} variant="outline" onPress={handleCancelReRecord} />
               )}
             </View>
           ) : (
@@ -249,7 +252,7 @@ export default function VoiceSettingsScreen() {
                 )}
               </View>
               {isReRecording && (
-                <Button title={t('common.cancel')} variant="secondary" onPress={handleCancelReRecord} />
+                <Button title={t('common.cancel')} variant="outline" onPress={handleCancelReRecord} />
               )}
             </View>
           )
@@ -281,6 +284,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'center',
   },
+  readyRow: { alignItems: 'center', gap: 8 },
   timerText: {
     fontSize: 22,
     fontFamily: fonts.bold,

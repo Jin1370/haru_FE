@@ -210,8 +210,11 @@ export default function SetupStep2() {
         {/* Status card mirrors settings/voice.tsx layout exactly so a user
             comparing the two surfaces sees the same shape. */}
         <View style={styles.statusCard}>
-          {cloneStatus === 'ready' && !isReRecording && profile?.voice_sample_url ? (
-            <AudioPlayer url={profile.voice_sample_url} showProgressBar tintColor={REGISTERED_PINK} />
+          {cloneStatus === 'ready' && !isReRecording ? (
+            <View style={styles.readyRow}>
+              <Ionicons name="checkmark-circle" size={48} color={REGISTERED_PINK} />
+              <Text style={styles.statusText}>{t('setupVoice.cloneReady')}</Text>
+            </View>
           ) : cloneStatus === 'processing' ? (
             <>
               <Ionicons name="hourglass" size={48} color={colors.primary} />
@@ -239,7 +242,7 @@ export default function SetupStep2() {
               <Button title={t('setupVoice.uploadVoice')} onPress={handleUpload} loading={loading} />
               <Button title={t('setupVoice.reRecord')} variant="outline" onPress={clear} />
               {isReRecording && (
-                <Button title={t('common.cancel')} variant="secondary" onPress={handleCancelReRecord} />
+                <Button title={t('common.cancel')} variant="outline" onPress={handleCancelReRecord} />
               )}
             </View>
           ) : (
@@ -261,7 +264,7 @@ export default function SetupStep2() {
                 )}
               </View>
               {isReRecording && (
-                <Button title={t('common.cancel')} variant="secondary" onPress={handleCancelReRecord} />
+                <Button title={t('common.cancel')} variant="outline" onPress={handleCancelReRecord} />
               )}
             </View>
           )
@@ -279,7 +282,9 @@ export default function SetupStep2() {
         )}
 
         <View style={styles.actions}>
-          <Button title={t('common.next')} onPress={handleNext} disabled={!voiceReady} />
+          {!isReRecording && (
+            <Button title={t('common.next')} onPress={handleNext} disabled={!voiceReady} />
+          )}
           {!voiceReady && (
             <Button title={t('signupWizard.skipAndStart')} variant="outline" onPress={handleSkip} />
           )}
@@ -309,6 +314,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     textAlign: 'center',
   },
+  readyRow: { alignItems: 'center', gap: 8 },
   timerText: {
     fontSize: 22,
     fontFamily: fonts.bold,

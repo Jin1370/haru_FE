@@ -435,6 +435,7 @@ export default {
     previewRecording: 'Preview your recording',
     processing: 'Processing your voice...',
     ready: 'Voice clone is ready!',
+    cloneReady: 'Voice clone ready',
     failed: 'Voice clone failed. Try again.',
     startRecording: 'Start Recording',
     stopRecording: 'Stop Recording',

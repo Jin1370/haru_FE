@@ -434,6 +434,7 @@ export default {
         previewRecording: "録音を確認してみてください",
         processing: "音声を処理中です...",
         ready: "ボイスクローンの準備ができました！",
+        cloneReady: "ボイスクローン登録完了",
         failed: "ボイスクローンの作成に失敗しました。もう一度お試しください。",
         startRecording: "録音開始",
         stopRecording: "録音停止",
