@@ -1260,6 +1260,52 @@ const NATIONALITY_CODES_ADMIN = [
 ] as const;
 const GENDERS_ADMIN = ['male', 'female', 'other'] as const;
 
+// haru_FE/src/constants/interests.ts 의 INTEREST_SECTIONS 인라인 복제 (id 만).
+// 라벨은 상단 INTEREST_LABELS_KO 에서 조회 (interestLabel 헬퍼). 카탈로그 변경 시
+// 본 admin 파일도 같이 갱신해야 함 — dev/QA 용 화면이라 drift 수용.
+const INTEREST_SECTIONS_ADMIN: readonly { id: string; title: string; items: readonly string[] }[] = [
+  { id: 'content', title: '콘텐츠', items: ['drama', 'movies', 'anime', 'youtube', 'webtoon', 'variety', 'documentary', 'thriller', 'romance', 'scifi'] },
+  { id: 'games', title: '게임', items: ['gaming', 'lol', 'overwatch', 'valorant', 'pubg', 'minecraft', 'roblox', 'genshin', 'mobileGame', 'nintendo', 'playstation', 'rpg', 'fps', 'simulation'] },
+  { id: 'outdoor', title: '외출/액티비티', items: ['cafe', 'walking', 'foodie', 'escapeRoom', 'bar', 'camping', 'travel', 'shopping', 'driving', 'picnic', 'karaoke', 'cinema', 'concert', 'exhibition', 'festival'] },
+  { id: 'indoor', title: '실내', items: ['reading', 'cooking', 'baking', 'drawing', 'bingeWatch', 'boardGame', 'homeCafe', 'gardening', 'writing', 'puzzle', 'homeWorkout', 'knitting', 'candleMaking', 'diy', 'teaCeremony'] },
+  { id: 'sports', title: '스포츠', items: ['gym', 'yoga', 'pilates', 'running', 'cycling', 'hiking', 'swimming', 'climbing', 'basketball', 'soccer', 'tennis', 'badminton', 'bowling', 'golf', 'dance'] },
+  { id: 'music', title: '음악', items: ['music', 'kpop', 'jpop', 'pop', 'hiphop', 'ballad', 'indie', 'rock', 'rnb', 'jazz'] },
+  { id: 'etc', title: '기타', items: ['photography', 'pets', 'wine', 'coffee', 'meditation', 'selfDev', 'languageLearn', 'fashion', 'beauty', 'tattoo', 'cosplay', 'perfume', 'mbti', 'astrology', 'tarot'] },
+];
+
+const MAX_INTERESTS_ADMIN = 10;
+
+// haru_BE/src/constants/bioPhrasesCatalog.ts 의 BIO_PHRASE_CATALOG 인라인 복제.
+// BE 가 카탈로그 변경 시 server-authoritative override 로 voice_intro 텍스트를
+// 강제 덮어쓰므로, admin 의 카탈로그가 drift 해도 안전. 표시용 텍스트만 일치하면 됨.
+const BIO_PRESETS_ADMIN: readonly {
+  id: string;
+  text: { ko: string; ja: string; en: string };
+}[] = [
+  { id: 'taste-1', text: { ko: '맛있는 거 먹으러 다니는 게 제 취미인데, 같이 맛집 리스트 공유하실 분 찾아요.', en: "Hunting down good food is basically my hobby — looking for someone to trade restaurant lists with.", ja: '美味しいものを食べ歩くのが趣味なんです。一緒にお店リストを交換できる人、探してます。' } },
+  { id: 'simple-1', text: { ko: '그냥 자연스럽게 대화해봐요. 인연이면 이어지지 않을까요?', en: "Let's just chat naturally. If we click, things will fall into place, right?", ja: '自然に話してみませんか？縁があれば、きっと繋がりますよね。' } },
+  { id: 'simple-2', text: { ko: '부담 없이 한 번 얘기해봐요. 그냥 편하게', en: "Let's just chat — no pressure, no big deal.", ja: '気軽に話してみましょう。肩の力を抜いて。' } },
+  { id: 'sincere-1', text: { ko: '글로 보는 것보다 목소리로 듣는 게 훨씬 그 사람 같잖아요. 만나서 반가워요.', en: "You learn more about someone from their voice than their words. Nice to meet you.", ja: '文字で読むより、声で聞いたほうがずっとその人らしいですよね。お会いできて嬉しいです。' } },
+  { id: 'flutter-1', text: { ko: '여기서 지나가면 조금 아쉬울 것 같지 않아요?', en: "Wouldn't it feel a little like a missed chance if you scrolled past me?", ja: 'ここで通り過ぎたら、ちょっともったいない気がしませんか？' } },
+  { id: 'flutter-2', text: { ko: '제 목소리 방금 들었을 때, 1초라도 설렜으면 좋겠는데... 설렜나요?', en: "I'm hoping my voice gave you a flutter — even just for a second. Did it?", ja: '今の声、ほんの一瞬でもときめいてくれたら嬉しいんですけど…どうでした？' } },
+  { id: 'confidence-1', text: { ko: '저랑 얘기하면 시간 가는 줄 모르실걸요? 일단 말 걸어주세요!', en: "Talk to me and you'll lose track of time, I promise. Just say hi!", ja: '私と話すと時間を忘れちゃうかも。とりあえず声かけてください！' } },
+  { id: 'aegyo-1', text: { ko: '지금 하트 누를까 말까 고민 중이죠? 그냥 눌러주면 안 돼요?', en: "Still hovering over the heart button? Just press it for me, won't you?", ja: '今ハート押そうか迷ってますよね？そのまま押しちゃだめですか？' } },
+  { id: 'aegyo-2', text: { ko: '저를 버리시려고요? 진짜로요?', en: "Wait — you're really going to swipe me away? Really?", ja: '私のこと、置いていっちゃうんですか？本当に？' } },
+];
+
+// preset 카탈로그를 작성자 언어 텍스트 → id 로 역매핑 (load 시 현재 voice_intro 가
+// 어느 preset 에 매칭되는지 추정). slot=language=ko/ja/en 셋 외 (th/hi) 는 en 폴백.
+function detectPresetIdByText(
+  voiceIntro: string | null,
+  language: string,
+): string | null {
+  if (!voiceIntro) return null;
+  const slot: 'ko' | 'ja' | 'en' =
+    language === 'ko' || language === 'ja' || language === 'en' ? language : 'en';
+  const match = BIO_PRESETS_ADMIN.find((p) => p.text[slot] === voiceIntro);
+  return match?.id ?? null;
+}
+
 function ProfilePane({ account }: { account: DevAccount }) {
   const [profile, setProfile] = useState<MyProfile | null>(null);
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
@@ -1363,9 +1409,17 @@ function ProfileSection({
   const [gender, setGender] = useState<'male' | 'female' | 'other'>(profile.gender);
   const [nationality, setNationality] = useState(profile.nationality);
   const [language, setLanguage] = useState(profile.language);
-  const [interests, setInterests] = useState((profile.interests ?? []).join(', '));
+  const [interests, setInterests] = useState<string[]>(profile.interests ?? []);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  const toggleInterest = (id: string) => {
+    setInterests((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_INTERESTS_ADMIN) return prev;
+      return [...prev, id];
+    });
+  };
 
   const save = async () => {
     if (saving) return;
@@ -1381,10 +1435,7 @@ function ProfileSection({
         nationality,
         language,
         voice_intro: profile.voice_intro ?? null,
-        interests: interests
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
+        interests,
       };
       const updated = await updateMyProfile(account.user_id, payload);
       onSaved(updated);
@@ -1464,14 +1515,48 @@ function ProfileSection({
           </select>
         </div>
         <div className="col-span-2">
-          <FieldLabel>interests (comma-separated canonical id)</FieldLabel>
-          <input
-            value={interests}
-            onChange={(e) => setInterests(e.target.value)}
-            placeholder="cafe, walking, gym"
-            className="w-full rounded-xl border px-3 py-2 text-sm outline-none"
-            style={fieldInputStyle}
-          />
+          <FieldLabel>
+            interests ({interests.length}/{MAX_INTERESTS_ADMIN})
+          </FieldLabel>
+          <div className="flex flex-col gap-3">
+            {INTEREST_SECTIONS_ADMIN.map((section) => (
+              <div key={section.id}>
+                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: C.textLight }}>
+                  {section.title}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {section.items.map((id) => {
+                    const active = interests.includes(id);
+                    const atMax = !active && interests.length >= MAX_INTERESTS_ADMIN;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => toggleInterest(id)}
+                        disabled={atMax}
+                        className="rounded-full border px-2.5 py-1 text-[11px] font-medium transition disabled:opacity-40"
+                        style={
+                          active
+                            ? {
+                                background: C.primary,
+                                borderColor: C.primary,
+                                color: '#FFFFFF',
+                              }
+                            : {
+                                background: '#FFFFFF',
+                                borderColor: C.border,
+                                color: C.textSecondary,
+                              }
+                        }
+                      >
+                        {interestLabel(id)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
       <div className="mt-4 flex items-center gap-3">
@@ -1502,32 +1587,57 @@ function VoiceIntroSection({
   profile: MyProfile;
   onSaved: (next: MyProfile) => void;
 }) {
-  const [voiceIntro, setVoiceIntro] = useState(profile.voice_intro ?? '');
+  // 초기 모드 결정 — 현재 voice_intro 가 preset 텍스트와 매칭되면 preset 모드.
+  // detect 못하면 custom (자유 입력) 모드. 사용자가 토글로 자유 전환 가능.
+  const initialPresetId = detectPresetIdByText(profile.voice_intro, profile.language);
+  const [mode, setMode] = useState<'preset' | 'custom'>(initialPresetId ? 'preset' : 'custom');
+  const [presetId, setPresetId] = useState<string | null>(initialPresetId);
+  const [customText, setCustomText] = useState(profile.voice_intro ?? '');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const changed = (voiceIntro || null) !== (profile.voice_intro || null);
+  // 본인 language 슬롯 → ko/ja/en 셋 안에서. 그 외 (th/hi/null) 는 en 폴백.
+  const slot: 'ko' | 'ja' | 'en' =
+    profile.language === 'ko' || profile.language === 'ja' || profile.language === 'en'
+      ? profile.language
+      : 'en';
+  const audioUrl =
+    profile.voice_intro_audio_urls && profile.voice_intro_audio_urls[slot]
+      ? profile.voice_intro_audio_urls[slot] ?? null
+      : null;
+
+  // 다음 저장 시 보낼 작성자 언어 텍스트 — preset 모드면 카탈로그에서, custom 이면 textarea.
+  const resolvedText: string | null = (() => {
+    if (mode === 'preset' && presetId) {
+      const entry = BIO_PRESETS_ADMIN.find((p) => p.id === presetId);
+      return entry ? entry.text[slot] : null;
+    }
+    return customText.trim() || null;
+  })();
+
+  const changed = (resolvedText ?? null) !== (profile.voice_intro ?? null);
 
   const save = async () => {
     if (saving || !changed) return;
     setSaving(true);
     setMsg(null);
     try {
-      // voice_intro 만 변경된 페이로드. 다른 필드는 기존 값 그대로 동봉
-      // (profileUpsertSchema 는 display_name/birth_date/gender/nationality/language 가 필수).
-      // voice_intro_phrase_id 는 미동봉 → BE 가 Gemini 폴백 경로로 흡수 (자유 입력).
+      // preset 모드: voice_intro_phrase_id 동봉 → BE 가 Gemini 우회 (preset-bypass sprint).
+      //              voice_intro 는 server-authoritative override 로 카탈로그 텍스트가 강제됨.
+      // custom 모드: voice_intro_phrase_id 미동봉 → BE 가 Gemini 폴백 경로.
       const payload: ProfileUpsertPayload = {
         display_name: profile.display_name,
         birth_date: profile.birth_date,
         gender: profile.gender,
         nationality: profile.nationality,
         language: profile.language,
-        voice_intro: voiceIntro.trim() || null,
+        voice_intro: resolvedText,
+        voice_intro_phrase_id: mode === 'preset' ? presetId : null,
         interests: profile.interests ?? [],
       };
       const updated = await updateMyProfile(account.user_id, payload);
       onSaved(updated);
-      setMsg('저장됨 — Gemini 번역 + TTS 파이프라인이 비동기로 진행됩니다');
+      setMsg('저장됨 — TTS 파이프라인이 비동기로 진행됩니다');
     } catch (err) {
       // BE 가 모더레이션 사전/OpenAI 차단 시 422 + code='message_blocked' 응답
       // (voice-intro-moderation-unification sprint). admin 토스트는 단순 표시.
@@ -1539,22 +1649,88 @@ function VoiceIntroSection({
 
   return (
     <SectionCard title="voice intro">
-      <div
-        className="mb-3 rounded-xl border px-3 py-2 text-[11px] leading-snug"
-        style={{ background: '#FEF3C7', borderColor: '#FDE68A', color: '#92400E' }}
-      >
-        ⚠ 변경 시 Gemini 번역 × 3슬롯 + ElevenLabs TTS × 3슬롯 + OpenAI Moderation 호출 — 회당 약 $0.10~0.30 발생.
-        자유 입력 (preset 우회) 경로라 비용 누적에 주의.
+      {/* 현재 voice intro 오디오 재생 — 본인 language 슬롯 URL. 미보유 / 합성 진행 중이면 안내. */}
+      <div className="mb-4">
+        <FieldLabel>현재 보이스 한마디 ({slot} 슬롯)</FieldLabel>
+        {audioUrl ? (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <audio src={audioUrl} controls className="h-8 w-full" />
+        ) : (
+          <span className="text-xs" style={{ color: C.textLight }}>
+            오디오 없음 (voice clone 미보유 / 합성 미완료 / voice_intro 미설정)
+          </span>
+        )}
       </div>
-      <FieldLabel>voice_intro (max 500)</FieldLabel>
-      <textarea
-        value={voiceIntro}
-        onChange={(e) => setVoiceIntro(e.target.value)}
-        rows={3}
-        maxLength={500}
-        className="w-full rounded-xl border px-3 py-2 text-sm outline-none"
-        style={fieldInputStyle}
-      />
+
+      {/* 모드 토글 */}
+      <FieldLabel>입력 방식</FieldLabel>
+      <div className="mb-4 flex gap-1.5">
+        {(['preset', 'custom'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setMode(m)}
+            className="rounded-full border px-3 py-1 text-[11px] font-medium transition"
+            style={
+              mode === m
+                ? { background: C.primary, borderColor: C.primary, color: '#FFFFFF' }
+                : { background: '#FFFFFF', borderColor: C.border, color: C.textSecondary }
+            }
+          >
+            {m === 'preset' ? '카탈로그 선택' : '직접 입력'}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'preset' ? (
+        <div>
+          <FieldLabel>카탈로그 ({slot} 슬롯 텍스트 표시)</FieldLabel>
+          <div className="flex flex-col gap-1.5">
+            {BIO_PRESETS_ADMIN.map((p) => {
+              const active = presetId === p.id;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPresetId(p.id)}
+                  className="rounded-xl border px-3 py-2 text-left text-xs transition"
+                  style={
+                    active
+                      ? {
+                          background: C.primaryLight,
+                          borderColor: C.primary,
+                          color: C.primaryDark,
+                        }
+                      : {
+                          background: '#FFFFFF',
+                          borderColor: C.border,
+                          color: C.text,
+                        }
+                  }
+                >
+                  <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: C.textLight }}>
+                    {p.id}
+                  </div>
+                  <div className="mt-0.5 leading-snug">{p.text[slot]}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div>
+          <FieldLabel>voice_intro (max 500)</FieldLabel>
+          <textarea
+            value={customText}
+            onChange={(e) => setCustomText(e.target.value)}
+            rows={3}
+            maxLength={500}
+            className="w-full rounded-xl border px-3 py-2 text-sm outline-none"
+            style={fieldInputStyle}
+          />
+        </div>
+      )}
+
       <div className="mt-4 flex items-center gap-3">
         <button
           onClick={save}
@@ -1562,7 +1738,7 @@ function VoiceIntroSection({
           className="rounded-full px-5 py-2 text-xs font-semibold text-white transition disabled:opacity-50"
           style={{ background: C.primary, boxShadow: '0 4px 14px rgba(2,132,199,0.32)' }}
         >
-          {saving ? '저장 중...' : changed ? '저장 (비용 발생)' : '변경 없음'}
+          {saving ? '저장 중...' : changed ? '저장' : '변경 없음'}
         </button>
         {profile.voice_clone_status && (
           <span className="text-xs" style={{ color: C.textSecondary }}>

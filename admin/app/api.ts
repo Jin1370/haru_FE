@@ -165,6 +165,11 @@ export type MyProfile = {
   photos: string[];
   voice_clone_status: 'pending' | 'processing' | 'ready' | 'failed' | null;
   elevenlabs_voice_id: string | null;
+  // mig 011: ko/ja/en 슬롯별 작성자 텍스트의 번역본 / TTS URL / 합성 상태. admin 은
+  // 본인 language 슬롯 URL 을 audio 컨트롤로 재생하는 용도로 사용.
+  voice_intro_translations?: Partial<Record<'ko' | 'ja' | 'en', string>>;
+  voice_intro_audio_urls?: Partial<Record<'ko' | 'ja' | 'en', string | null>>;
+  voice_intro_audio_status?: Partial<Record<'ko' | 'ja' | 'en', string>>;
 };
 
 // 프로필 수정 페이로드. BE profileUpsertSchema (haru_BE/src/schemas/profile.ts) 와 일치.
