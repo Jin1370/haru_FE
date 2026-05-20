@@ -51,8 +51,8 @@ export default function PreferencesScreen() {
     if (preferences) {
       // Clamp incoming BE values into the FE-displayed band. The BE still
       // accepts up to 100 for backward compatibility, but the slider caps
-      // at MAX_AGE (65 = "65+") so existing prefs above that fold into the
-      // ceiling rather than overflowing the track.
+      // at MAX_AGE so existing prefs above that fold into the ceiling
+      // rather than overflowing the track.
       setAgeRange({
         min: Math.max(MIN_AGE, Math.min(preferences.min_age, MAX_AGE)),
         max: Math.max(MIN_AGE, Math.min(preferences.max_age, MAX_AGE)),

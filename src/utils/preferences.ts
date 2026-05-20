@@ -4,7 +4,7 @@
  * surface the reason with the same i18n key contract the BE expects.
  */
 export const MIN_AGE = 18;
-export const MAX_AGE = 65;
+export const MAX_AGE = 40;
 
 export type AgeRangeError =
   | 'out-of-bounds'
