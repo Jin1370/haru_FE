@@ -39,5 +39,9 @@
       "description": "Terms of use, member obligations, content moderation, and liability for haru."
     },
     "localeNotice": "Only the Korean source text is currently available. Translations will be provided after launch."
+  },
+  "footer": {
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy"
   }
 }
