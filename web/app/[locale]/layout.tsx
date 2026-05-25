@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import Footer from '@/components/Footer';
+import Navbar from '@/components/Navbar';
 import { routing, isAppLocale } from '@/i18n/routing';
 import { getSiteUrl } from '@/lib/site-url';
 import '../globals.css';
@@ -55,6 +56,7 @@ export default async function LocaleLayout({
     <html lang={locale}>
       <body className="flex min-h-screen flex-col bg-[color:var(--color-bg)] text-[color:var(--color-text)] antialiased">
         <NextIntlClientProvider>
+          <Navbar />
           <div className="flex-1">{children}</div>
           <Footer />
         </NextIntlClientProvider>

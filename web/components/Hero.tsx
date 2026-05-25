@@ -6,15 +6,7 @@ export default function Hero() {
 
   return (
     <section className="relative overflow-hidden bg-dawn">
-      <div className="mx-auto max-w-6xl px-6 pt-20 md:pt-28">
-        {/* Brand wordmark — sets the identity before any pitch copy. */}
-        <h1 className="text-center text-6xl font-bold tracking-tight text-[color:var(--color-primary-dark)] md:text-8xl lg:text-9xl">
-          하루{' '}
-          <span className="text-[color:var(--color-primary)]">(春)</span>
-        </h1>
-      </div>
-
-      <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pt-12 pb-20 md:grid-cols-2 md:gap-8 md:pb-28 md:pt-16">
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pt-16 pb-20 md:grid-cols-2 md:gap-8 md:pt-24 md:pb-28">
         {/* Left — copy */}
         <div className="flex flex-col items-center gap-6 text-center md:items-start md:text-left">
           <span className="rounded-full border border-[color:var(--color-primary)]/30 bg-white/60 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--color-primary-dark)] backdrop-blur">
@@ -37,72 +29,114 @@ export default function Hero() {
 }
 
 /**
- * Mirrors the real discover screen (haru_FE/src/components/discover/SwipeCard).
- * Background photo is blurred until the user listens to the voice intro — the
- * "slow dating" core value is visible here, before reading any copy below.
+ * Faithful reproduction of haru_FE/src/components/discover/SwipeCard.
+ *
+ * Real card structure (top → bottom):
+ *  1. Dark translucent shell (rgba(20,10,25,0.62))
+ *  2. Square blurred cover photo
+ *  3. Name (white bold 21) + age · flag · nationality row
+ *  4. 32-bar waveform (heights 6..48), progress portion in primary,
+ *     unplayed bars in white@28%
+ *  5. Skip / Play (58px pink gradient circle) / Like — three controls
+ *
+ * The mockup keeps all five layers, only swapping the cover photo for an
+ * abstract gradient so no stock face is shipped.
  */
 function DiscoverCardMockup() {
-  const t = useTranslations('hero.mockup');
+  // Deterministic waveform shape — same Gaussian peak formula as the real
+  // SwipeCard so the silhouette is recognizable.
+  const BARS = 32;
+  const heights = Array.from({ length: BARS }, (_, i) => {
+    const t = i / (BARS - 1);
+    const peak = (c: number, w: number, a: number) =>
+      a * Math.exp(-Math.pow((t - c) / w, 2));
+    const envelope =
+      peak(0.13, 0.08, 0.55) +
+      peak(0.34, 0.1, 0.95) +
+      peak(0.58, 0.09, 0.78) +
+      peak(0.82, 0.09, 0.85);
+    const detail =
+      0.55 + 0.3 * Math.sin(i * 2.1 + 0.5) + 0.15 * Math.sin(i * 0.9 + 1.7);
+    const n = Math.max(0.04, Math.min(1, envelope * detail));
+    return Math.round(6 + 30 * n); // smaller max (30) to fit phone mockup
+  });
+  const PROGRESS_INDEX = 11; // first 11 bars filled — implies playing state
+
   return (
-    <div className="relative h-full w-full">
-      {/* Blurred photo stand-in — abstract gradient so we don't ship a stock
-         portrait that implies a real user. */}
+    <div
+      className="flex h-full w-full flex-col items-center px-5 pt-12 pb-6"
+      style={{ backgroundColor: 'rgba(20,10,25,0.92)' }}
+    >
+      {/* Cover photo (blurred) — abstract gradient, never a stock face */}
       <div
-        className="absolute inset-0"
+        className="aspect-square w-full overflow-hidden rounded-2xl"
         style={{
           background:
-            'radial-gradient(circle at 30% 25%, #FFCBA4 0%, #F6B5C8 35%, #B8A1C8 70%, #8A5A8C 100%)',
-          filter: 'blur(18px)',
+            'radial-gradient(circle at 30% 25%, #FFCBA4 0%, #F6B5C8 35%, #B8A1C8 70%, #6B4980 100%)',
+          filter: 'blur(2px)',
         }}
-      />
-      <div className="absolute inset-0 bg-black/15" />
-
-      {/* Top bar */}
-      <div className="absolute left-0 right-0 top-7 flex items-center justify-between px-5">
-        <span className="text-xs font-semibold uppercase tracking-widest text-white/90">
-          haru
-        </span>
-        <span className="rounded-full bg-white/30 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">
-          {t('cardLabel')}
-        </span>
+      >
+        <div className="h-full w-full bg-black/15" />
       </div>
 
-      {/* Big play button — the visual anchor for "listen first" */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="relative">
-          <span className="absolute -inset-4 animate-ping rounded-full bg-white/40" />
-          <button
-            type="button"
-            aria-label="play voice intro"
-            className="relative grid h-20 w-20 place-items-center rounded-full bg-white text-[color:var(--color-primary-dark)] shadow-[0_18px_40px_-12px_rgba(58,35,64,0.5)]"
-          >
-            <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </button>
+      {/* Name + nationality row */}
+      <div className="mt-3 flex flex-col items-center">
+        <p className="text-lg font-bold tracking-wide text-white">Aiko</p>
+        <div className="mt-0.5 flex items-center gap-2 text-xs">
+          <span className="text-white/75">27세</span>
+          <span className="text-white/55">•</span>
+          <span className="leading-none">🇯🇵</span>
+          <span className="text-white/75">JP</span>
         </div>
       </div>
 
-      {/* Bottom info card */}
-      <div className="absolute inset-x-4 bottom-6 rounded-2xl bg-white/95 p-4 shadow-[0_10px_30px_-10px_rgba(58,35,64,0.35)] backdrop-blur">
-        <div className="flex items-baseline justify-between">
-          <p className="text-base font-semibold text-[color:var(--color-text)]">
-            {t('name')}
-          </p>
-          <p className="text-xs text-[color:var(--color-text-secondary)]">
-            {t('distance')}
-          </p>
+      {/* Waveform — 32 bars */}
+      <div className="mt-3 flex h-10 w-full items-center justify-between">
+        {heights.map((h, i) => (
+          <span
+            key={i}
+            className="rounded-full"
+            style={{
+              width: 3,
+              height: h,
+              backgroundColor:
+                i <= PROGRESS_INDEX
+                  ? 'var(--color-primary)'
+                  : 'rgba(255,255,255,0.28)',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Controls — Skip / Play (pink gradient 58px) / Like */}
+      <div className="mt-3 flex w-full items-center justify-center gap-4">
+        <div className="flex items-center gap-1.5 text-white/90">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+          </svg>
+          <span className="text-[10px] font-medium tracking-wider">Skip</span>
         </div>
-        <p className="mt-1 break-keep text-sm leading-snug text-[color:var(--color-text-secondary)]">
-          {t('intro')}
-        </p>
-        <div className="mt-3 flex items-center gap-2">
-          <span className="h-1.5 flex-1 rounded-full bg-[color:var(--color-border)]">
-            <span className="block h-full w-1/3 rounded-full bg-[color:var(--color-primary)]" />
-          </span>
-          <span className="text-[10px] font-medium text-[color:var(--color-text-secondary)]">
-            0:04 / 0:12
-          </span>
+
+        <div
+          className="grid h-14 w-14 place-items-center rounded-full"
+          style={{
+            background: 'linear-gradient(135deg, #F6B5C8 0%, #E27AA0 100%)',
+            boxShadow: '0 8px 24px -4px rgba(226,122,160,0.55)',
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
+            <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
+          </svg>
+        </div>
+
+        <div
+          className="flex items-center gap-1.5"
+          style={{ color: 'var(--color-like)' }}
+        >
+          <span className="text-[10px] font-medium tracking-wider">Like</span>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M18 6h-2v12h2zM14.5 12L6 18V6z" />
+          </svg>
         </div>
       </div>
     </div>
