@@ -69,6 +69,9 @@ export default {
     signupFailed: 'Signup Failed',
     enterEmailAndPassword: 'Please enter email and password',
     googleNotInExpoGo: 'Google sign-in only works in a dev-client or production build. Please use email login instead.',
+    legalDisclaimer: 'By signing up, you agree to the {{terms}} and {{privacy}}',
+    termsOfService: 'Terms of Service',
+    privacyPolicy: 'Privacy Policy',
   },
 
   validation: {
@@ -501,6 +504,8 @@ export default {
     title: 'Settings',
     languageSettings: 'Language',
     changePassword: 'Change Password',
+    termsOfService: 'Terms of Service',
+    privacyPolicy: 'Privacy Policy',
     deleteAccount: 'Delete Account',
     deleteAccountTitle: 'Delete Account',
     deleteAccountConfirm: "Are you sure you want to delete your account? Your profile, matches, and messages will be permanently erased and can't be recovered.",

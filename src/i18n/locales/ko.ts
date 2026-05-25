@@ -69,6 +69,9 @@ export default {
         signupFailed: "회원가입 실패",
         enterEmailAndPassword: "이메일과 비밀번호를 입력해주세요",
         googleNotInExpoGo: "Google 로그인은 dev-client 또는 정식 빌드에서만 동작해요. 이메일 로그인을 사용해주세요.",
+        legalDisclaimer: "회원가입 시 {{terms}}과 {{privacy}}에 동의한 것으로 간주됩니다",
+        termsOfService: "이용약관",
+        privacyPolicy: "개인정보처리방침",
     },
 
     validation: {
@@ -503,6 +506,8 @@ export default {
         title: "설정",
         languageSettings: "언어 설정",
         changePassword: "비밀번호 변경",
+        termsOfService: "이용약관",
+        privacyPolicy: "개인정보처리방침",
         deleteAccount: "회원 탈퇴",
         deleteAccountTitle: "회원 탈퇴",
         deleteAccountConfirm: "정말 탈퇴하시겠어요? 프로필·매치·메시지 등 모든 데이터가 영구적으로 삭제되고 복구할 수 없어요.",

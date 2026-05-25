@@ -69,6 +69,9 @@ export default {
         signupFailed: "新規登録に失敗しました",
         enterEmailAndPassword: "メールアドレスとパスワードを入力してください",
         googleNotInExpoGo: "Googleログインは dev-client または製品ビルドでのみ利用できます。メールログインをご利用ください。",
+        legalDisclaimer: "登録すると、{{terms}}および{{privacy}}に同意したものとみなされます",
+        termsOfService: "利用規約",
+        privacyPolicy: "プライバシーポリシー",
     },
 
     validation: {
@@ -502,6 +505,8 @@ export default {
         title: "設定",
         languageSettings: "言語設定",
         changePassword: "パスワード変更",
+        termsOfService: "利用規約",
+        privacyPolicy: "プライバシーポリシー",
         deleteAccount: "退会する",
         deleteAccountTitle: "退会する",
         deleteAccountConfirm: "本当に退会しますか？プロフィール・マッチ・メッセージなど、すべてのデータが完全に削除され、復元できません。",

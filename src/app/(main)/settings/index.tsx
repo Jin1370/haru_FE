@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,7 @@ import { WizardHeader } from '@/components/setup/WizardHeader';
 import { useAuthStore } from '@/stores/authStore';
 import { showAlert } from '@/stores/alertStore';
 import { colors } from '@/constants/colors';
+import { LEGAL_URLS } from '@/constants/legal';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -81,6 +82,14 @@ export default function SettingsScreen() {
           <MenuCardButton
             label={t('settings.languageSettings')}
             onPress={() => router.push('/(main)/settings/language')}
+          />
+          <MenuCardButton
+            label={t('settings.termsOfService')}
+            onPress={() => Linking.openURL(LEGAL_URLS.terms)}
+          />
+          <MenuCardButton
+            label={t('settings.privacyPolicy')}
+            onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
           />
         </View>
         <Button

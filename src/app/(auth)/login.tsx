@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Pressable,
   Image,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import { Redirect } from 'expo-router';
@@ -21,6 +22,7 @@ import { showAlert } from '@/stores/alertStore';
 import { ApiRequestError } from '@/services/api';
 import { colors, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
+import { LEGAL_URLS } from '@/constants/legal';
 import { validateEmail, validatePassword } from '@/utils/validators';
 
 const LOGIN_BG = require('../../../assets/images/login-day.png');
@@ -300,9 +302,52 @@ export default function LoginScreen() {
             onPress={handleGooglePress}
             loading={loadingAction === 'google'}
           />
+
+          <LegalDisclaimer />
         </View>
       </View>
     </View>
+  );
+}
+
+function LegalDisclaimer() {
+  const { t } = useTranslation();
+  const termsLabel = t('auth.termsOfService');
+  const privacyLabel = t('auth.privacyPolicy');
+  const template = t('auth.legalDisclaimer', {
+    terms: '__TERMS__',
+    privacy: '__PRIVACY__',
+  });
+  const parts = template.split(/(__TERMS__|__PRIVACY__)/);
+
+  return (
+    <Text style={styles.disclaimer}>
+      {parts.map((part, i) => {
+        if (part === '__TERMS__') {
+          return (
+            <Text
+              key={i}
+              style={styles.disclaimerLink}
+              onPress={() => Linking.openURL(LEGAL_URLS.terms)}
+            >
+              {termsLabel}
+            </Text>
+          );
+        }
+        if (part === '__PRIVACY__') {
+          return (
+            <Text
+              key={i}
+              style={styles.disclaimerLink}
+              onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
+            >
+              {privacyLabel}
+            </Text>
+          );
+        }
+        return part;
+      })}
+    </Text>
   );
 }
 
@@ -387,5 +432,17 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     letterSpacing: 0.3,
+  },
+  disclaimer: {
+    textAlign: 'center',
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 6,
+    paddingHorizontal: 8,
+  },
+  disclaimerLink: {
+    color: colors.primary,
+    textDecorationLine: 'underline',
   },
 });
