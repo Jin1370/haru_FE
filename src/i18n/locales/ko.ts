@@ -225,6 +225,13 @@ export default {
         fileTooLarge: "파일이 너무 큽니다",
         photoSizeLimit: "사진은 5MB 이하여야 합니다.",
         uploadFailed: "업로드 실패",
+        // photo-watercolor-pipeline sprint: gpt-image-2 비동기 변환 status overlay
+        // 카피. AI 변환 라벨은 사용자 결정 #1 에 따라 미노출 — 본 카피들도 "그림"
+        // 으로만 표현해 추가 정황 노출을 피한다.
+        photoConverting: "사진을 그림으로 변환 중...",
+        photoConversionFailed: "변환 실패. 다시 시도해주세요.",
+        photoBlocked: "이 사진은 사용할 수 없어요. 다른 사진을 선택해주세요.",
+        photoRetry: "다시 시도",
     },
 
     chat: {
@@ -513,7 +520,7 @@ export default {
         privacyPolicy: "개인정보처리방침",
         deleteAccount: "회원 탈퇴",
         deleteAccountTitle: "회원 탈퇴",
-        deleteAccountConfirm: "정말 탈퇴하시겠어요? 프로필·매치·메시지 등 모든 데이터가 영구적으로 삭제되고 복구할 수 없어요.",
+        deleteAccountConfirm: "정말 탈퇴하시겠어요? 프로필·사진·보이스·매칭 선호도는 즉시 삭제되고, 매치와 메시지 기록은 상대방의 채팅 보호를 위해 익명화된 상태로 남아요. 복구는 불가능합니다.",
         notifications: {
             title: "알림",
             messages: "메시지 알림",

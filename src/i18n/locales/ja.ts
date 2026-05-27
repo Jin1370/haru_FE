@@ -224,6 +224,13 @@ export default {
         fileTooLarge: "ファイルが大きすぎます",
         photoSizeLimit: "写真は5MB以下にしてください。",
         uploadFailed: "アップロード失敗",
+        // photo-watercolor-pipeline sprint: gpt-image-2 非同期変換の status overlay カピ。
+        // AI 変換ラベルは利用者決定 #1 により非表示 — カピも「イラスト」表現に留めて
+        // AI 由来情報の漏洩を回避。
+        photoConverting: "写真をイラストに変換中...",
+        photoConversionFailed: "変換失敗。もう一度お試しください。",
+        photoBlocked: "この写真は使用できません。別の写真を選択してください。",
+        photoRetry: "再試行",
     },
 
     chat: {
@@ -512,7 +519,7 @@ export default {
         privacyPolicy: "プライバシーポリシー",
         deleteAccount: "退会する",
         deleteAccountTitle: "退会する",
-        deleteAccountConfirm: "本当に退会しますか？プロフィール・マッチ・メッセージなど、すべてのデータが完全に削除され、復元できません。",
+        deleteAccountConfirm: "本当に退会しますか？プロフィール・写真・ボイス・マッチング設定は即時削除され、マッチとメッセージは相手のチャット保護のため匿名化された状態で残ります。復元はできません。",
         notifications: {
             title: "通知",
             messages: "メッセージ通知",

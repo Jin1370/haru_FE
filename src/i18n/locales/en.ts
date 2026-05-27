@@ -225,6 +225,13 @@ export default {
     fileTooLarge: 'File Too Large',
     photoSizeLimit: 'Photo must be under 5MB.',
     uploadFailed: 'Upload Failed',
+    // photo-watercolor-pipeline sprint: gpt-image-2 async conversion status overlays.
+    // AI conversion label intentionally suppressed (user decision #1) — phrasing stays
+    // generic ("photo") so no AI provenance leaks through the UI.
+    photoConverting: 'Converting your photo...',
+    photoConversionFailed: 'Conversion failed. Please try again.',
+    photoBlocked: "This photo can't be used. Please choose another.",
+    photoRetry: 'Retry',
   },
 
   chat: {
@@ -511,7 +518,7 @@ export default {
     privacyPolicy: 'Privacy Policy',
     deleteAccount: 'Delete Account',
     deleteAccountTitle: 'Delete Account',
-    deleteAccountConfirm: "Are you sure you want to delete your account? Your profile, matches, and messages will be permanently erased and can't be recovered.",
+    deleteAccountConfirm: "Are you sure you want to delete your account? Your profile, photos, voice, and matching preferences will be removed immediately. Matches and messages will remain in anonymized form to protect your partners' chat history. This cannot be undone.",
     notifications: {
       title: 'Notifications',
       messages: 'Message notifications',
