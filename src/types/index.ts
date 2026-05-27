@@ -48,6 +48,12 @@ export interface Profile {
   voice_intro_translations?: Partial<Record<VoiceIntroSlotLanguage, string>>;
   voice_intro_audio_urls?: Partial<Record<VoiceIntroSlotLanguage, string | null>>;
   voice_intro_audio_status?: Partial<Record<VoiceIntroSlotLanguage, VoiceIntroAudioStatus>>;
+  // photo-watercolor-pipeline sprint (mig 028): profile_photos row 의 슬롯별
+  // 변환 상태. `photos` 배열은 status='ready' 인 converted_url 만 노출하므로
+  // 폴링 중인 (processing/pending/failed/rejected) 슬롯은 photos 배열에는 없고
+  // 이 필드로만 식별된다. position 순서는 mig 028 의 UNIQUE (user_id, position)
+  // 로 보장. BE 가 mig 028 미적용 윈도우에서 응답하지 않을 수 있어 optional.
+  photo_statuses?: PhotoStatus[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -70,13 +76,35 @@ export interface ProfileUpsertRequest {
   interests?: string[];
 }
 
+// photo-watercolor-pipeline sprint (mig 028): 사진 업로드 라우트가 동기 응답에서
+// 비동기(202 + status='processing') 로 전환되었다. 변환 파이프라인은 BE 의
+// fire-and-forget 가 처리하며, FE 는 `photo_statuses` 폴링으로 ready 전이를 감지.
+// 옛 shape ({ url, photos[] }) 은 이번 sprint 부로 폐기 — 라우트가 202 + photo_id
+// 만 반환하므로 동기적으로 URL 을 노출할 수 없다.
 export interface PhotoUploadResponse {
-  url: string;
-  photos: string[];
+  photo_id: string;
+  position: number;
+  status: 'processing';
 }
 
 export interface PhotoDeleteResponse {
   photos: string[];
+}
+
+// photo-watercolor-pipeline sprint: profile_photos row 의 status snapshot.
+// GET /api/profile/me 응답에 동봉되어 FE 가 슬롯별 변환 진행 상태를 표시.
+//   - pending  : 자동 백필 row (mig 028) 또는 큐 대기 직전. retry sweep 처리 대기.
+//   - processing: gpt-image-2 호출 진행 중. FE 는 ActivityIndicator + dim.
+//   - ready    : 변환 완료, converted_url 노출.
+//   - failed   : 네트워크/타임아웃 등 자동 재시도 가능. FE 는 retry 아이콘.
+//   - rejected : OpenAI safety filter 거부. retry 불가, 사용자 재업로드 유도.
+export type PhotoConversionStatus = 'pending' | 'processing' | 'ready' | 'failed' | 'rejected';
+
+export interface PhotoStatus {
+  id: string;
+  position: number;
+  status: PhotoConversionStatus;
+  failure_reason?: string;
 }
 
 // === Voice ===

@@ -286,12 +286,18 @@ export function SwipeCard({ candidate, onLike, onPass }: SwipeCardProps) {
                     </Text>
                 </Animated.View>
                 <View style={[styles.cover, { width: COVER_SIZE, height: COVER_SIZE }]}>
-                    {/* Discover는 첫인상 음성 중심 UX — photo_access와 무관하게 항상 블러 */}
+                    {/* photo-watercolor-pipeline sprint: 디스커버 응답은 BE 가 변환본
+                        (gpt-image-2 수채화 톤 스타일라이즈) 1장을 노출하므로 블러를
+                        명시적으로 끈다. 변환본은 외관을 stylize 하되 신원/나이/외모를
+                        보존하며, 매치 후 10회 라운드트립에서 원본 메인/전체가 한 번에
+                        unlock 된다 (사용자 결정 #1: 5회 milestone 폐지). photo_access
+                        분기는 ProfilePhoto 내부에 그대로 유지되지만 forceBlur=false 가
+                        명시적으로 그 분기를 비활성화. */}
                     <ProfilePhoto
                         userId={candidate.id}
                         uri={photo}
                         variant="swipe-card"
-                        forceBlur
+                        forceBlur={false}
                     />
                 </View>
 

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ import { ErrorText } from '@/components/ui/ErrorText';
 import { VoiceIntroMultiLangPreview } from '@/components/profile/VoiceIntroMultiLangPreview';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
 import { useProfile, MAX_PHOTOS } from '@/hooks/useProfile';
-import { VOICE_INTRO_SLOT_LANGUAGES } from '@/types';
+import { VOICE_INTRO_SLOT_LANGUAGES, type PhotoStatus, type PhotoConversionStatus } from '@/types';
 import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { showAlert } from '@/stores/alertStore';
 import { colors, gradients, radii, shadows } from '@/constants/colors';
@@ -53,8 +53,18 @@ export default function ProfileScreen() {
     deletePhoto,
     setPrimaryPhoto,
     replacePhotoAt,
+    retryPhotoConversion,
+    pollPhotoConversions,
     loadProfile,
   } = useProfile();
+
+  // photo-watercolor-pipeline sprint: 변환 status 폴링 effect.
+  // photo_statuses 가 변화할 때마다 pollPhotoConversions 가 새 클로저로 갱신되며,
+  // 모든 슬롯이 ready/rejected 면 즉시 noop 반환 (useProfile 안의 가드) — idle 시
+  // 폴링 부하 0. cleanup 은 unmount/슬롯 갱신 시 timer 정리.
+  useEffect(() => {
+    return pollPhotoConversions();
+  }, [pollPhotoConversions]);
 
   // Supabase storage uses upsert so the public URL is identical across uploads
   // to the same slot — React Image caches by URL and won't refetch. Bumping a
@@ -234,6 +244,134 @@ export default function ProfileScreen() {
     );
   }
 
+  // photo-watercolor-pipeline sprint: profile.photos 는 status='ready' 인 converted_url
+  // 만 position ASC 순으로 compact. 비-ready 슬롯은 photo_statuses 에만 존재 (position
+  // 필드 보유). 5개 슬롯(MAIN_PHOTOS=5) 을 position 기반으로 통합해 status overlay
+  // 분기에 사용. 한 position 에 ready+statuses 양쪽 entry 가 있을 수 있으나 응답
+  // shape 상 ready 면 photos 배열에만 노출되거나 status='ready' 인 statuses entry
+  // 중 하나 — 어떤 경우든 uri 가 있으면 ready 로 간주.
+  type Slot =
+    | { kind: 'ready'; uri: string }
+    | { kind: 'inflight'; status: PhotoConversionStatus; photoId?: string }
+    | { kind: 'empty' };
+
+  const statusByPosition = new Map<number, PhotoStatus>();
+  for (const s of profile.photo_statuses ?? []) {
+    statusByPosition.set(s.position, s);
+  }
+  // 사용자에게 인지되는 position 순서는 (a) compact photos[] (ready 들의 position
+  // ASC) + (b) statuses 중 비-ready position. 단 BE 응답이 position 을 별도 명시
+  // 안 하므로 ready photo 들의 position 은 statuses 의 status='ready' entry 와
+  // join 해 추출 — statuses 에 status='ready' 가 없으면 0..photos.length-1 로 폴백
+  // (legacy 응답 호환).
+  const readyPositions = profile.photo_statuses
+    ? profile.photo_statuses
+        .filter((s) => s.status === 'ready')
+        .map((s) => s.position)
+        .sort((a, b) => a - b)
+    : profile.photos.map((_, i) => i);
+  const readyUrlByPosition = new Map<number, string>();
+  profile.photos.forEach((url, i) => {
+    const pos = readyPositions[i] ?? i;
+    readyUrlByPosition.set(pos, url);
+  });
+
+  function slotAt(position: number): Slot {
+    const uri = readyUrlByPosition.get(position);
+    if (uri) return { kind: 'ready', uri };
+    const s = statusByPosition.get(position);
+    if (s) return { kind: 'inflight', status: s.status, photoId: s.id };
+    return { kind: 'empty' };
+  }
+
+  // photo-watercolor-pipeline sprint: status overlay 렌더러.
+  //   - pending  : 자동 백필 row 처리 대기. processing 과 동일 UI (ActivityIndicator
+  //     + dim) — 사용자 결정 #2 (자동 백필 ON).
+  //   - processing: gpt-image-2 호출 진행 중. ActivityIndicator + dim.
+  //   - failed   : 빨간 retry 아이콘 + onPress → retryPhotoConversion. 자동 재시도
+  //     sweep 이 BE 측에서 진행되지만 사용자가 즉시 트리거할 수 있는 affordance.
+  //   - rejected : 모더레이션 거부. 빨간 X 아이콘 + 토스트로 재업로드 유도. retry
+  //     불가 — 같은 사진은 영구 차단되므로 사용자가 슬롯을 삭제·다른 사진 업로드.
+  const handleRejectedTap = useCallback(() => {
+    showAlert({
+      variant: 'error',
+      title: t('moderation.blocked.title'),
+      message: t('profile.photoBlocked'),
+    });
+  }, [t]);
+  const handleRetryTap = useCallback(
+    async (photoId: string) => {
+      try {
+        await retryPhotoConversion(photoId);
+      } catch (e: any) {
+        showAlert({
+          variant: 'error',
+          title: t('profile.uploadFailed'),
+          message: e.message ?? t('profile.photoConversionFailed'),
+        });
+      }
+    },
+    [retryPhotoConversion, t],
+  );
+
+  const renderInflightSlot = (
+    status: PhotoConversionStatus,
+    photoId: string | undefined,
+    slotStyle: any,
+  ) => {
+    if (status === 'pending' || status === 'processing') {
+      return (
+        <View
+          style={[slotStyle, styles.statusOverlaySlot]}
+          accessibilityLabel={t('profile.photoConverting')}
+        >
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      );
+    }
+    if (status === 'failed') {
+      return (
+        <Pressable
+          style={({ pressed }) => [
+            slotStyle,
+            styles.statusOverlaySlot,
+            styles.statusFailedSlot,
+            pressed && styles.sheetBtnPressed,
+          ]}
+          onPress={() => photoId && handleRetryTap(photoId)}
+          accessibilityRole="button"
+          accessibilityLabel={t('profile.photoRetry')}
+        >
+          <Ionicons name="refresh-circle" size={32} color={colors.like} />
+          <Text style={styles.statusOverlayText} numberOfLines={2}>
+            {t('profile.photoConversionFailed')}
+          </Text>
+        </Pressable>
+      );
+    }
+    // rejected
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          slotStyle,
+          styles.statusOverlaySlot,
+          styles.statusRejectedSlot,
+          pressed && styles.sheetBtnPressed,
+        ]}
+        onPress={handleRejectedTap}
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.photoBlocked')}
+      >
+        <Ionicons name="close-circle" size={32} color={colors.like} />
+        <Text style={styles.statusOverlayText} numberOfLines={2}>
+          {t('profile.photoBlocked')}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  const mainSlot = slotAt(0);
+
   return (
     <PhotoBackground variant="app">
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -241,7 +379,7 @@ export default function ProfileScreen() {
           Always render 4 slots so empty inputs are visible from the start;
           uploadPhoto appends to the end so any empty slot tap fills the next position. */}
       <View style={[styles.photoGrid, { width: GRID_WIDTH }]}>
-        {profile.photos[0] ? (
+        {mainSlot.kind === 'ready' ? (
           // Distinct keys force React to fully unmount the empty add slot and
           // mount a fresh Image-bearing Pressable. Without this, reconciliation
           // swaps children in place and Image never picks up its source on
@@ -255,17 +393,23 @@ export default function ProfileScreen() {
           >
             <Image
               key={`main-${photoBust}`}
-              source={{ uri: bustUri(profile.photos[0]) }}
+              source={{ uri: bustUri(mainSlot.uri) }}
               style={styles.photo}
               resizeMode="cover"
               onError={(e) =>
-                console.warn('[profile] main photo load failed', profile.photos[0], e.nativeEvent)
+                console.warn('[profile] main photo load failed', mainSlot.uri, e.nativeEvent)
               }
             />
             <View style={styles.mainBadge}>
               <Ionicons name="star" size={12} color={colors.white} />
             </View>
           </Pressable>
+        ) : mainSlot.kind === 'inflight' ? (
+          renderInflightSlot(
+            mainSlot.status,
+            mainSlot.photoId,
+            [styles.mainPhotoSlot, { width: MAIN_PHOTO_WIDTH, height: MAIN_PHOTO_HEIGHT }],
+          )
         ) : (
           <Pressable
             key="main-add"
@@ -286,8 +430,8 @@ export default function ProfileScreen() {
             {Array.from({ length: THUMBS_PER_COL }).map((__, rowIdx) => {
               // Slot index layout: main=0, col0={1,2}, col1={3,4}.
               const photoIndex = 1 + colIdx * THUMBS_PER_COL + rowIdx;
-              const uri = profile.photos[photoIndex];
-              if (uri) {
+              const slot = slotAt(photoIndex);
+              if (slot.kind === 'ready') {
                 return (
                   <Pressable
                     key={`thumb-${photoIndex}`}
@@ -298,14 +442,24 @@ export default function ProfileScreen() {
                   >
                     <Image
                       key={`thumb-${photoIndex}-${photoBust}`}
-                      source={{ uri: bustUri(uri) }}
+                      source={{ uri: bustUri(slot.uri) }}
                       style={styles.photo}
                       resizeMode="cover"
                       onError={(e) =>
-                        console.warn('[profile] thumb photo load failed', photoIndex, uri, e.nativeEvent)
+                        console.warn('[profile] thumb photo load failed', photoIndex, slot.uri, e.nativeEvent)
                       }
                     />
                   </Pressable>
+                );
+              }
+              if (slot.kind === 'inflight') {
+                return (
+                  <View key={`thumb-inflight-${photoIndex}`}>
+                    {renderInflightSlot(slot.status, slot.photoId, [
+                      styles.thumbSlot,
+                      { width: THUMB_WIDTH, height: THUMB_HEIGHT },
+                    ])}
+                  </View>
                 );
               }
               return (
@@ -593,6 +747,39 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primaryDark,
     fontFamily: fonts.medium,
+  },
+  // photo-watercolor-pipeline sprint: 변환 status overlay 슬롯 베이스. pending/
+  // processing 은 dimmed cardAlt 배경 + ActivityIndicator; failed/rejected 는
+  // 빨간 톤 보더 + 아이콘 + 카피 2~3 단어.
+  statusOverlaySlot: {
+    backgroundColor: colors.cardAlt,
+    borderRadius: radii.lg,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    padding: 8,
+    overflow: 'hidden',
+  },
+  statusFailedSlot: {
+    borderColor: colors.like,
+    borderStyle: 'solid',
+    backgroundColor: 'rgba(255,82,82,0.06)',
+  },
+  statusRejectedSlot: {
+    borderColor: colors.like,
+    borderStyle: 'solid',
+    backgroundColor: 'rgba(255,82,82,0.12)',
+  },
+  statusOverlayText: {
+    fontSize: 10,
+    lineHeight: 13,
+    textAlign: 'center',
+    color: colors.text,
+    fontFamily: fonts.medium,
+    letterSpacing: -0.2,
   },
   section: {
     marginTop: 22,

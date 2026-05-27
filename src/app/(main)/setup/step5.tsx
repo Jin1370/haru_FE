@@ -8,6 +8,7 @@ import {
     Image,
     useWindowDimensions,
     Modal,
+    ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,6 +22,7 @@ import { WizardHeader } from "@/components/setup/WizardHeader";
 import { useProfile, MAX_PHOTOS } from "@/hooks/useProfile";
 import { requestAndRegisterPushToken } from "@/hooks/usePushToken";
 import * as profileService from "@/services/profile";
+import { ApiRequestError } from "@/services/api";
 import { useSignupDraftStore } from "@/stores/signupDraftStore";
 import { showAlert } from "@/stores/alertStore";
 import { colors, radii, shadows } from "@/constants/colors";
@@ -156,6 +158,12 @@ export default function SetupStep5() {
             // and voice steps that follow are skippable, and the in-app nudges
             // recover them later. After this point a reload routes straight
             // to discover (see app/index.tsx).
+            //
+            // photo-watercolor-pipeline sprint: 업로드 응답이 202 + status='processing'
+            // 로 바뀌었지만 본 흐름은 "다음 진행 가능" 정책이라 ready 전이를 기다리지
+            // 않는다. 변환은 회원가입 완료 후 디스커버/프로필 화면의 폴링이 인계.
+            // 단일 422 + code='photo_blocked' 분기는 가드 — BE 정책상 본 sprint 의
+            // 모더레이션 거부는 비동기지만, 즉시 차단 케이스가 미래에 추가될 가능성.
             await upsertProfile(draft.buildProfilePayload());
             for (const uri of photoUris) {
                 await profileService.uploadPhoto(uri);
@@ -166,6 +174,19 @@ export default function SetupStep5() {
             await requestAndRegisterPushToken().catch(() => undefined);
             router.push("/(main)/setup/step4");
         } catch (e: any) {
+            if (
+                e instanceof ApiRequestError &&
+                e.status === 422 &&
+                e.code === profileService.PHOTO_BLOCKED_CODE
+            ) {
+                // 즉시 차단된 사진 — 사용자에게 다른 사진 선택 안내.
+                showAlert({
+                    variant: "error",
+                    title: t("moderation.blocked.title"),
+                    message: t("profile.photoBlocked"),
+                });
+                return;
+            }
             showAlert({
                 variant: "error",
                 title: t("common.error"),
@@ -312,6 +333,25 @@ export default function SetupStep5() {
                 <ErrorText testID="setup-step5-photo-error">
                     {photoError}
                 </ErrorText>
+
+                {/* photo-watercolor-pipeline: 업로드 직후 비동기 변환 진행 인디케이터.
+                    handleNext 가 sequential uploadPhoto + loadProfile + router.push 흐름이라
+                    submitting=true 윈도우에서만 노출. 변환 자체는 다음 화면 진입 후에도
+                    background 에서 진행되며 디스커버/프로필 화면이 폴링으로 인계. */}
+                {submitting && (
+                    <View
+                        style={styles.conversionBox}
+                        testID="setup-step5-conversion-progress"
+                    >
+                        <ActivityIndicator
+                            size="small"
+                            color={colors.primary}
+                        />
+                        <Text style={styles.conversionText}>
+                            {t("profile.photoConverting")}
+                        </Text>
+                    </View>
+                )}
 
                 {!canProceed && (
                     <View style={styles.warnBox}>
@@ -515,6 +555,26 @@ const styles = StyleSheet.create({
     // the pair reads as a related stack instead of two unrelated callouts.
     warnBoxStacked: {
         marginTop: 8,
+    },
+    conversionBox: {
+        flexDirection: "row",
+        gap: 10,
+        alignItems: "center",
+        backgroundColor: colors.surface,
+        borderRadius: radii.md,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderWidth: 1,
+        borderColor: colors.border,
+        marginTop: 16,
+    },
+    conversionText: {
+        flex: 1,
+        fontSize: 13,
+        lineHeight: 18,
+        letterSpacing: -0.4,
+        color: colors.primaryDark,
+        fontFamily: fonts.medium,
     },
     sheetBackdrop: {
         flex: 1,
