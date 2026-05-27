@@ -3,40 +3,42 @@ import remarkGfm from 'remark-gfm';
 
 export default function LegalMarkdown({ source }: { source: string }) {
   return (
-    <article className="mx-auto max-w-3xl px-6 py-16 text-zinc-200">
+    <article className="mx-auto max-w-3xl px-6 py-16 text-[color:var(--color-text)]">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ children }) => (
-            <h1 className="mb-6 text-3xl font-semibold text-zinc-50 md:text-4xl">
+            <h1 className="mb-6 text-3xl font-semibold text-[color:var(--color-text)] md:text-4xl">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="mt-12 mb-4 text-2xl font-semibold text-zinc-50">
+            <h2 className="mt-12 mb-4 text-2xl font-semibold text-[color:var(--color-text)]">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="mt-8 mb-3 text-xl font-semibold text-zinc-100">
+            <h3 className="mt-8 mb-3 text-xl font-semibold text-[color:var(--color-text)]">
               {children}
             </h3>
           ),
           p: ({ children }) => (
-            <p className="my-4 leading-7 text-zinc-300">{children}</p>
+            <p className="my-4 leading-7 text-[color:var(--color-text)]">
+              {children}
+            </p>
           ),
           ul: ({ children }) => (
-            <ul className="my-4 list-disc space-y-1 pl-6 text-zinc-300">
+            <ul className="my-4 list-disc space-y-1 pl-6 text-[color:var(--color-text)]">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="my-4 list-decimal space-y-1 pl-6 text-zinc-300">
+            <ol className="my-4 list-decimal space-y-1 pl-6 text-[color:var(--color-text)]">
               {children}
             </ol>
           ),
           blockquote: ({ children }) => (
-            <blockquote className="my-6 border-l-2 border-zinc-700 pl-4 text-zinc-400 italic">
+            <blockquote className="my-6 border-l-2 border-[color:var(--color-primary)] pl-4 text-[color:var(--color-text-secondary)] italic">
               {children}
             </blockquote>
           ),
@@ -46,20 +48,22 @@ export default function LegalMarkdown({ source }: { source: string }) {
             </div>
           ),
           thead: ({ children }) => (
-            <thead className="bg-zinc-900 text-zinc-200">{children}</thead>
+            <thead className="bg-[color:var(--color-surface)] text-[color:var(--color-text)]">
+              {children}
+            </thead>
           ),
           th: ({ children }) => (
-            <th className="border border-zinc-800 px-3 py-2 text-left font-medium">
+            <th className="border border-[color:var(--color-border)] px-3 py-2 text-left font-medium">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="border border-zinc-800 px-3 py-2 align-top text-zinc-300">
+            <td className="border border-[color:var(--color-border)] px-3 py-2 align-top text-[color:var(--color-text)]">
               {children}
             </td>
           ),
           code: ({ children }) => (
-            <code className="rounded bg-zinc-900 px-1.5 py-0.5 text-sm text-zinc-200">
+            <code className="rounded bg-[color:var(--color-surface)] px-1.5 py-0.5 text-sm text-[color:var(--color-text)]">
               {children}
             </code>
           ),
@@ -68,14 +72,18 @@ export default function LegalMarkdown({ source }: { source: string }) {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-zinc-50 underline hover:text-zinc-300"
+              className="text-[color:var(--color-primary-dark)] underline hover:text-[color:var(--color-primary)]"
             >
               {children}
             </a>
           ),
-          hr: () => <hr className="my-10 border-zinc-800" />,
+          hr: () => (
+            <hr className="my-10 border-[color:var(--color-border)]" />
+          ),
           strong: ({ children }) => (
-            <strong className="font-semibold text-zinc-100">{children}</strong>
+            <strong className="font-semibold text-[color:var(--color-text)]">
+              {children}
+            </strong>
           ),
         }}
       >

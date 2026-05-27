@@ -37,7 +37,7 @@ export default async function TermsPage({
   return (
     <>
       {showLocaleNotice && (
-        <div className="border-b border-zinc-800 bg-zinc-900/60 px-6 py-3 text-center text-sm text-zinc-400">
+        <div className="border-b border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-6 py-3 text-center text-sm text-[color:var(--color-text-secondary)]">
           {t('localeNotice')}
         </div>
       )}
