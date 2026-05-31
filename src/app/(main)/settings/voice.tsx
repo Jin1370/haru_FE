@@ -72,10 +72,24 @@ function RecordRing({
 }
 
 export default function VoiceSettingsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { status, loading: voiceLoading, uploadClone, checkStatus } = useVoice();
   const authProfile = useAuthStore((s) => s.profile);
+
+  // 재녹음 잔여(미리 노출용, mig 032). status 미로드 시 undefined.
+  const recloneRemaining = status?.reclone_remaining;
+  const recloneResetAt = status?.reclone_reset_at ?? null;
+  const formatResetDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(i18n.language, {
+      month: 'long',
+      day: 'numeric',
+    });
+  // 재생성 버튼 라벨: "재생성 (N회 남음)". status 미로드 시 카운트 생략.
+  const regenButtonTitle =
+    typeof recloneRemaining === 'number'
+      ? t('setupVoice.regenerateWithRemaining', { remaining: recloneRemaining })
+      : t('setupVoice.regenerateShort');
 
   const {
     isRecording,
@@ -156,7 +170,18 @@ export default function VoiceSettingsScreen() {
       // 재녹음으로 진입했던 경우 업로드 성공 시 ready 분기로 자연 복귀.
       setIsReRecording(false);
     } catch (e: any) {
-      showAlert({ variant: 'error', title: t('setupVoice.uploadFailed'), message: e.message });
+      // 재녹음 한도(429 reclone_limit) — 어뷰즈 가드. 친절한 안내로 분기.
+      if (e?.code === 'reclone_limit') {
+        showAlert({
+          variant: 'error',
+          title: t('setupVoice.recloneLimitTitle'),
+          message: recloneResetAt
+            ? t('setupVoice.recloneExhausted', { date: formatResetDate(recloneResetAt) })
+            : t('setupVoice.recloneLimitMessage'),
+        });
+      } else {
+        showAlert({ variant: 'error', title: t('setupVoice.uploadFailed'), message: e.message });
+      }
     }
   };
 
@@ -257,7 +282,32 @@ export default function VoiceSettingsScreen() {
             </View>
           )
         ) : cloneStatus === 'ready' ? (
-          <Button title={t('setupVoice.regenerateVoiceClone')} variant="outline" onPress={handleRegenerate} />
+          <View style={styles.regenSection}>
+            <Button
+              title={regenButtonTitle}
+              variant="outline"
+              onPress={handleRegenerate}
+              disabled={recloneRemaining === 0}
+              // 카운트 로드 전(undefined)엔 로딩 상태 → 탭 불가(녹음 진입 차단) +
+              // "재생성"→"재생성 (N회 남음)" 텍스트 깜빡임 제거. 로드 후 정상 표시.
+              loading={recloneRemaining === undefined}
+            />
+            {/* 한도 소진 시에만 버튼 아래 안내 (step5 사진 등록 화면 warnBox 와 동일 UI). */}
+            {recloneRemaining === 0 ? (
+              <View style={styles.recloneWarnBox}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={16}
+                  color={colors.primaryDark}
+                />
+                <Text style={styles.recloneWarnText}>
+                  {recloneResetAt
+                    ? t('setupVoice.recloneExhausted', { date: formatResetDate(recloneResetAt) })
+                    : t('setupVoice.recloneLimitTitle')}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         ) : null}
       </ScrollView>
     </View>
@@ -267,6 +317,27 @@ export default function VoiceSettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, paddingBottom: 40 },
+  regenSection: { gap: 8 },
+  // step5(사진 등록) 화면의 warnBox 와 동일 UI. 간격은 regenSection 의 gap 이 담당.
+  recloneWarnBox: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  recloneWarnText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: -0.6,
+    color: colors.primaryDark,
+    fontFamily: fonts.medium,
+  },
   statusCard: {
     alignItems: 'center',
     padding: 22,

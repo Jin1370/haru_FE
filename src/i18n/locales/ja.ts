@@ -491,6 +491,12 @@ export default {
         voiceSizeLimit:
             "音声サンプルは10MB以下にしてください。短く録音し直してください。",
         uploadFailed: "アップロード失敗",
+        regenerateShort: "再生成",
+        regenerateWithRemaining: "再生成（残り{{remaining}}回）",
+        recloneLimitTitle: "再生成の上限に達しました",
+        recloneLimitMessage:
+            "今期間のボイス再生成の上限に達しました。しばらくしてからもう一度お試しください。",
+        recloneExhausted: "再生成の上限に達しました。{{date}}から再度可能になります。",
         tooShortTitle: "録音が短すぎます",
         tooShortMessage:
             "ボイスクローンを作成するには10秒以上の録音が必要です。もう一度録音してください。",

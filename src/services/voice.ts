@@ -32,12 +32,17 @@ export async function uploadVoiceClone(uri: string): Promise<VoiceCloneResponse>
 
   if (result.status < 200 || result.status >= 300) {
     let message = 'Upload failed';
+    let code: string | undefined;
     try {
-      message = JSON.parse(result.body).error ?? message;
+      const parsed = JSON.parse(result.body);
+      message = parsed.error ?? message;
+      // 재녹음 한도(429 reclone_limit) 등 BE 의 discriminated code 를 보존해
+      // 호출처가 친절한 안내로 분기할 수 있게 한다.
+      code = typeof parsed.code === 'string' ? parsed.code : undefined;
     } catch {
       /* ignore */
     }
-    throw new ApiRequestError(result.status, message);
+    throw new ApiRequestError(result.status, message, code);
   }
 
   return JSON.parse(result.body) as VoiceCloneResponse;

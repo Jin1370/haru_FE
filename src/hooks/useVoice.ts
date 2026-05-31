@@ -26,7 +26,14 @@ export function useVoice() {
     setError(null);
     try {
       const res = await voiceService.uploadVoiceClone(uri);
-      setStatus({ status: res.status, voice_id: res.voice_id });
+      // 재생성 직후 버튼 카운트가 즉시 갱신되도록 reclone 필드까지 보존.
+      setStatus({
+        status: res.status,
+        voice_id: res.voice_id,
+        reclone_remaining: res.reclone_remaining,
+        reclone_cap: res.reclone_cap,
+        reclone_reset_at: res.reclone_reset_at,
+      });
       await loadProfile();
       return res;
     } catch (e: any) {

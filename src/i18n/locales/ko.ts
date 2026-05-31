@@ -492,6 +492,12 @@ export default {
         voiceSizeLimit:
             "음성 샘플은 10MB 이하여야 합니다. 더 짧게 녹음해주세요.",
         uploadFailed: "업로드 실패",
+        regenerateShort: "재생성",
+        regenerateWithRemaining: "재생성 ({{remaining}}회 남음)",
+        recloneLimitTitle: "재생성 한도 도달",
+        recloneLimitMessage:
+            "이번 기간 보이스 재생성 한도에 도달했어요. 잠시 후 다시 시도해 주세요.",
+        recloneExhausted: "재생성 한도에 도달했어요. {{date}}부터 다시 가능해요.",
         tooShortTitle: "녹음이 너무 짧습니다",
         tooShortMessage:
             "보이스 클론을 만들려면 10초 이상 녹음이 필요합니다. 다시 녹음해주세요.",

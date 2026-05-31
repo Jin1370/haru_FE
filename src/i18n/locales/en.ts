@@ -491,6 +491,12 @@ export default {
     fileTooLarge: 'File Too Large',
     voiceSizeLimit: 'Voice sample must be under 10MB. Try a shorter recording.',
     uploadFailed: 'Upload Failed',
+    regenerateShort: 'Regenerate',
+    regenerateWithRemaining: 'Regenerate ({{remaining}} left)',
+    recloneLimitTitle: 'Regeneration Limit Reached',
+    recloneLimitMessage:
+        'You\'ve reached the voice regeneration limit for this period. Please try again later.',
+    recloneExhausted: 'You\'ve reached the regeneration limit. Available again on {{date}}.',
     tooShortTitle: 'Recording Too Short',
     tooShortMessage: 'Voice clone requires at least 10 seconds. Please record again.',
     tooQuietTitle: 'No Voice Detected',

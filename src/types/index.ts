@@ -125,11 +125,19 @@ export interface PhotoStatus {
 export interface VoiceCloneResponse {
   voice_id: string;
   status: 'ready';
+  // 재생성 직후 잔여 횟수 즉시 반영용 (POST /clone 동봉). mig 032.
+  reclone_remaining?: number;
+  reclone_cap?: number;
+  reclone_reset_at?: string | null;
 }
 
 export interface VoiceStatusResponse {
   status: 'pending' | 'processing' | 'ready' | 'failed';
   voice_id: string | null;
+  // 재녹음 레이트리밋 미리 노출용 (mig 032). reset_at 은 윈도우 미활성 시 null.
+  reclone_remaining?: number;
+  reclone_cap?: number;
+  reclone_reset_at?: string | null;
 }
 
 // voice-first-message-gate follow-up: voice clone 단독 삭제 라우트가 제거됨에
