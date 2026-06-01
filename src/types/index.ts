@@ -64,6 +64,9 @@ export interface Profile {
   // 이 필드로만 식별된다. position 순서는 mig 028 의 UNIQUE (user_id, position)
   // 로 보장. BE 가 mig 028 미적용 윈도우에서 응답하지 않을 수 있어 optional.
   photo_statuses?: PhotoStatus[];
+  // 프리미엄 entitlement (mig 033). NULL/과거 = 무료, 미래 = 프리미엄.
+  // 런칭 쿠폰 + 향후 구독 공유. 판정은 utils/premium.isPremium.
+  premium_until?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
