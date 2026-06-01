@@ -106,13 +106,14 @@ export function useProfile() {
   // 재배치 호출 안 함 (설계 §5.5): 새 사진은 processing 이라 position 0 ready 강제와
   // 충돌 가능 + POST 가 첫 빈 자리에 재할당하므로 자연 순서 유지. 메인 교체 시 변환
   // 완료까지 메인 공백은 교체의 자연 트레이드오프 (현행 동작과 동일).
-  const replacePhotoAt = useCallback(async (position: number, newUri: string): Promise<void> => {
+  const replacePhotoAt = useCallback(async (position: number, newUri: string): Promise<PhotoUploadResponse> => {
     setLoading(true);
     setError(null);
     try {
       await profileService.deletePhoto(position);
-      await profileService.uploadPhoto(newUri);
+      const res = await profileService.uploadPhoto(newUri);
       await loadProfile();
+      return res;
     } catch (e: any) {
       setError(e.message);
       throw e;

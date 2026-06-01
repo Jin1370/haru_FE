@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
     View,
     Text,
@@ -10,7 +10,7 @@ import {
     Modal,
     ActivityIndicator,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
@@ -34,7 +34,8 @@ import { fonts } from "@/constants/fonts";
 const GRID_GAP = 10;
 const COL_COUNT = 2;
 const THUMBS_PER_COL = 2;
-
+// Strong blur for the Mode B lock backdrop — much heavier than the profile
+// tab's blurRadius={4} so the converting originals are never legible.
 export default function SetupStep5() {
     const { t } = useTranslation();
     const insets = useSafeAreaInsets();
@@ -48,15 +49,42 @@ export default function SetupStep5() {
     const THUMB_HEIGHT = Math.round(
         (MAIN_PHOTO_HEIGHT - GRID_GAP) / THUMBS_PER_COL,
     );
+    // Preview box dimensions mirror (tabs)/profile.tsx so the tap-to-preview
+    // modal looks identical to the profile tab's photo preview.
+    const PREVIEW_WIDTH = Math.round(SCREEN_WIDTH * 0.82);
+    const PREVIEW_HEIGHT = Math.round((PREVIEW_WIDTH * 4) / 3);
     const draft = useSignupDraftStore();
     const {
+        profile,
         upsertProfile,
         loadProfile,
         loading: profileLoading,
     } = useProfile();
 
+    // Dual-mode gate. On the very first pass through the wizard the BE profile
+    // row has no photos yet → Mode A (purely local batch upload on "next").
+    // After "next" the photos are uploaded; if the user backs out of step4 and
+    // returns here, photo_statuses is populated → Mode B. Mode B is now a pure
+    // LOCK screen: the user can neither view, edit, nor add photos — only
+    // advance. This kills both the old "back → next again → duplicate upload +
+    // duplicate convert" bug AND the "user pokes at converting slots" surface.
+    const hasUploadedPhotos = (profile?.photo_statuses?.length ?? 0) > 0;
+
+    // Mode B refetch: step4 → back returns here. Pull latest photo_statuses so
+    // the mode gate flips on re-entry.
+    // Refetch profile on focus so the Mode A/B gate (photo_statuses presence)
+    // is fresh when returning here from step4. One GET per focus — no polling.
+    // The lock screen doesn't reflect per-photo conversion status, so there's
+    // nothing to poll for.
+    useFocusEffect(
+        useCallback(() => {
+            loadProfile();
+        }, [loadProfile]),
+    );
+
     const [photoUris, setPhotoUris] = useState<string[]>(draft.photoUris);
     const [submitting, setSubmitting] = useState(false);
+    // activePhotoIndex is set ONLY in Mode A — the action sheet is Mode A only.
     const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(
         null,
     );
@@ -89,6 +117,7 @@ export default function SetupStep5() {
         return asset.uri;
     };
 
+    // === Mode A (first-pass, local batch) handlers =========================
     const handleAdd = async () => {
         if (photoUris.length >= MAX_PHOTOS) {
             setPhotoError(t("profile.maxPhotosReached"));
@@ -145,6 +174,12 @@ export default function SetupStep5() {
     };
 
     const handleNext = async () => {
+        // Mode B: photos are already uploaded + converting. Just advance — no
+        // re-upload, so existing converting photos are never re-converted.
+        if (hasUploadedPhotos) {
+            router.push("/(main)/setup/step4");
+            return;
+        }
         if (photoUris.length === 0) {
             // The "at least one" warning is already permanently inlined in the
             // warnBox below the grid — no extra Alert needed; just gate.
@@ -152,55 +187,69 @@ export default function SetupStep5() {
         }
         if (submitting) return;
         setSubmitting(true);
-        try {
-            // Wizard position 2: this is where the BE INSERT happens. Basics
-            // (step1) and ≥1 photo are the only mandatory blocks — preferences
-            // and voice steps that follow are skippable, and the in-app nudges
-            // recover them later. After this point a reload routes straight
-            // to discover (see app/index.tsx).
-            //
-            // photo-watercolor-pipeline sprint: 업로드 응답이 202 + status='processing'
-            // 로 바뀌었지만 본 흐름은 "다음 진행 가능" 정책이라 ready 전이를 기다리지
-            // 않는다. 변환은 회원가입 완료 후 디스커버/프로필 화면의 폴링이 인계.
-            // 단일 422 + code='photo_blocked' 분기는 가드 — BE 정책상 본 sprint 의
-            // 모더레이션 거부는 비동기지만, 즉시 차단 케이스가 미래에 추가될 가능성.
-            await upsertProfile(draft.buildProfilePayload());
-            for (const uri of photoUris) {
-                await profileService.uploadPhoto(uri);
+
+        // 낙관적(optimistic) 진행 — "다음"을 누르면 화면을 즉시 step4 로 전환하고,
+        // 느린 작업(프로필 upsert + 사진 바이트 업로드)은 백그라운드로 돌린다.
+        //
+        // Wizard position 2: 여기서 BE 프로필 row 가 생성된다(이후 reload 시 곧장
+        // discover 로 라우팅 — app/index.tsx). 업로드는 순차 유지 — BE POST /photos
+        // 가 position 을 비원자적으로 배정해 병렬이면 UNIQUE(user_id, position)
+        // 충돌(23505)이 난다. 실패(휴면 상태인 422 photo_blocked 포함)는 사용자가
+        // 이미 다음 단계로 넘어갔을 수 있으므로 글로벌 alert 로 노출한다.
+        const uris = [...photoUris];
+        router.push("/(main)/setup/step4");
+
+        void (async () => {
+            try {
+                await upsertProfile(draft.buildProfilePayload());
+                for (const uri of uris) {
+                    await profileService.uploadPhoto(uri);
+                }
+                requestAndRegisterPushToken().catch(() => undefined);
+            } catch (e: any) {
+                if (
+                    e instanceof ApiRequestError &&
+                    e.status === 422 &&
+                    e.code === profileService.PHOTO_BLOCKED_CODE
+                ) {
+                    showAlert({
+                        variant: "error",
+                        title: t("moderation.blocked.title"),
+                        message: t("profile.photoBlocked"),
+                    });
+                } else {
+                    showAlert({
+                        variant: "error",
+                        title: t("common.error"),
+                        message: e.message ?? t("signupWizard.registerFailed"),
+                    });
+                }
+            } finally {
+                // 버튼을 다시 활성화하기 전에 프로필을 await 로 갱신한다. 사용자가
+                // step4 에서 빠르게 step5 로 돌아온 경우, submitting 이 false 로
+                // 풀리는 시점엔 photo_statuses 가 이미 채워져 Mode B(잠금)로
+                // 전환돼 있어야 "다음" 재탭이 재업로드(이미지 생성 중복)로 이어지지
+                // 않는다. loadProfile 이 실패해도 버튼은 풀어줘야 하므로 catch 흡수.
+                await loadProfile().catch(() => undefined);
+                setSubmitting(false);
             }
-            await loadProfile();
-            // push-notifications sprint: 회원가입 직후(프로필 생성 완료) 권한 요청.
-            // 거부되어도 가입 흐름 차단하지 않음 — 사용자는 settings 에서 재허용 가능.
-            await requestAndRegisterPushToken().catch(() => undefined);
-            router.push("/(main)/setup/step4");
-        } catch (e: any) {
-            if (
-                e instanceof ApiRequestError &&
-                e.status === 422 &&
-                e.code === profileService.PHOTO_BLOCKED_CODE
-            ) {
-                // 즉시 차단된 사진 — 사용자에게 다른 사진 선택 안내.
-                showAlert({
-                    variant: "error",
-                    title: t("moderation.blocked.title"),
-                    message: t("profile.photoBlocked"),
-                });
-                return;
-            }
-            showAlert({
-                variant: "error",
-                title: t("common.error"),
-                message: e.message ?? t("signupWizard.registerFailed"),
-            });
-        } finally {
-            setSubmitting(false);
-        }
+        })();
     };
 
     const loading = submitting || profileLoading;
-    const canProceed = photoUris.length >= 1;
+
+    // Photo count drives the nudges + the "next" gate. In mode B the source of
+    // truth is the BE photo_statuses (each uploaded/converting slot counts);
+    // in mode A it's the local photoUris not yet uploaded.
+    const photoCount = hasUploadedPhotos
+        ? (profile?.photo_statuses?.length ?? 0)
+        : photoUris.length;
+    const canProceed = photoCount >= 1;
     const mainUri = photoUris[0];
 
+    // Mode B lock backdrop: the user's main original (upload order = position,
+    // persisted in draft.photoUris) blurred heavily so the converting photo is
+    // not legible. Falls back to a dim box if the draft original is missing.
     return (
         <View style={styles.container}>
             <WizardHeader
@@ -215,145 +264,148 @@ export default function SetupStep5() {
                     { paddingBottom: 24 + insets.bottom },
                 ]}
             >
-                {/* Photo grid layout matches (tabs)/profile.tsx so what the user
-            registers here is what they'll see on their profile tab. Always
-            render every slot so empty inputs are visible from the start. */}
-                <View style={[styles.photoGrid, { width: GRID_WIDTH }]}>
-                    {mainUri ? (
-                        <Pressable
-                            key="main-photo"
-                            style={[
-                                styles.mainPhotoSlot,
-                                { width: MAIN_PHOTO_WIDTH, height: MAIN_PHOTO_HEIGHT },
-                            ]}
-                            onPress={() => setActivePhotoIndex(0)}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("profile.photoActionsTitle")}
-                        >
-                            <Image
-                                source={{ uri: mainUri }}
-                                style={styles.photo}
-                                resizeMode="cover"
+                {hasUploadedPhotos ? (
+                    // === Mode B: fully locked while photos convert ==========
+                    // No view / edit / add / preview. The whole grid area is a
+                    // blurred backdrop + scrim + lock notice. Non-interactive.
+                    <View
+                        style={[
+                            styles.lockGrid,
+                            { width: GRID_WIDTH, height: MAIN_PHOTO_HEIGHT },
+                        ]}
+                        pointerEvents="none"
+                    >
+                        <View style={styles.lockContent}>
+                            <ActivityIndicator
+                                size="small"
+                                color={colors.primary}
                             />
-                            <View style={styles.mainBadge}>
-                                <Ionicons
-                                    name="star"
-                                    size={12}
-                                    color={colors.white}
+                            <Text style={styles.lockText}>
+                                {t("signupWizard.step5ConvertingLocked")}
+                            </Text>
+                        </View>
+                    </View>
+                ) : (
+                    // === Mode A: local grid (batch upload on "next") ========
+                    <View style={[styles.photoGrid, { width: GRID_WIDTH }]}>
+                        {mainUri ? (
+                            <Pressable
+                                key="main-photo"
+                                style={[
+                                    styles.mainPhotoSlot,
+                                    { width: MAIN_PHOTO_WIDTH, height: MAIN_PHOTO_HEIGHT },
+                                ]}
+                                onPress={() => setActivePhotoIndex(0)}
+                                accessibilityRole="button"
+                                accessibilityLabel={t("profile.photoActionsTitle")}
+                            >
+                                <Image
+                                    source={{ uri: mainUri }}
+                                    style={styles.photo}
+                                    resizeMode="cover"
                                 />
-                            </View>
-                        </Pressable>
-                    ) : (
-                        <Pressable
-                            key="main-add"
-                            style={[
-                                styles.mainPhotoSlot,
-                                styles.addSlot,
-                                { width: MAIN_PHOTO_WIDTH, height: MAIN_PHOTO_HEIGHT },
-                            ]}
-                            onPress={handleAdd}
-                            accessibilityRole="button"
-                            accessibilityLabel={t("profile.addPhoto")}
-                        >
-                            <Ionicons
-                                name="add"
-                                size={36}
-                                color={colors.textSecondary}
-                            />
-                        </Pressable>
-                    )}
+                                <View style={styles.mainBadge}>
+                                    <Ionicons
+                                        name="star"
+                                        size={12}
+                                        color={colors.white}
+                                    />
+                                </View>
+                            </Pressable>
+                        ) : (
+                            <Pressable
+                                key="main-add"
+                                style={[
+                                    styles.mainPhotoSlot,
+                                    styles.addSlot,
+                                    { width: MAIN_PHOTO_WIDTH, height: MAIN_PHOTO_HEIGHT },
+                                ]}
+                                onPress={handleAdd}
+                                accessibilityRole="button"
+                                accessibilityLabel={t("profile.addPhoto")}
+                            >
+                                <Ionicons
+                                    name="add"
+                                    size={36}
+                                    color={colors.textSecondary}
+                                />
+                            </Pressable>
+                        )}
 
-                    {Array.from({ length: COL_COUNT }).map((_, colIdx) => (
-                        <View
-                            key={`col-${colIdx}`}
-                            style={[
-                                styles.thumbColumn,
-                                { width: THUMB_WIDTH, height: MAIN_PHOTO_HEIGHT },
-                            ]}
-                        >
-                            {Array.from({ length: THUMBS_PER_COL }).map(
-                                (__, rowIdx) => {
-                                    // Slot index layout: main=0, col0={1,2}, col1={3,4}.
-                                    const photoIndex =
-                                        1 + colIdx * THUMBS_PER_COL + rowIdx;
-                                    const uri = photoUris[photoIndex];
-                                    if (uri) {
+                        {Array.from({ length: COL_COUNT }).map((_, colIdx) => (
+                            <View
+                                key={`col-${colIdx}`}
+                                style={[
+                                    styles.thumbColumn,
+                                    { width: THUMB_WIDTH, height: MAIN_PHOTO_HEIGHT },
+                                ]}
+                            >
+                                {Array.from({ length: THUMBS_PER_COL }).map(
+                                    (__, rowIdx) => {
+                                        // Slot index layout: main=0, col0={1,2}, col1={3,4}.
+                                        const photoIndex =
+                                            1 + colIdx * THUMBS_PER_COL + rowIdx;
+                                        const uri = photoUris[photoIndex];
+                                        if (uri) {
+                                            return (
+                                                <Pressable
+                                                    key={`thumb-${photoIndex}`}
+                                                    style={[
+                                                        styles.thumbSlot,
+                                                        { width: THUMB_WIDTH, height: THUMB_HEIGHT },
+                                                    ]}
+                                                    onPress={() =>
+                                                        setActivePhotoIndex(
+                                                            photoIndex,
+                                                        )
+                                                    }
+                                                    accessibilityRole="button"
+                                                    accessibilityLabel={t(
+                                                        "profile.photoActionsTitle",
+                                                    )}
+                                                >
+                                                    <Image
+                                                        source={{ uri }}
+                                                        style={styles.photo}
+                                                        resizeMode="cover"
+                                                    />
+                                                </Pressable>
+                                            );
+                                        }
                                         return (
                                             <Pressable
-                                                key={`thumb-${photoIndex}`}
+                                                key={`thumb-add-${photoIndex}`}
                                                 style={[
                                                     styles.thumbSlot,
+                                                    styles.addSlot,
                                                     { width: THUMB_WIDTH, height: THUMB_HEIGHT },
                                                 ]}
-                                                onPress={() =>
-                                                    setActivePhotoIndex(
-                                                        photoIndex,
-                                                    )
-                                                }
+                                                onPress={handleAdd}
                                                 accessibilityRole="button"
                                                 accessibilityLabel={t(
-                                                    "profile.photoActionsTitle",
+                                                    "profile.addPhoto",
                                                 )}
                                             >
-                                                <Image
-                                                    source={{ uri }}
-                                                    style={styles.photo}
-                                                    resizeMode="cover"
+                                                <Ionicons
+                                                    name="add"
+                                                    size={24}
+                                                    color={colors.textSecondary}
                                                 />
                                             </Pressable>
                                         );
-                                    }
-                                    return (
-                                        <Pressable
-                                            key={`thumb-add-${photoIndex}`}
-                                            style={[
-                                                styles.thumbSlot,
-                                                styles.addSlot,
-                                                { width: THUMB_WIDTH, height: THUMB_HEIGHT },
-                                            ]}
-                                            onPress={handleAdd}
-                                            accessibilityRole="button"
-                                            accessibilityLabel={t(
-                                                "profile.addPhoto",
-                                            )}
-                                        >
-                                            <Ionicons
-                                                name="add"
-                                                size={24}
-                                                color={colors.textSecondary}
-                                            />
-                                        </Pressable>
-                                    );
-                                },
-                            )}
-                        </View>
-                    ))}
-                </View>
+                                    },
+                                )}
+                            </View>
+                        ))}
+                    </View>
+                )}
 
                 <ErrorText testID="setup-step5-photo-error">
                     {photoError}
                 </ErrorText>
 
-                {/* photo-watercolor-pipeline: 업로드 직후 비동기 변환 진행 인디케이터.
-                    handleNext 가 sequential uploadPhoto + loadProfile + router.push 흐름이라
-                    submitting=true 윈도우에서만 노출. 변환 자체는 다음 화면 진입 후에도
-                    background 에서 진행되며 디스커버/프로필 화면이 폴링으로 인계. */}
-                {submitting && (
-                    <View
-                        style={styles.conversionBox}
-                        testID="setup-step5-conversion-progress"
-                    >
-                        <ActivityIndicator
-                            size="small"
-                            color={colors.primary}
-                        />
-                        <Text style={styles.conversionText}>
-                            {t("profile.photoConverting")}
-                        </Text>
-                    </View>
-                )}
-
-                {!canProceed && (
+                {/* Nudges are Mode A only — Mode B shows the lock screen alone. */}
+                {!hasUploadedPhotos && !canProceed && (
                     <View style={styles.warnBox}>
                         <Ionicons
                             name="information-circle-outline"
@@ -365,27 +417,24 @@ export default function SetupStep5() {
                         </Text>
                     </View>
                 )}
-                {/* Encouragement keeps showing as long as the user can still
-                    add more photos. Stacks tightly under the required notice
-                    when both are visible; renders with the standard top
-                    margin once the required notice has cleared. */}
-                {photoUris.length < MAX_PHOTOS && (
-                    <View
-                        style={[
-                            styles.warnBox,
-                            !canProceed && styles.warnBoxStacked,
-                        ]}
-                    >
-                        <Ionicons
-                            name="information-circle-outline"
-                            size={16}
-                            color={colors.primaryDark}
-                        />
-                        <Text style={styles.warnText}>
-                            {t("signupWizard.step5MorePhotosBoost")}
-                        </Text>
-                    </View>
-                )}
+                {/* Encouragement shows only once ≥1 photo is registered (and
+                    there's still room for more). At 0 photos only the required
+                    "at least one" notice shows — keeps the screen text minimal.
+                    The two notices are mutually exclusive, so no stacking. */}
+                {!hasUploadedPhotos &&
+                    canProceed &&
+                    photoCount < MAX_PHOTOS && (
+                        <View style={styles.warnBox}>
+                            <Ionicons
+                                name="information-circle-outline"
+                                size={16}
+                                color={colors.primaryDark}
+                            />
+                            <Text style={styles.warnText}>
+                                {t("signupWizard.step5MorePhotosBoost")}
+                            </Text>
+                        </View>
+                    )}
 
                 <Button
                     title={t("common.next")}
@@ -396,8 +445,8 @@ export default function SetupStep5() {
                 />
             </ScrollView>
 
-            {/* Photo action sheet mirrors the one in (tabs)/profile.tsx so users
-          re-encountering this on the profile tab see identical affordances. */}
+            {/* Photo action sheet — Mode A only. activePhotoIndex is never set
+          in Mode B, so this modal stays closed while photos are locked. */}
             <Modal
                 visible={activePhotoIndex !== null}
                 transparent
@@ -408,14 +457,49 @@ export default function SetupStep5() {
                 <Pressable
                     style={[
                         styles.sheetBackdrop,
-                        { paddingBottom: 12 + insets.bottom },
+                        {
+                            paddingTop: 12 + insets.top,
+                            paddingBottom: 12 + insets.bottom,
+                        },
                     ]}
                     onPress={closeSheet}
                 >
                     <Pressable
-                        style={styles.sheetGroup}
+                        style={[styles.sheetGroup, { width: PREVIEW_WIDTH }]}
                         onPress={(e) => e.stopPropagation()}
                     >
+                        {activePhotoIndex !== null &&
+                        photoUris[activePhotoIndex] ? (
+                            <View
+                                style={[
+                                    styles.sheetPreviewBox,
+                                    {
+                                        width: PREVIEW_WIDTH,
+                                        height: PREVIEW_HEIGHT,
+                                    },
+                                ]}
+                            >
+                                <Image
+                                    source={{
+                                        uri: photoUris[activePhotoIndex],
+                                    }}
+                                    style={styles.sheetPreviewImage}
+                                    resizeMode="cover"
+                                />
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.previewCloseBtn,
+                                        pressed && styles.previewCloseBtnPressed,
+                                    ]}
+                                    onPress={closeSheet}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={t("common.cancel")}
+                                    hitSlop={8}
+                                >
+                                    <Ionicons name="close" size={20} color={colors.white} />
+                                </Pressable>
+                            </View>
+                        ) : null}
                         <View style={styles.sheet}>
                             {activePhotoIndex !== null &&
                                 activePhotoIndex !== 0 && (
@@ -463,23 +547,6 @@ export default function SetupStep5() {
                                 </Text>
                             </Pressable>
                         </View>
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.sheet,
-                                styles.sheetCancel,
-                                pressed && styles.sheetBtnPressed,
-                            ]}
-                            onPress={closeSheet}
-                        >
-                            <Text
-                                style={[
-                                    styles.sheetBtnText,
-                                    styles.sheetBtnCancelText,
-                                ]}
-                            >
-                                {t("common.cancel")}
-                            </Text>
-                        </Pressable>
                     </Pressable>
                 </Pressable>
             </Modal>
@@ -493,6 +560,31 @@ const styles = StyleSheet.create({
     photoGrid: {
         flexDirection: "row",
         gap: GRID_GAP,
+    },
+    // === Mode B lock screen ================================================
+    lockGrid: {
+        borderRadius: radii.xl,
+        overflow: "hidden",
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.border,
+        alignItems: "center",
+        justifyContent: "center",
+        ...shadows.card,
+    },
+    lockContent: {
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
+        paddingHorizontal: 28,
+    },
+    lockText: {
+        textAlign: "center",
+        fontSize: 14,
+        lineHeight: 20,
+        letterSpacing: -0.3,
+        color: colors.primaryDark,
+        fontFamily: fonts.semibold,
     },
     mainPhotoSlot: {
         borderRadius: radii.xl,
@@ -526,9 +618,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.cardAlt,
         alignItems: "center",
         justifyContent: "center",
-        borderWidth: 1.5,
-        borderColor: colors.border,
-        borderStyle: "dashed",
     },
     photo: { width: "100%", height: "100%" },
     warnBox: {
@@ -551,40 +640,40 @@ const styles = StyleSheet.create({
         color: colors.primaryDark,
         fontFamily: fonts.medium,
     },
-    // Second warn box sits directly under the first; tighter top margin so
-    // the pair reads as a related stack instead of two unrelated callouts.
-    warnBoxStacked: {
-        marginTop: 8,
-    },
-    conversionBox: {
-        flexDirection: "row",
-        gap: 10,
-        alignItems: "center",
-        backgroundColor: colors.surface,
-        borderRadius: radii.md,
-        paddingVertical: 12,
-        paddingHorizontal: 14,
-        borderWidth: 1,
-        borderColor: colors.border,
-        marginTop: 16,
-    },
-    conversionText: {
-        flex: 1,
-        fontSize: 13,
-        lineHeight: 18,
-        letterSpacing: -0.4,
-        color: colors.primaryDark,
-        fontFamily: fonts.medium,
-    },
     sheetBackdrop: {
         flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.4)",
-        justifyContent: "flex-end",
+        justifyContent: "center",
         paddingTop: 12,
         paddingHorizontal: 12,
     },
     sheetGroup: {
+        alignSelf: "center",
         gap: 10,
+    },
+    sheetPreviewBox: {
+        alignSelf: "center",
+        borderRadius: radii.lg,
+        overflow: "hidden",
+        backgroundColor: colors.cardAlt,
+    },
+    sheetPreviewImage: {
+        width: "100%",
+        height: "100%",
+    },
+    previewCloseBtn: {
+        position: "absolute",
+        top: 10,
+        right: 10,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: "rgba(0, 0, 0, 0.45)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    previewCloseBtnPressed: {
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
     },
     sheet: {
         borderRadius: radii.lg,

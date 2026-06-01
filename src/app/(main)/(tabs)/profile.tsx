@@ -74,6 +74,29 @@ export default function ProfileScreen() {
     return pollPhotoConversions();
   }, [pollPhotoConversions]);
 
+  // photo-original-blur-preview: 슬롯이 settled(ready/rejected) 되거나 사라지면
+  // 해당 photoId 의 로컬 미리보기를 정리해 세션 내 메모리 누적을 막는다. 변환 중
+  // (pending/processing/failed) 슬롯의 키만 유지.
+  useEffect(() => {
+    const inflightIds = new Set(
+      (profile?.photo_statuses ?? [])
+        .filter(
+          (s) =>
+            s.status === 'pending' || s.status === 'processing' || s.status === 'failed',
+        )
+        .map((s) => s.id),
+    );
+    setLocalPreviews((m) => {
+      let changed = false;
+      const next: Record<string, string> = {};
+      for (const [id, uri] of Object.entries(m)) {
+        if (inflightIds.has(id)) next[id] = uri;
+        else changed = true;
+      }
+      return changed ? next : m;
+    });
+  }, [profile?.photo_statuses]);
+
   // Supabase storage uses upsert so the public URL is identical across uploads
   // to the same slot — React Image caches by URL and won't refetch. Bumping a
   // suffix forces a fresh request after every mutation so the new photo shows
@@ -83,6 +106,12 @@ export default function ProfileScreen() {
   // Transient inline message for photo-pick failures (format / size / cap).
   // Cleared on every new pick attempt or successful upload.
   const [photoError, setPhotoError] = useState<string | null>(null);
+
+  // photo-original-blur-preview: 방금 고른 사진의 로컬 URI 를 업로드 응답의
+  // photoId 로 키잉. 변환 중(inflight) 슬롯 배경에 흐리게 깔아 빈 dim 박스 대신
+  // "내가 올린 사진이 그 자리에서 처리 중" 임을 보여준다. 같은 세션 동안만 유효 —
+  // 앱 재시작/cold load 면 비어 있어 기존 dim 박스로 자연 폴백한다(서버 변경 없음).
+  const [localPreviews, setLocalPreviews] = useState<Record<string, string>>({});
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -173,7 +202,8 @@ export default function ProfileScreen() {
     const uri = await pickAndValidate();
     if (!uri) return;
     try {
-      await uploadPhoto(uri);
+      const res = await uploadPhoto(uri);
+      setLocalPreviews((m) => ({ ...m, [res.photo_id]: uri }));
       setPhotoBust((n) => n + 1);
     } catch (e: any) {
       // Network/BE upload failures route through the unified alert host —
@@ -204,7 +234,8 @@ export default function ProfileScreen() {
     const uri = await pickAndValidate();
     if (!uri) return;
     try {
-      await replacePhotoAt(index, uri);
+      const res = await replacePhotoAt(index, uri);
+      setLocalPreviews((m) => ({ ...m, [res.photo_id]: uri }));
       setPhotoBust((n) => n + 1);
     } catch (e: any) {
       showAlert({ variant: 'error', title: t('profile.uploadFailed'), message: e.message });
@@ -295,7 +326,14 @@ export default function ProfileScreen() {
   // 중 하나 — 어떤 경우든 uri 가 있으면 ready 로 간주.
   type Slot =
     | { kind: 'ready'; uri: string }
-    | { kind: 'inflight'; status: PhotoConversionStatus; photoId?: string }
+    | {
+        kind: 'inflight';
+        status: PhotoConversionStatus;
+        photoId?: string;
+        // photo-original-blur-preview: 같은 세션에서 방금 올린 사진의 로컬 URI
+        // (있으면 blur 배경, 없으면 dim 폴백). 앱 재시작/이전 세션 업로드면 부재.
+        originalPreviewUrl?: string;
+      }
     | { kind: 'empty' };
 
   const statusByPosition = new Map<number, PhotoStatus>();
@@ -323,7 +361,13 @@ export default function ProfileScreen() {
     const uri = readyUrlByPosition.get(position);
     if (uri) return { kind: 'ready', uri };
     const s = statusByPosition.get(position);
-    if (s) return { kind: 'inflight', status: s.status, photoId: s.id };
+    if (s)
+      return {
+        kind: 'inflight',
+        status: s.status,
+        photoId: s.id,
+        originalPreviewUrl: localPreviews[s.id],
+      };
     return { kind: 'empty' };
   }
 
@@ -357,17 +401,37 @@ export default function ProfileScreen() {
     [retryPhotoConversion, t],
   );
 
+  // photo-original-blur-preview: 변환 중(pending/processing/failed) 슬롯 배경에
+  // 깔리는 흐린 원본 미리보기. originalPreviewUrl 이 있을 때만 렌더.
+  // NOTE: RN core Image 의 `blurRadius` 는 iOS/Android 모두 동작하나 동일 radius
+  // 라도 강도/품질이 플랫폼별로 다르다 (iOS=Core Image Gaussian, Android=
+  // StackBlur 근사). 4 정도면 양쪽 다 "원본은 알아보되 처리 중 느낌" 의 아주 약한 블러.
+  // expo-image 가 아닌 RN core Image 라 추가 의존성 0 (PhotoBackground 와 동일 방식).
+  const renderBlurBackground = (uri: string, scrimStyle: any) => (
+    <>
+      <Image
+        source={{ uri }}
+        style={StyleSheet.absoluteFill}
+        blurRadius={4}
+        resizeMode="cover"
+      />
+      <View style={[StyleSheet.absoluteFill, scrimStyle]} />
+    </>
+  );
+
   const renderInflightSlot = (
     status: PhotoConversionStatus,
     photoId: string | undefined,
     slotStyle: any,
+    originalPreviewUrl?: string,
   ) => {
     if (status === 'pending' || status === 'processing') {
       return (
         <View
-          style={[slotStyle, styles.statusOverlaySlot]}
+          style={[slotStyle, styles.statusOverlaySlot, originalPreviewUrl && styles.statusBlurSlot]}
           accessibilityLabel={t('profile.photoConverting')}
         >
+          {originalPreviewUrl ? renderBlurBackground(originalPreviewUrl, styles.inflightScrim) : null}
           <ActivityIndicator size="small" color={colors.primary} />
         </View>
       );
@@ -379,14 +443,21 @@ export default function ProfileScreen() {
             slotStyle,
             styles.statusOverlaySlot,
             styles.statusFailedSlot,
+            originalPreviewUrl && styles.statusBlurSlot,
             pressed && styles.sheetBtnPressed,
           ]}
           onPress={() => photoId && handleRetryTap(photoId)}
           accessibilityRole="button"
           accessibilityLabel={t('profile.photoRetry')}
         >
+          {originalPreviewUrl
+            ? renderBlurBackground(originalPreviewUrl, styles.inflightFailedScrim)
+            : null}
           <Ionicons name="refresh-circle" size={32} color={colors.like} />
-          <Text style={styles.statusOverlayText} numberOfLines={2}>
+          <Text
+            style={[styles.statusOverlayText, originalPreviewUrl && styles.statusOverlayTextOnBlur]}
+            numberOfLines={2}
+          >
             {t('profile.photoConversionFailed')}
           </Text>
         </Pressable>
@@ -459,6 +530,7 @@ export default function ProfileScreen() {
             mainSlot.status,
             mainSlot.photoId,
             [styles.mainPhotoSlot, { width: MAIN_PHOTO_WIDTH, height: MAIN_PHOTO_HEIGHT }],
+            mainSlot.originalPreviewUrl,
           )
         ) : (
           <Pressable
@@ -505,10 +577,12 @@ export default function ProfileScreen() {
               if (slot.kind === 'inflight') {
                 return (
                   <View key={`thumb-inflight-${photoIndex}`}>
-                    {renderInflightSlot(slot.status, slot.photoId, [
-                      styles.thumbSlot,
-                      { width: THUMB_WIDTH, height: THUMB_HEIGHT },
-                    ])}
+                    {renderInflightSlot(
+                      slot.status,
+                      slot.photoId,
+                      [styles.thumbSlot, { width: THUMB_WIDTH, height: THUMB_HEIGHT }],
+                      slot.originalPreviewUrl,
+                    )}
                   </View>
                 );
               }
@@ -685,6 +759,18 @@ export default function ProfileScreen() {
                 />
                 <Pressable
                   style={({ pressed }) => [
+                    styles.previewCloseBtn,
+                    pressed && styles.previewCloseBtnPressed,
+                  ]}
+                  onPress={closeSheet}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('common.cancel')}
+                  hitSlop={8}
+                >
+                  <Ionicons name="close" size={20} color={colors.white} />
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
                     styles.previewDownloadBtn,
                     pressed && styles.previewDownloadBtnPressed,
                   ]}
@@ -727,14 +813,6 @@ export default function ProfileScreen() {
                 </Text>
               </Pressable>
             </View>
-            <Pressable
-              style={({ pressed }) => [styles.sheet, styles.sheetCancel, pressed && styles.sheetBtnPressed]}
-              onPress={closeSheet}
-            >
-              <Text style={[styles.sheetBtnText, styles.sheetBtnCancelText]}>
-                {t('common.cancel')}
-              </Text>
-            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
@@ -803,9 +881,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardAlt,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
   },
   photo: {
     width: '100%',
@@ -836,9 +911,6 @@ const styles = StyleSheet.create({
   statusOverlaySlot: {
     backgroundColor: colors.cardAlt,
     borderRadius: radii.lg,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
@@ -846,11 +918,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   statusFailedSlot: {
+    borderWidth: 1.5,
     borderColor: colors.like,
     borderStyle: 'solid',
     backgroundColor: 'rgba(255,82,82,0.06)',
   },
   statusRejectedSlot: {
+    borderWidth: 1.5,
     borderColor: colors.like,
     borderStyle: 'solid',
     backgroundColor: 'rgba(255,82,82,0.12)',
@@ -862,6 +936,29 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fonts.medium,
     letterSpacing: -0.2,
+  },
+  // photo-original-blur-preview: 흐린 원본 배경을 깔 때 적용. dashed dim 박스
+  // 대신 원본이 슬롯을 가득 채우므로 cardAlt 배경/대시 보더를 solid 로 정리.
+  // statusOverlaySlot 의 overflow:'hidden' + borderRadius 가 absoluteFill Image
+  // 를 슬롯 모서리에 클립한다.
+  statusBlurSlot: {
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+  },
+  // pending/processing: 흐린 원본 위 밝은 반투명 scrim — 스피너(primary) 대비 확보.
+  inflightScrim: {
+    backgroundColor: 'rgba(255,255,255,0.42)',
+  },
+  // failed: 흐린 원본 위 빨간 톤 scrim — "변환 실패 + 재시도" 의미 + 아이콘/텍스트 가독.
+  inflightFailedScrim: {
+    backgroundColor: 'rgba(255,82,82,0.32)',
+  },
+  // blur 배경 위 카피는 흰색 + textShadow 로 어떤 원본 위에서도 가독.
+  statusOverlayTextOnBlur: {
+    color: colors.white,
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   section: {
     marginTop: 22,
@@ -1034,6 +1131,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   previewDownloadBtnPressed: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  previewCloseBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewCloseBtnPressed: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   sheet: {

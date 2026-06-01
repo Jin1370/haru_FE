@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Pressable,
   BackHandler,
-  type LayoutChangeEvent,
 } from 'react-native';
 import { router, useNavigation, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,9 +13,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useKeyboardState } from 'react-native-keyboard-controller';
 import { FormField } from '@/components/ui/FormField';
-import { ErrorText } from '@/components/ui/ErrorText';
 import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
+import { RequiredLabel } from '@/components/ui/RequiredLabel';
 import { LanguagePicker } from '@/components/ui/LanguagePicker';
 import { useAuthStore } from '@/stores/authStore';
 import { useSignupDraftStore, type Gender } from '@/stores/signupDraftStore';
@@ -26,6 +25,7 @@ import { SUPPORTED_NATIONALITIES, type NationalityCode } from '@/constants/natio
 import { INTEREST_SECTIONS, MAX_INTERESTS } from '@/constants/interests';
 import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { validateDisplayName, DISPLAY_NAME_MAX } from '@/utils/validators';
+import { isValidAdultBirthDate } from '@/utils/age';
 import type { LanguageCode } from '@/constants/languages';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
@@ -80,34 +80,9 @@ export default function SetupStep1() {
   });
   const [nationalityOpen, setNationalityOpen] = useState(false);
   const [interests, setInterests] = useState<string[]>(draft.interests);
-  const [displayNameError, setDisplayNameError] = useState<string | null>(null);
-  const [birthDateError, setBirthDateError] = useState<string | null>(null);
-  const [nationalityError, setNationalityError] = useState<string | null>(null);
-  const [languageError, setLanguageError] = useState<string | null>(null);
-
-  // Auto-scroll target tracking. Mirrors edit-profile.tsx — handleNext scrolls
-  // the first invalid field back into view if it's been pushed offscreen by
-  // the long interests grid below.
-  type FieldKey = 'display_name' | 'birth_date' | 'nationality' | 'language';
-  const scrollRef = useRef<ScrollView>(null);
-  const fieldYRef = useRef<Record<FieldKey, number>>({
-    display_name: 0,
-    birth_date: 0,
-    nationality: 0,
-    language: 0,
-  });
-  const onFieldLayout = (key: FieldKey) => (e: LayoutChangeEvent) => {
-    fieldYRef.current[key] = e.nativeEvent.layout.y;
-  };
-  const SCROLL_PAD = 16;
-  const scrollToField = (key: FieldKey) => {
-    const y = fieldYRef.current[key];
-    scrollRef.current?.scrollTo({ y: Math.max(0, y - SCROLL_PAD), animated: true });
-  };
 
   const setLanguage = (next: LanguageCode | null) => {
     setForm((f) => ({ ...f, language: next }));
-    if (languageError && next) setLanguageError(null);
   };
 
   // Storage moved from "current-locale label" to canonical id so the
@@ -139,49 +114,18 @@ export default function SetupStep1() {
     setInterests((prev) => [...prev, id]);
   };
 
+  // The Next button is disabled until `canProceed` (below), so handleNext only
+  // runs on a valid form — no inline errors needed. The `!form.language` guard
+  // is defensive and also narrows the type from `LanguageCode | null` for TS.
   const handleNext = () => {
-    // Validate everything together so the user sees every mistake at once
-    // instead of one-per-tap. Scroll to the first invalid field for the
-    // user's convenience (long interests grid below pushes the top fields
-    // off the visible viewport on smaller screens).
-    const nameErr = validateDisplayName(form.display_name);
-    const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(form.birth_date);
-    const nationalityMissing = !form.nationality;
-    const languageMissing = !form.language;
-
-    setDisplayNameError(nameErr ? t(nameErr.key, nameErr.vars) : null);
-    setBirthDateError(dateValid ? null : t('validation.birthDateInvalid'));
-    setNationalityError(
-      nationalityMissing ? t('setupProfile.selectNationalityRequired') : null,
-    );
-    setLanguageError(
-      languageMissing ? t('setupProfile.selectLanguageRequired') : null,
-    );
-
-    if (nameErr) {
-      scrollToField('display_name');
-      return;
-    }
-    if (!dateValid) {
-      scrollToField('birth_date');
-      return;
-    }
-    if (nationalityMissing) {
-      scrollToField('nationality');
-      return;
-    }
-    if (languageMissing || !form.language) {
-      scrollToField('language');
-      return;
-    }
-    const step1Payload = {
+    if (!form.language) return;
+    draft.setStep1({
       display_name: form.display_name.trim(),
       birth_date: form.birth_date,
       gender: form.gender,
       nationality: form.nationality,
       language: form.language,
-    };
-    draft.setStep1(step1Payload);
+    });
     draft.setInterests(interests);
     // No BE write here — wizard order is now basics → photos → prefs → voice
     // clone → voice intro, and the photos step performs the INSERT once both
@@ -196,6 +140,16 @@ export default function SetupStep1() {
     return t('setupProfile.genderOther');
   };
 
+  // Next stays disabled until every required field is valid: name (valid after
+  // trimming), a real calendar birth date for an 18+ user, and a selected
+  // nationality + language. Gender has a default and interests are optional, so
+  // neither gates progression. This replaces the old tap-time inline errors.
+  const canProceed =
+    validateDisplayName(form.display_name.trim()) === null &&
+    isValidAdultBirthDate(form.birth_date) &&
+    !!form.nationality &&
+    !!form.language;
+
   return (
     <View style={styles.container}>
       <WizardHeader
@@ -204,47 +158,38 @@ export default function SetupStep1() {
         subtitle={t('signupWizard.step1Subtitle')}
       />
       <ScrollView
-        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: 24 + insets.bottom + 88 + kbHeight },
         ]}
         keyboardShouldPersistTaps="handled"
       >
-      <View onLayout={onFieldLayout('display_name')}>
-        <Text style={styles.label}>{t('setupProfile.displayName')}</Text>
+      <View>
+        <RequiredLabel text={t('setupProfile.displayName')} />
         <FormField
           value={form.display_name}
-          onChangeText={(v) => {
-            setForm((f) => ({ ...f, display_name: v }));
-            if (displayNameError) setDisplayNameError(null);
-          }}
+          onChangeText={(v) => setForm((f) => ({ ...f, display_name: v }))}
           placeholder={t('setupProfile.displayNamePlaceholder')}
           maxLength={DISPLAY_NAME_MAX}
-          error={displayNameError}
           inputStyle={styles.inputCompact}
-          errorTestID="setup-step1-display-name-error"
         />
       </View>
 
-      <View onLayout={onFieldLayout('birth_date')}>
-        <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.birthDate')}</Text>
+      <View>
+        <RequiredLabel text={t('setupProfile.birthDate')} gap />
         <FormField
           value={form.birth_date}
-          onChangeText={(v) => {
-            setForm((f) => ({ ...f, birth_date: formatBirthDate(v) }));
-            if (birthDateError) setBirthDateError(null);
-          }}
+          onChangeText={(v) =>
+            setForm((f) => ({ ...f, birth_date: formatBirthDate(v) }))
+          }
           placeholder={t('setupProfile.birthDatePlaceholder')}
           keyboardType="number-pad"
           maxLength={10}
-          error={birthDateError}
           inputStyle={styles.inputCompact}
-          errorTestID="setup-step1-birth-date-error"
         />
       </View>
 
-      <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.gender')}</Text>
+      <RequiredLabel text={t('setupProfile.gender')} gap />
       <View style={styles.genderRow}>
         {GENDER_OPTIONS.map((g) => (
           <Pressable
@@ -259,13 +204,12 @@ export default function SetupStep1() {
         ))}
       </View>
 
-      <View onLayout={onFieldLayout('nationality')}>
-        <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.nationality')}</Text>
+      <View>
+        <RequiredLabel text={t('setupProfile.nationality')} gap />
         <Pressable
           style={[
             styles.selectBtn,
             nationalityOpen && styles.selectBtnOpen,
-            nationalityError ? styles.selectBtnError : null,
           ]}
           onPress={() => setNationalityOpen((v) => !v)}
         >
@@ -291,7 +235,6 @@ export default function SetupStep1() {
                   onPress={() => {
                     setForm((f) => ({ ...f, nationality: code as NationalityCode }));
                     setNationalityOpen(false);
-                    if (nationalityError) setNationalityError(null);
                   }}
                 >
                   <Text style={[styles.chipText, selected && styles.chipActiveText]}>
@@ -312,18 +255,15 @@ export default function SetupStep1() {
             </View>
           </View>
         )}
-        <ErrorText testID="setup-step1-nationality-error">{nationalityError}</ErrorText>
       </View>
 
-      <View onLayout={onFieldLayout('language')}>
-        <Text style={[styles.label, styles.sectionGap]}>{t('setupProfile.language')}</Text>
+      <View>
+        <RequiredLabel text={t('setupProfile.language')} gap />
         <LanguagePicker
           mode="single"
           value={form.language}
           onChange={setLanguage}
-          hasError={!!languageError}
         />
-        <ErrorText testID="setup-step1-language-error">{languageError}</ErrorText>
       </View>
 
       {/* Interests — optional. Markup mirrors settings/edit-profile.tsx so
@@ -374,7 +314,7 @@ export default function SetupStep1() {
           already includes kbHeight so the focused FormField can be scrolled
           above the keyboard line. */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        <Button title={t('common.next')} onPress={handleNext} />
+        <Button title={t('common.next')} onPress={handleNext} disabled={!canProceed} />
       </View>
     </View>
   );
@@ -428,7 +368,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   selectBtnOpen: { borderColor: colors.primary, backgroundColor: colors.white },
-  selectBtnError: { borderColor: colors.error },
   inputCompact: { fontSize: 14 },
   selectText: { fontSize: 14, color: colors.text, fontFamily: fonts.medium },
   selectPlaceholder: { color: colors.textLight },
