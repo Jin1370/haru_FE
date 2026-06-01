@@ -77,7 +77,8 @@
                 {
                     "iosUrlScheme": "com.googleusercontent.apps.781449315272-s14jdh63094i1nu46slt2cid3p08blj8"
                 }
-            ]
+            ],
+            "./plugins/withRemoveMediaPermissions.js"
         ],
         "extra": {
             "router": {},

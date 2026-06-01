@@ -17,6 +17,7 @@ import CountryFlag from 'react-native-country-flag';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
+import * as ScreenCapture from 'expo-screen-capture';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ErrorText } from '@/components/ui/ErrorText';
@@ -252,6 +253,17 @@ export default function ProfileScreen() {
   const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
   const closeSheet = () => setActivePhotoIndex(null);
   const handlePhotoPress = (index: number) => setActivePhotoIndex(index);
+
+  // 사진 미리보기 모달이 열린 동안만 화면 캡처 차단 (안드로이드: FLAG_SECURE).
+  // 워터마크 없는 스크린샷 우회를 막기 위함. iOS 는 OS 제약상 스크린샷 차단 불가
+  // (preventScreenCaptureAsync 는 화면 녹화만 막음) — 의도된 한계.
+  useEffect(() => {
+    if (activePhotoIndex === null) return;
+    ScreenCapture.preventScreenCaptureAsync();
+    return () => {
+      ScreenCapture.allowScreenCaptureAsync();
+    };
+  }, [activePhotoIndex]);
 
   const runSheetAction = (action: (index: number) => void | Promise<void>) => {
     const index = activePhotoIndex;
