@@ -78,8 +78,15 @@ export async function uploadPhoto(uri: string): Promise<PhotoUploadResponse> {
   return JSON.parse(result.body) as PhotoUploadResponse;
 }
 
-export async function deletePhoto(index: number): Promise<PhotoDeleteResponse> {
-  return api.delete<PhotoDeleteResponse>(`/api/profile/photos/${index}`);
+// compact=false 면 BE 가 삭제 후 position 압축을 건너뛴다(gap 유지). "변경(replace)"
+// 흐름이 delete(compact=false) → upload 로 같은 슬롯에 새 사진을 채우기 위해 사용.
+// 단독 삭제는 기본(압축).
+export async function deletePhoto(
+  index: number,
+  opts?: { compact?: boolean },
+): Promise<PhotoDeleteResponse> {
+  const query = opts?.compact === false ? '?compact=false' : '';
+  return api.delete<PhotoDeleteResponse>(`/api/profile/photos/${index}${query}`);
 }
 
 // photo-reorder-no-reconvert sprint: 재변환 없이 profile_photos.position 만 원자적

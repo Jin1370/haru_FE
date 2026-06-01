@@ -74,28 +74,13 @@ export default function ProfileScreen() {
     return pollPhotoConversions();
   }, [pollPhotoConversions]);
 
-  // photo-original-blur-preview: 슬롯이 settled(ready/rejected) 되거나 사라지면
-  // 해당 photoId 의 로컬 미리보기를 정리해 세션 내 메모리 누적을 막는다. 변환 중
-  // (pending/processing/failed) 슬롯의 키만 유지.
-  useEffect(() => {
-    const inflightIds = new Set(
-      (profile?.photo_statuses ?? [])
-        .filter(
-          (s) =>
-            s.status === 'pending' || s.status === 'processing' || s.status === 'failed',
-        )
-        .map((s) => s.id),
-    );
-    setLocalPreviews((m) => {
-      let changed = false;
-      const next: Record<string, string> = {};
-      for (const [id, uri] of Object.entries(m)) {
-        if (inflightIds.has(id)) next[id] = uri;
-        else changed = true;
-      }
-      return changed ? next : m;
-    });
-  }, [profile?.photo_statuses]);
+  // photo-original-blur-preview: localPreviews 는 세션 내 append-only — 정리 effect 를
+  // 두지 않는다. 정리하면, 변경 직후 폴링/지연된 stale loadProfile 응답이 photo_statuses
+  // 를 일시적으로 옛 상태(변경 전 ready 사진)로 덮는 순간 방금 추가한 키가 "inflight
+  // 아님"으로 분류돼 지워지고, 새 사진이 다시 processing 으로 잡혀도 URI 가 사라져 blur
+  // 미리보기가 안 뜨는 레이스가 생긴다(메인 단일 사진 변경 시 재현). 로컬 URI 문자열
+  // 몇 개라 누적 메모리는 무시 가능하고, ready/삭제된 슬롯의 stale 엔트리는 slotAt 이
+  // inflight 슬롯만 조회하므로 읽히지 않는다(무해).
 
   // Supabase storage uses upsert so the public URL is identical across uploads
   // to the same slot — React Image caches by URL and won't refetch. Bumping a
@@ -608,8 +593,9 @@ export default function ProfileScreen() {
           <Text style={styles.photoBusyText}>{t('profile.reorderingPhotos')}</Text>
         </View>
       ) : hasConvertingPhoto ? (
+        // 변환 중 배너는 텍스트만 — 회전 스피너는 변환 슬롯(흐린 원본 위)에 이미
+        // 있어 중복이다. 이 배너는 "무엇을 하는지" 설명 캡션 역할만 한다.
         <View style={styles.photoBusyOverlay} pointerEvents="none">
-          <ActivityIndicator size="small" color={colors.primary} />
           <Text style={styles.photoBusyText}>{t('profile.photoConverting')}</Text>
         </View>
       ) : null}

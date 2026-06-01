@@ -110,7 +110,9 @@ export function useProfile() {
     setLoading(true);
     setError(null);
     try {
-      await profileService.deletePhoto(position);
+      // compact=false: 삭제가 그 자리에 gap 을 남기고, 직후 업로드가 "첫 빈 자리"
+      // =원래 슬롯을 채워 변경 사진이 같은 위치에 들어가게 한다(순서 유지).
+      await profileService.deletePhoto(position, { compact: false });
       const res = await profileService.uploadPhoto(newUri);
       await loadProfile();
       return res;
