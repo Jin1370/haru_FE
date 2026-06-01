@@ -36,6 +36,13 @@ export default function Footer() {
             {t('accountDeletion')}
           </Link>
           <span className="text-[color:var(--color-text-light)]">·</span>
+          <Link
+            href={`${prefix}/child-safety`}
+            className="transition hover:text-[color:var(--color-primary-dark)] hover:underline"
+          >
+            {t('childSafety')}
+          </Link>
+          <span className="text-[color:var(--color-text-light)]">·</span>
           <span>© {year} haru</span>
         </div>
       </div>

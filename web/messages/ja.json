@@ -57,7 +57,8 @@
   "footer": {
     "terms": "利用規約",
     "privacy": "プライバシーポリシー",
-    "accountDeletion": "アカウント削除"
+    "accountDeletion": "アカウント削除",
+    "childSafety": "児童の安全"
   },
   "legal": {
     "privacy": {
@@ -71,6 +72,10 @@
     "accountDeletion": {
       "title": "アカウント削除のご案内 — haru",
       "description": "haru サービスのアカウント削除手順、削除・保管されるデータのご案内。"
+    },
+    "childSafety": {
+      "title": "児童の安全基準ポリシー — haru",
+      "description": "haru の児童の性的虐待・搾取(CSAE)への対応基準、通報方法、年齢ポリシーのご案内。"
     },
     "localeNotice": "現在は韓国語原文のみ提供されています。翻訳版はリリース後に順次提供予定です。"
   },

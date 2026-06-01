@@ -57,7 +57,8 @@
   "footer": {
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
-    "accountDeletion": "Account Deletion"
+    "accountDeletion": "Account Deletion",
+    "childSafety": "Child Safety"
   },
   "legal": {
     "privacy": {
@@ -71,6 +72,10 @@
     "accountDeletion": {
       "title": "Account Deletion — haru",
       "description": "How to delete your haru account and what data is removed, retained, or anonymized."
+    },
+    "childSafety": {
+      "title": "Child Safety Standards Policy — haru",
+      "description": "haru's standards against child sexual abuse and exploitation (CSAE), how to report, and our age policy."
     },
     "localeNotice": "Only the Korean source text is currently available. Translations will be provided after launch."
   },
