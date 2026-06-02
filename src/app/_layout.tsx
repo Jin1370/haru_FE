@@ -18,7 +18,16 @@ import { AlertHost } from '@/components/ui/AlertHost';
 import { showAlert } from '@/stores/alertStore';
 import { SWRConfigProvider } from '@/lib/swr';
 import { PRETENDARD_ASSETS, fonts } from '@/constants/fonts';
+import * as Sentry from '@sentry/react-native';
 import i18n from '@/i18n';
+
+// 환경분리 도입 시 EXPO_PUBLIC_ENV 만 dev/stage/prod 로 다르게 주면 Sentry
+// 대시보드에서 environment 로 필터된다. iOS/Android 구분은 Sentry 가 자동 태깅.
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  environment: process.env.EXPO_PUBLIC_ENV ?? 'development',
+  tracesSampleRate: 0.2,
+});
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -120,7 +129,7 @@ function RootShell() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const { isLoading, tryAutoLogin, isAuthenticated, hasProfile } = useAuthStore();
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
@@ -221,3 +230,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);

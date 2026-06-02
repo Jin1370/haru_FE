@@ -1,90 +1,100 @@
 {
-    "expo": {
-        "name": "haru",
-        "slug": "voicemate",
-        "version": "1.0.0",
-        "orientation": "portrait",
-        "icon": "./assets/icon.png",
-        "scheme": "haruvoice",
-        "userInterfaceStyle": "light",
-        "newArchEnabled": true,
-        "splash": {
-            "image": "./assets/splash-icon.png",
-            "resizeMode": "contain",
-            "backgroundColor": "#6C5CE7"
-        },
-        "androidStatusBar": {
-            "translucent": true,
-            "backgroundColor": "#00000000",
-            "barStyle": "dark-content"
-        },
-        "ios": {
-            "supportsTablet": false,
-            "bundleIdentifier": "com.haruvoice.app",
-            "infoPlist": {
-                "NSMicrophoneUsageDescription": "Voice sample recording for voice clone",
-                "NSPhotoLibraryUsageDescription": "Profile photo selection",
-                "UIBackgroundModes": ["remote-notification"]
-            }
-        },
-        "android": {
-            "adaptiveIcon": {
-                "foregroundImage": "./assets/adaptive-icon.png",
-                "backgroundColor": "#6C5CE7"
-            },
-            "package": "com.haruvoice.app",
-            "googleServicesFile": "./google-services.json",
-            "softwareKeyboardLayoutMode": "resize",
-            "permissions": [
-                "android.permission.RECORD_AUDIO",
-                "android.permission.READ_EXTERNAL_STORAGE",
-                "android.permission.MODIFY_AUDIO_SETTINGS",
-                "android.permission.POST_NOTIFICATIONS"
-            ]
-        },
-        "plugins": [
-            "expo-router",
-            "expo-secure-store",
-            [
-                "expo-image-picker",
-                {
-                    "photosPermission": "Allow haru to access your photos for profile pictures."
-                }
-            ],
-            [
-                "expo-media-library",
-                {
-                    "photosPermission": "Allow haru to save profile photos to your gallery.",
-                    "savePhotosPermission": "Allow haru to save profile photos to your gallery.",
-                    "isAccessMediaLocationEnabled": false
-                }
-            ],
-            [
-                "expo-audio",
-                {
-                    "microphonePermission": "Allow haru to access your microphone to record voice samples."
-                }
-            ],
-            "expo-asset",
-            [
-                "expo-notifications",
-                {
-                    "color": "#6C5CE7"
-                }
-            ],
-            [
-                "@react-native-google-signin/google-signin",
-                {
-                    "iosUrlScheme": "com.googleusercontent.apps.781449315272-s14jdh63094i1nu46slt2cid3p08blj8"
-                }
-            ],
-            "./plugins/withRemoveMediaPermissions.js"
-        ],
-        "extra": {
-            "router": {},
-            "eas": {
-                "projectId": "0058361e-081e-4790-b8f9-bf1b4d1e745d"
-            }
+  "expo": {
+    "name": "haru",
+    "slug": "voicemate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "haruvoice",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#FDEAF0"
+    },
+    "androidStatusBar": {
+      "translucent": true,
+      "backgroundColor": "#00000000",
+      "barStyle": "dark-content"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.haruvoice.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Voice sample recording for voice clone",
+        "NSPhotoLibraryUsageDescription": "Profile photo selection",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F8D2DC"
+      },
+      "package": "com.haruvoice.app",
+      "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow haru to access your photos for profile pictures."
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow haru to save profile photos to your gallery.",
+          "savePhotosPermission": "Allow haru to save profile photos to your gallery.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow haru to access your microphone to record voice samples."
+        }
+      ],
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "color": "#6C5CE7"
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.781449315272-s14jdh63094i1nu46slt2cid3p08blj8"
+        }
+      ],
+      "./plugins/withRemoveMediaPermissions.js",
+      [
+        "@sentry/react-native",
+        {
+          "organization": "sejin-2s",
+          "project": "haru-mobile",
+          "url": "https://sentry.io/"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0058361e-081e-4790-b8f9-bf1b4d1e745d"
+      }
     }
+  }
 }
