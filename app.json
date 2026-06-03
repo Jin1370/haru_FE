@@ -8,6 +8,12 @@
     "scheme": "haruvoice",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "updates": {
+      "url": "https://u.expo.dev/0058361e-081e-4790-b8f9-bf1b4d1e745d"
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
     "backgroundColor": "#FEEEF0",
     "splash": {
       "image": "./assets/splash-icon.png",
