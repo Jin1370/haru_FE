@@ -31,6 +31,10 @@ export function useDiscover() {
   const [error, setError] = useState<string | null>(null);
   const [dailyCount, setDailyCount] = useState(0);
   const [dailyCountReady, setDailyCountReady] = useState(false);
+  // env 게이트(quota 응답의 pass_reset_enabled). 디스커버 화면이 "다시 보기"
+  // 버튼 노출 여부를 판단. 기본 false — quota 동기화 전까진 버튼 미노출(안전).
+  const [passResetEnabled, setPassResetEnabled] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const prefetchingRef = useRef(false);
   // Block prefetch until the screen's initial loadCandidates() has finished.
   // Otherwise the prefetch trigger effect (queue.length=0 ≤ 3) fires on mount
@@ -78,29 +82,36 @@ export function useDiscover() {
     }
   }, [candidates]);
 
-  // Pull today's swipe count from BE on mount. Server-derived (counts rows in
-  // `swipes` for the user's local "today") so the cap is enforced across
-  // devices, not just the local SecureStore. Network failures fall back to 0
-  // to avoid blocking offline users — they'll re-sync next mount.
+  // Pull today's swipe count + pass-reset feature flag from BE. Server-derived
+  // (counts rows in `swipes` for the user's local "today") so the cap is
+  // enforced across devices, not just the local SecureStore. Identity-stable so
+  // the pass-reset handler can reuse it to re-sync after deleting pass rows.
+  const syncQuota = useCallback(async () => {
+    try {
+      const q = await discoverService.getDiscoverQuota();
+      setDailyCount(q.count);
+      setPassResetEnabled(q.pass_reset_enabled === true);
+    } catch {
+      // Network failures fall back to 0 to avoid blocking offline users —
+      // they'll re-sync next mount. Leave the flag as-is (don't flip a button
+      // off mid-session on a transient error).
+      setDailyCount(0);
+    }
+  }, []);
+
+  // Mount-time hydration. Gates the first fetch on dailyCountReady so we don't
+  // overshoot the quota by fetching against a stale count of 0.
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     setDailyCountReady(false);
-    discoverService.getDiscoverQuota()
-      .then((q) => {
-        if (cancelled) return;
-        setDailyCount(q.count);
-        setDailyCountReady(true);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setDailyCount(0);
-        setDailyCountReady(true);
-      });
+    syncQuota().finally(() => {
+      if (!cancelled) setDailyCountReady(true);
+    });
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, syncQuota]);
 
   const dailyLimitReached = dailyCount >= MAX_PER_DAY;
 
@@ -232,6 +243,34 @@ export function useDiscover() {
     }
   }, [userId, globalMutate]);
 
+  // "넘긴 사람 다시 보기" — viewer 의 pass 스와이프 행을 BE 에서 일괄 삭제한 뒤
+  // 세션 권위 집합을 비우고 디스커버/quota 를 재동기화해 pass 했던 후보를 다시
+  // 노출한다. swipedIdsRef.current.clear() 가 핵심: 이 집합(2026-05-31 sprint 의
+  // FE 권위 재노출 가드)을 비우지 않으면 BE 가 pass 행을 지워도 FE 가 계속 필터해
+  // 재노출되지 않는다. 반드시 clear → loadCandidates → syncQuota 순서.
+  const handleResetPasses = useCallback(async (): Promise<number | null> => {
+    if (resetting) return null;
+    setResetting(true);
+    try {
+      const { reset_count } = await discoverService.resetPasses();
+      swipedIdsRef.current.clear();
+      // 다음 카드용 이미지 프리페치 dedupe 도 비워 재노출 후보 사진이 다시 캐시됨.
+      prefetchedPhotosRef.current.clear();
+      await loadCandidates();
+      // pass 행 삭제로 swipes 행 수가 줄어 quota count 가 회복 — 한도 화면 자동 해제.
+      await syncQuota();
+      return reset_count;
+    } catch (e: any) {
+      // account_frozen 은 글로벌 ApiRequestError 핸들러가 모달 처리. pass_reset_disabled
+      // 는 버튼이 이미 숨겨진 상태라 정상 경로에선 도달 안 함 — 도달 시 조용히 무시.
+      const status = e instanceof ApiRequestError ? e.status : 0;
+      if (status !== 403) setError(e.message);
+      return null;
+    } finally {
+      setResetting(false);
+    }
+  }, [resetting, loadCandidates, syncQuota]);
+
   return {
     candidates,
     loading,
@@ -241,5 +280,8 @@ export function useDiscover() {
     dailyCount,
     dailyCountReady,
     dailyLimitReached,
+    passResetEnabled,
+    resetting,
+    handleResetPasses,
   };
 }

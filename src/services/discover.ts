@@ -25,3 +25,11 @@ export async function getDiscoverQuota(): Promise<DiscoverQuota> {
   const tz = new Date().getTimezoneOffset();
   return api.get<DiscoverQuota>(`/api/discover/quota?tz_offset_minutes=${tz}`);
 }
+
+// 넘긴(pass) 스와이프 행을 일괄 삭제해 지나친 프로필을 디스커버에 다시 노출한다.
+// 성공 시 삭제된 pass 행 수(reset_count)를 반환 — "N명 다시 보기" 토스트에 사용.
+// env 비활성 시 BE 가 403 { code:'pass_reset_disabled' } 응답(버튼이 숨겨져 정상
+// 경로에선 도달 안 함), account_frozen 은 글로벌 ApiRequestError 핸들러가 모달 처리.
+export async function resetPasses(): Promise<{ reset_count: number }> {
+  return api.delete<{ reset_count: number }>('/api/discover/passes');
+}

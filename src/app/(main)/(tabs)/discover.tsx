@@ -26,6 +26,9 @@ export default function DiscoverScreen() {
     handleSwipe,
     dailyCountReady,
     dailyLimitReached,
+    passResetEnabled,
+    resetting,
+    handleResetPasses,
   } = useDiscover();
 
   const voiceReady = profile?.voice_clone_status === 'ready';
@@ -90,6 +93,21 @@ export default function DiscoverScreen() {
     }
   };
 
+  // "넘긴 사람 다시 보기" — 막힌 상태(빈 화면/한도 도달)에서만 노출되는 탈출구.
+  // 완료 시 다시 볼 수 있는 인원 수를 토스트로 안내. 0명이면 안내 카피만.
+  const onReset = async () => {
+    const resetCount = await handleResetPasses();
+    if (resetCount === null) return;
+    showAlert({
+      variant: 'info',
+      title: t('discover.passReset.button'),
+      message:
+        resetCount > 0
+          ? t('discover.passReset.done', { count: resetCount })
+          : t('discover.passReset.empty_zero'),
+    });
+  };
+
   if (loading && candidates.length === 0) {
     return <LoadingScreen />;
   }
@@ -126,6 +144,20 @@ export default function DiscoverScreen() {
           </LinearGradient>
           <Text style={styles.emptyTitle}>{t(titleKey)}</Text>
           <Text style={styles.emptyText}>{t(textKey)}</Text>
+          {passResetEnabled && (
+            <>
+              <Text style={styles.resetPrompt}>{t('discover.passReset.empty')}</Text>
+              <Button
+                title={t('discover.passReset.button')}
+                onPress={onReset}
+                loading={resetting}
+                disabled={resetting}
+                variant="secondary"
+                style={styles.resetBtn}
+                textStyle={styles.ctaBtnText}
+              />
+            </>
+          )}
         </ScrollView>
       </PhotoBackground>
     );
@@ -283,8 +315,22 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
   },
+  resetPrompt: {
+    fontSize: 13,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    marginTop: 28,
+    textAlign: 'center',
+    textShadowColor: 'rgba(255,244,238,0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
   ctaBtn: {
     marginTop: 28,
+    borderRadius: radii.pill,
+  },
+  resetBtn: {
+    marginTop: 16,
     borderRadius: radii.pill,
   },
   ctaBtnText: {

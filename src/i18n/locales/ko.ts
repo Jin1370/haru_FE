@@ -124,6 +124,12 @@ export default {
         lockedGoPhoto: "사진 등록하러 가기",
         voiceProcessingTitle: "음성 생성 중입니다",
         voiceProcessingHint: "잠시만 기다려주세요. 음성 생성이 끝나면 자동으로 탐색을 시작할 수 있어요.",
+        passReset: {
+            button: "넘긴 사람 다시 보기",
+            empty: "넘겼던 분들을 한 번 더 둘러볼까요?",
+            done: "{{count}}명을 다시 볼 수 있어요",
+            empty_zero: "아직 넘긴 사람이 없어요",
+        },
     },
 
     likes: {
