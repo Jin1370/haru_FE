@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, Platform, StyleSheet, Text, TextInput } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, Text, TextInput } from 'react-native';
 import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -131,8 +131,6 @@ function RootShell() {
 function RootLayout() {
   const { isLoading, tryAutoLogin, isAuthenticated, hasProfile } = useAuthStore();
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [showLaunch, setShowLaunch] = useState(true);
-  const launchOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     (async () => {
@@ -143,14 +141,6 @@ function RootLayout() {
         setFontsLoaded(true);
       }
     })();
-  }, []);
-
-  // Android 12+ 네이티브 스플래시는 "가운데 아이콘 + 단색 배경"만 지원하고
-  // 풀스크린 이미지를 못 쓴다. 그래서 네이티브 스플래시는 핑크 단색(#F5849C,
-  // 도시 이미지 상단색)으로 두고, JS 마운트 직후 그것을 숨겨 아래의 풀스크린
-  // launch 오버레이(도시 디자인)를 드러낸다. 두 배경색이 같아 이음새가 없다.
-  useEffect(() => {
-    SplashScreen.hideAsync().catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -228,41 +218,21 @@ function RootLayout() {
 
   const appReady = fontsLoaded && !isLoading;
 
-  // 앱 준비 완료 시 풀스크린 launch 오버레이(도시)를 부드럽게 페이드아웃.
+  // 준비되면 네이티브 스플래시(핑크 + 카세트)를 내린다. 그 전까지는 네이티브
+  // 스플래시가 화면을 덮고 있으므로 별도 로딩 화면이 필요 없다.
   useEffect(() => {
-    if (appReady) {
-      Animated.timing(launchOpacity, {
-        toValue: 0,
-        duration: 400,
-        delay: 120,
-        useNativeDriver: true,
-      }).start(() => setShowLaunch(false));
-    }
-  }, [appReady, launchOpacity]);
+    if (appReady) SplashScreen.hideAsync().catch(() => {});
+  }, [appReady]);
+
+  if (!appReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <KeyboardProvider>{appReady ? <RootShell /> : null}</KeyboardProvider>
-      {showLaunch && (
-        <Animated.View
-          pointerEvents="none"
-          style={[StyleSheet.absoluteFillObject, styles.launch, { opacity: launchOpacity }]}
-        >
-          <Image
-            source={require('../../assets/launch-city.png')}
-            style={StyleSheet.absoluteFillObject}
-            resizeMode="cover"
-          />
-        </Animated.View>
-      )}
+      <KeyboardProvider>
+        <RootShell />
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
-
-const styles = StyleSheet.create({
-  // 도시 이미지 상단색과 동일 — 이미지 디코드 전/레터박스 영역도 핑크로 채워
-  // 네이티브 스플래시에서 이음새 없이 이어진다.
-  launch: { backgroundColor: '#F5849C' },
-});
 
 export default Sentry.wrap(RootLayout);
