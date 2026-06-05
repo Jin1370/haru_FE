@@ -190,20 +190,38 @@ export default function SetupStep5() {
         if (submitting) return;
         setSubmitting(true);
 
-        // 낙관적(optimistic) 진행 — "다음"을 누르면 화면을 즉시 step4 로 전환하고,
-        // 느린 작업(프로필 upsert + 사진 바이트 업로드)은 백그라운드로 돌린다.
+        // 낙관적(optimistic) 진행 — 느린 작업(사진 바이트 업로드)은 백그라운드로
+        // 돌린다. 단, 프로필 upsert(빠른 단일 요청)만은 이동 전에 await 한다.
         //
         // Wizard position 2: 여기서 BE 프로필 row 가 생성된다(이후 reload 시 곧장
-        // discover 로 라우팅 — app/index.tsx). 업로드는 순차 유지 — BE POST /photos
-        // 가 position 을 비원자적으로 배정해 병렬이면 UNIQUE(user_id, position)
-        // 충돌(23505)이 난다. 실패(휴면 상태인 422 photo_blocked 포함)는 사용자가
-        // 이미 다음 단계로 넘어갔을 수 있으므로 글로벌 alert 로 노출한다.
+        // discover 로 라우팅 — app/index.tsx). 이 row 는 바로 다음 화면 step4 가
+        // 저장하는 선호도(PUT /api/preferences → user_preferences.user_id →
+        // profiles.id)의 FK 부모다. 예전엔 router.push 후 백그라운드에서 upsert 해
+        // 사용자가 step4 에서 빠르게 "다음"을 누르면(혹은 upsert 실패 시) profiles
+        // 행이 아직 없어 FK 위반(23503, user_preferences_user_id_fkey)이 났다.
+        // 프로필 생성을 이동 전에 완료해 이 레이스를 제거한다.
         const uris = [...photoUris];
+
+        try {
+            await upsertProfile(draft.buildProfilePayload());
+        } catch (e: any) {
+            setSubmitting(false);
+            showAlert({
+                variant: "error",
+                title: t("common.error"),
+                message: e?.message ?? t("signupWizard.registerFailed"),
+            });
+            return;
+        }
+
         router.push("/(main)/setup/step4");
 
+        // 사진 업로드는 순차 유지 — BE POST /photos 가 position 을 비원자적으로
+        // 배정해 병렬이면 UNIQUE(user_id, position) 충돌(23505)이 난다. 실패
+        // (휴면 상태인 422 photo_blocked 포함)는 사용자가 이미 다음 단계로 넘어갔을
+        // 수 있으므로 글로벌 alert 로 노출한다.
         void (async () => {
             try {
-                await upsertProfile(draft.buildProfilePayload());
                 for (const uri of uris) {
                     const res = await profileService.uploadPhoto(uri);
                     // 업로드한 사진의 로컬 URI 를 공유 store 에 기록 — 가입 직후
