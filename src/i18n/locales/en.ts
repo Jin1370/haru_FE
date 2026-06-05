@@ -500,8 +500,12 @@ export default {
     startRecording: 'Start Recording',
     stopRecording: 'Stop Recording',
     recordingGuide:
-      '• Minimum recording length is 10 seconds — the longer you record, the closer the result sounds to your real voice.\n• Please read in a warm voice, slowly and softly.\n• If you\'re not sure what to say, feel free to read the script below.',
-    exampleScriptTitle: 'Sample Script',
+      '• Minimum recording length is 10 seconds — the longer you record, the closer the result sounds to your real voice.\n• Please read in a warm voice, slowly and softly.',
+    // Reduces drop-off at the voice step — aligned with the voice-sample-removal
+    // sprint (the raw recording is discarded right after the clone is created and
+    // is never stored on our servers).
+    recordingPrivacyNote: "• Your voice recording isn't saved, so don't worry.",
+    exampleScriptTitle: "Read this if you're not sure what to say.",
     exampleScript:
       "Hello. How was your day today? I hope your day was kind to you. It's funny — I walk the same path every day, but some days my heart feels a little heavy, and other days I find myself lifted by the smallest things. Did anyone's words make you smile today? Or, on the other hand, was there something that hurt a little? It's strange — sometimes a brief word from someone far away resonates more deeply than anything from someone close. Like the melody of a favorite playlist, certain voices have a way of comforting you just by being heard. So today, why don't we share a small hello with each other?",
     uploadVoice: 'Create Voice Clone',

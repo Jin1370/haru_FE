@@ -22,7 +22,8 @@ import { useSignupDraftStore, type Gender } from '@/stores/signupDraftStore';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { SUPPORTED_NATIONALITIES, type NationalityCode } from '@/constants/nationalities';
-import { INTEREST_SECTIONS, MAX_INTERESTS } from '@/constants/interests';
+import { MAX_INTERESTS } from '@/constants/interests';
+import { InterestSelector } from '@/components/profile/InterestSelector';
 import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { validateDisplayName, DISPLAY_NAME_MAX } from '@/utils/validators';
 import { isValidAdultBirthDate } from '@/utils/age';
@@ -272,40 +273,11 @@ export default function SetupStep1() {
         {t('setupProfile.interests', { count: interests.length })}
       </Text>
       <Text style={styles.hintBlock}>{t('setupProfile.interestsHint')}</Text>
-      {INTEREST_SECTIONS.map((section) => (
-        <View key={section.id} style={styles.interestSection}>
-          <Text style={styles.interestSectionTitle}>{t(section.titleKey)}</Text>
-          <View style={styles.chipRow}>
-            {section.items.map(({ id, labelKey }) => {
-              const label = t(labelKey);
-              const selected = selectedInterestIds.has(id);
-              const disabled = !selected && interests.length >= MAX_INTERESTS;
-              return (
-                <Pressable
-                  key={id}
-                  disabled={disabled}
-                  style={[
-                    styles.chip,
-                    selected && styles.chipActive,
-                    disabled && styles.chipDisabled,
-                  ]}
-                  onPress={() => toggleInterest(id)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      selected && styles.chipActiveText,
-                      disabled && styles.chipDisabledText,
-                    ]}
-                  >
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      ))}
+      <InterestSelector
+        selectedIds={selectedInterestIds}
+        totalSelected={interests.length}
+        onToggle={toggleInterest}
+      />
 
       </ScrollView>
 
