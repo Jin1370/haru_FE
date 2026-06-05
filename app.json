@@ -89,6 +89,7 @@
         }
       ],
       "./plugins/withRemoveMediaPermissions.js",
+      "./plugins/withCropImageColors.js",
       [
         "@sentry/react-native",
         {
