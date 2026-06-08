@@ -17,6 +17,7 @@ android/
 
 # secrets / credentials
 credentials/
+credentials.json
 *.pem
 *.key
 

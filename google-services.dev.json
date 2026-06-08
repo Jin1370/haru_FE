@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "698432210839",
+    "project_id": "haru-3b4da",
+    "storage_bucket": "haru-3b4da.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:698432210839:android:258e1f02ed55aaa74ee6d2",
+        "android_client_info": {
+          "package_name": "com.haruvoice.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwRdQrDbrbMBWkUy_xcHxqv_J-8sdu1xM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:698432210839:android:07a757d89aaa4b484ee6d2",
+        "android_client_info": {
+          "package_name": "com.haruvoice.app.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwRdQrDbrbMBWkUy_xcHxqv_J-8sdu1xM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
