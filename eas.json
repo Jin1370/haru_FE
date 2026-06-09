@@ -28,6 +28,9 @@
       "autoIncrement": true,
       "channel": "production",
       "credentialsSource": "remote",
+      "env": {
+        "APP_VARIANT": "production"
+      },
       "android": {
         "buildType": "app-bundle"
       }
