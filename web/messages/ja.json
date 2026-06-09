@@ -15,7 +15,6 @@
     }
   },
   "waitlist": {
-    "eyebrow": "テスター募集",
     "description": "無料体験をご希望の方は、機種とメールアドレスを入力してください。アプリのリリース後、そのアドレスへご連絡します。",
     "devicePlaceholder": "機種を選択",
     "emailPlaceholder": "メールアドレス",

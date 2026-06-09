@@ -15,7 +15,6 @@
     }
   },
   "waitlist": {
-    "eyebrow": "테스터 모집",
     "description": "무료 체험을 원하시면 기종과 메일 주소를 입력해주세요. 앱이 출시되는 대로 해당 주소로 연락드리겠습니다.",
     "devicePlaceholder": "기종 선택",
     "emailPlaceholder": "메일 주소",

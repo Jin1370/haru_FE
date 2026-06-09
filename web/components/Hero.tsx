@@ -5,7 +5,7 @@ export default function Hero() {
   const t = useTranslations('hero');
 
   return (
-    <section className="relative overflow-hidden bg-dawn">
+    <section className="relative overflow-hidden">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pt-16 pb-20 md:grid-cols-2 md:gap-8 md:pt-24 md:pb-28">
         {/* Left — copy */}
         <div className="flex flex-col items-center gap-6 text-center md:items-start md:text-left">

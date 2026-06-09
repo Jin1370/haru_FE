@@ -15,7 +15,6 @@
     }
   },
   "waitlist": {
-    "eyebrow": "Recruiting testers",
     "description": "Want to try haru for free? Enter your device model and email — we'll reach out at that address as soon as the app launches.",
     "devicePlaceholder": "Select your device",
     "emailPlaceholder": "Email address",

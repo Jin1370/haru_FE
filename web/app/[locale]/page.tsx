@@ -15,8 +15,12 @@ export default async function HomePage({
 
   return (
     <main>
-      <Waitlist />
-      <Hero />
+      {/* Waitlist + Hero 가 단일 dawn 그라데이션을 공유 — 두 섹션이 각자
+          그라데이션을 칠해 경계에서 색이 튀던 문제를 하나의 연속 배경으로 해결. */}
+      <div className="bg-dawn">
+        <Waitlist />
+        <Hero />
+      </div>
       <CrossLanguageSection />
       <SlowDatingSection />
       <AppStoreCTA />

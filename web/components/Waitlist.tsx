@@ -75,13 +75,10 @@ export default function Waitlist() {
     'w-full rounded-full border border-[color:var(--color-border)] bg-white px-5 py-3 text-sm text-[color:var(--color-text)] outline-none transition focus:border-[color:var(--color-primary)] focus:ring-2 focus:ring-[color:var(--color-primary)]/20';
 
   return (
-    <section className="bg-dawn">
+    <section>
       <div className="mx-auto max-w-3xl px-6 pt-10 md:pt-14">
         <div className="rounded-3xl border border-[color:var(--color-border)] bg-white/70 p-6 shadow-glow backdrop-blur md:p-8">
-          <span className="inline-block rounded-full border border-[color:var(--color-primary)]/30 bg-white/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--color-primary-dark)]">
-            {t('eyebrow')}
-          </span>
-          <p className="mt-3 break-keep text-sm leading-relaxed text-[color:var(--color-text)] md:text-base">
+          <p className="break-keep text-sm leading-relaxed text-[color:var(--color-text)] md:text-base">
             {t('description')}
           </p>
 
