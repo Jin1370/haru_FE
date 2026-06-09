@@ -612,6 +612,13 @@ export default {
     },
   },
 
+  // Force-update gate (block screen when below GET /api/config min_version).
+  forceUpdate: {
+    title: 'Update Required',
+    message: 'Please update to the latest version to keep using haru. You need to update the app to continue.',
+    button: 'Update Now',
+  },
+
   tabs: {
     discover: 'Discover',
     likes: 'Likes',

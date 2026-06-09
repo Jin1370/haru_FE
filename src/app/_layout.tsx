@@ -15,6 +15,8 @@ import { requestAndRegisterPushToken } from '@/hooks/usePushToken';
 import { getActiveChatMatchId, isMatchesTabActive } from '@/lib/activeChat';
 import { AlertHost } from '@/components/ui/AlertHost';
 import { PhotoEditorHost } from '@/components/photo/PhotoEditorHost';
+import { UpdateRequiredScreen } from '@/components/UpdateRequiredScreen';
+import { useForceUpdate } from '@/hooks/useForceUpdate';
 import { showAlert } from '@/stores/alertStore';
 import { SWRConfigProvider } from '@/lib/swr';
 import { PRETENDARD_ASSETS, fonts } from '@/constants/fonts';
@@ -133,6 +135,9 @@ function RootShell() {
 function RootLayout() {
   const { isLoading, tryAutoLogin, isAuthenticated, hasProfile } = useAuthStore();
   const [fontsLoaded, setFontsLoaded] = useState(false);
+  // 강제 업데이트 게이트 — 부팅 시 BE min_version 과 앱 버전 비교. blocked 면
+  // 앱 트리 대신 차단 화면만 렌더. fail-open 이라 평소엔 항상 false.
+  const { blocked: updateBlocked, storeUrl } = useForceUpdate();
 
   useEffect(() => {
     (async () => {
@@ -231,9 +236,17 @@ function RootLayout() {
       style={styles.root}
       onLayout={() => SplashScreen.hideAsync().catch(() => {})}
     >
-      <KeyboardProvider>
-        <RootShell />
-      </KeyboardProvider>
+      {updateBlocked ? (
+        // 차단 화면도 useSafeAreaInsets 를 쓰므로 SafeAreaProvider 로 감싼다.
+        // splash hide 는 위 onLayout 이 담당하므로 이 분기에서도 정상 해제됨.
+        <SafeAreaProvider>
+          <UpdateRequiredScreen storeUrl={storeUrl} />
+        </SafeAreaProvider>
+      ) : (
+        <KeyboardProvider>
+          <RootShell />
+        </KeyboardProvider>
+      )}
     </GestureHandlerRootView>
   );
 }

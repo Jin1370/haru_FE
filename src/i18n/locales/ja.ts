@@ -610,6 +610,13 @@ export default {
         },
     },
 
+    // 強制アップデートゲート (GET /api/config の min_version 未満でブロック画面)。
+    forceUpdate: {
+        title: "アップデートが必要です",
+        message: "快適にご利用いただくため、最新バージョンにアップデートしてください。続けるにはアップデートが必要です。",
+        button: "アップデート",
+    },
+
     tabs: {
         discover: "探す",
         likes: "いいね",

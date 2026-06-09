@@ -9,6 +9,9 @@
       "distribution": "internal",
       "channel": "development",
       "credentialsSource": "local",
+      "ios": {
+        "credentialsSource": "remote"
+      },
       "env": {
         "APP_VARIANT": "development"
       }
@@ -20,6 +23,9 @@
         "buildType": "apk"
       },
       "credentialsSource": "local",
+      "ios": {
+        "credentialsSource": "remote"
+      },
       "env": {
         "APP_VARIANT": "development"
       }

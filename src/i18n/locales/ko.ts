@@ -610,6 +610,13 @@ export default {
         },
     },
 
+    // 강제 업데이트 게이트 (GET /api/config min_version 미만 시 차단 화면).
+    forceUpdate: {
+        title: "업데이트가 필요해요",
+        message: "원활한 이용을 위해 최신 버전으로 업데이트해 주세요. 계속하려면 앱을 업데이트해야 해요.",
+        button: "업데이트하기",
+    },
+
     tabs: {
         discover: "탐색",
         likes: "좋아요",
