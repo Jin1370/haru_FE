@@ -174,7 +174,7 @@ export default function Waitlist() {
               <button
                 type="submit"
                 disabled={status === 'submitting'}
-                className="inline-flex items-center justify-center rounded-full bg-primary-gradient px-7 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_-10px_rgba(226,122,160,0.6)] transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60 sm:self-start"
+                className="inline-flex items-center justify-center self-end rounded-full bg-primary-gradient px-7 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_-10px_rgba(226,122,160,0.6)] transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {status === 'submitting' ? t('submitting') : t('submit')}
               </button>
