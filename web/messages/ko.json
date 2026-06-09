@@ -14,6 +14,18 @@
       "play": "재생"
     }
   },
+  "waitlist": {
+    "eyebrow": "테스터 모집",
+    "description": "무료 체험을 원하시면 기종과 메일 주소를 입력해주세요. 앱이 출시되는 대로 해당 주소로 연락드리겠습니다.",
+    "devicePlaceholder": "기종 (예: iPhone 15, Galaxy S24)",
+    "emailPlaceholder": "메일 주소",
+    "submit": "신청하기",
+    "submitting": "신청 중...",
+    "success": "신청이 완료됐어요. 출시되면 입력하신 주소로 연락드릴게요.",
+    "errorGeneric": "잠시 후 다시 시도해주세요.",
+    "errorEmail": "올바른 메일 주소를 입력해주세요.",
+    "errorDevice": "기종을 입력해주세요."
+  },
   "crossLanguage": {
     "eyebrow": "핵심 가치 1",
     "title": "언어의 벽은 없애되, 사람의 흔적은 지우지 않아요",

@@ -1,4 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
+import Waitlist from '@/components/Waitlist';
 import Hero from '@/components/Hero';
 import CrossLanguageSection from '@/components/CrossLanguageSection';
 import SlowDatingSection from '@/components/SlowDatingSection';
@@ -14,6 +15,7 @@ export default async function HomePage({
 
   return (
     <main>
+      <Waitlist />
       <Hero />
       <CrossLanguageSection />
       <SlowDatingSection />

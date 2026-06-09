@@ -14,6 +14,18 @@
       "play": "再生"
     }
   },
+  "waitlist": {
+    "eyebrow": "テスター募集",
+    "description": "無料体験をご希望の方は、機種とメールアドレスを入力してください。アプリのリリース後、そのアドレスへご連絡します。",
+    "devicePlaceholder": "機種(例:iPhone 15、Galaxy S24)",
+    "emailPlaceholder": "メールアドレス",
+    "submit": "申し込む",
+    "submitting": "送信中...",
+    "success": "受け付けました。リリース時にご入力のアドレスへご連絡します。",
+    "errorGeneric": "問題が発生しました。しばらくして再度お試しください。",
+    "errorEmail": "正しいメールアドレスを入力してください。",
+    "errorDevice": "機種を入力してください。"
+  },
   "crossLanguage": {
     "eyebrow": "特長 1",
     "title": "言葉の壁は取り払い、人の気配は残す。",

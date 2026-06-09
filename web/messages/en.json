@@ -14,6 +14,18 @@
       "play": "Play"
     }
   },
+  "waitlist": {
+    "eyebrow": "Recruiting testers",
+    "description": "Want to try haru for free? Enter your device model and email — we'll reach out at that address as soon as the app launches.",
+    "devicePlaceholder": "Device (e.g. iPhone 15, Galaxy S24)",
+    "emailPlaceholder": "Email address",
+    "submit": "Sign up",
+    "submitting": "Submitting...",
+    "success": "You're on the list. We'll email you the moment we launch.",
+    "errorGeneric": "Something went wrong. Please try again in a moment.",
+    "errorEmail": "Please enter a valid email address.",
+    "errorDevice": "Please enter your device model."
+  },
   "crossLanguage": {
     "eyebrow": "WHY 1",
     "title": "Break the language wall, keep the human trace.",
