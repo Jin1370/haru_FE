@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
-import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
@@ -52,10 +52,15 @@ export default async function LocaleLayout({
   }
   setRequestLocale(locale);
 
+  // 클라이언트 컴포넌트(예: Waitlist 폼)가 useTranslations 로 메시지를 읽으려면
+  // provider 에 messages 를 명시적으로 넘겨야 한다. 넘기지 않으면 클라 쪽엔
+  // 메시지가 없어 키가 그대로(`waitlist.eyebrow` 등) 렌더된다.
+  const messages = await getMessages();
+
   return (
     <html lang={locale}>
       <body className="flex min-h-screen flex-col bg-[color:var(--color-bg)] text-[color:var(--color-text)] antialiased">
-        <NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>
           <Navbar />
           {/* Navbar is position:fixed, so it leaves no flow space.
               The pt-* here matches the navbar's vertical footprint
