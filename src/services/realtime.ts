@@ -60,8 +60,19 @@ export async function subscribeToMessages(
   await unsubscribeFromMessages();
   await setRealtimeAuth();
 
+  // Unique channel name per call. supabase-js caches channels by name; with a
+  // fixed `messages_${matchId}` string a fast-refresh / re-subscribe race (e.g.
+  // a re-render from marking a message listened) lets `removeChannel()` race
+  // with the next `.channel()` call and the already-subscribed instance gets
+  // returned, throwing "cannot add `postgres_changes` callbacks ... after
+  // `subscribe()`" when we attach the .on() handlers. A random suffix sidesteps
+  // the cache entirely — same fix as subscribeToAllMessages / *MatchUpdates.
+  const channelName = `messages_${matchId}:${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 10)}`;
+
   let chan = supabase
-    .channel(`messages_${matchId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       {
