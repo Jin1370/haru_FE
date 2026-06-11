@@ -23,11 +23,11 @@ import { PRETENDARD_ASSETS, fonts } from '@/constants/fonts';
 import * as Sentry from '@sentry/react-native';
 import i18n from '@/i18n';
 
-// 환경분리 도입 시 EXPO_PUBLIC_ENV 만 dev/stage/prod 로 다르게 주면 Sentry
+// 환경분리 도입 시 EXPO_PUBLIC_SENTRY_ENV 만 dev/stage/prod 로 다르게 주면 Sentry
 // 대시보드에서 environment 로 필터된다. iOS/Android 구분은 Sentry 가 자동 태깅.
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-  environment: process.env.EXPO_PUBLIC_ENV ?? 'development',
+  environment: process.env.EXPO_PUBLIC_SENTRY_ENV ?? 'development',
   tracesSampleRate: 0.2,
 });
 

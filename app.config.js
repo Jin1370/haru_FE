@@ -34,7 +34,7 @@ module.exports = ({ config }) => {
     // 값이 APK 와 동일해 dev launcher 도 통과한다. prod(app.json)는 fingerprint
     // policy 그대로. ⚠️ 네이티브 의존성/플러그인 변경으로 dev client 를 새로
     // EAS 빌드하면 새 빌드의 runtimeVersion 으로 이 값을 갱신해야 한다.
-    runtimeVersion: '3cfd4593f1f9baa927468ef2ff1c8baf9da0c659',
+    runtimeVersion: 'haru-dev-20260611-worklets',
     android: {
       ...config.android,
       package: 'com.haruvoice.app.dev',
