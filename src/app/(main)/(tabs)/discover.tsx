@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +30,20 @@ export default function DiscoverScreen() {
     resetting,
     handleResetPasses,
   } = useDiscover();
+
+  // RefreshControl 의 refreshing 은 사용자 당김에만 묶는다. loading 을 그대로
+  // 묶으면 필터 저장 후 복귀(reloadVersion 발화)나 background refetch 가
+  // refreshing=true 를 프로그램적으로 발화 → iOS content inset stuck 위험
+  // (matches/likes 탭과 동일 원인).
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadCandidates();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadCandidates]);
 
   const voiceReady = profile?.voice_clone_status === 'ready';
   const voiceProcessing = profile?.voice_clone_status === 'processing';
@@ -115,8 +129,8 @@ export default function DiscoverScreen() {
 
   const refreshControl = (
     <RefreshControl
-      refreshing={loading}
-      onRefresh={() => loadCandidates()}
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
       tintColor={colors.primary}
       colors={[colors.primary]}
     />

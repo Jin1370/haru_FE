@@ -520,15 +520,46 @@ export default function ChatScreen() {
   const listBottomPad =
     (inputDockHeight || dockHeightFallback) + dockBottomOffset + EXTRA_BUBBLE_GAP;
 
+  const headerTitle = partnerDeleted
+    ? t('common.deletedUser')
+    : (partnerName ?? t('chat.title'));
+
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: partnerDeleted
-            ? t('common.deletedUser')
-            : (partnerName ?? t('chat.title')),
-          headerRight: () => (
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.container}>
+        {/* 완전 커스텀 헤더 — 네이티브 스택 헤더(iOS UINavigationBar /
+            Android Toolbar)의 플랫폼별 백버튼·여백 차이를 없애고 뒤로/전구/
+            메뉴 버튼을 양 플랫폼 동일하게 렌더. 상태바/노치 안전영역은 아래
+            spacer View 로 확보. */}
+        <View style={styles.header}>
+          {/* 상태바/노치 안전영역 spacer. header 에 paddingTop 을 주는 대신
+              spacer 로 분리해, 아래 absolute 제목의 위치 기준이 Yoga 버전
+              (패딩 박스 vs 보더 박스)에 흔들리지 않도록 한다. */}
+          <View style={{ height: insets.top }} />
+          {/* 제목은 절대중앙 정렬 — 좌/우 버튼 폭과 무관하게 시각적 정중앙
+              (네이티브 headerTitleAlign:'center' 와 동일한 결과). */}
+          <View
+            style={[styles.headerTitleWrap, { top: insets.top }]}
+            pointerEvents="none"
+          >
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {headerTitle}
+            </Text>
+          </View>
+          <View style={styles.headerRow}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.back')}
+              style={({ pressed }) => [
+                styles.headerBackBtn,
+                pressed && { opacity: 0.6 },
+              ]}
+            >
+              <Ionicons name="chevron-back" size={28} color={colors.text} />
+            </Pressable>
             <View style={styles.headerRightRow}>
               {matchId && !partnerDeleted && !matchUnmatched && (
                 <ChatPromptsToggleButton
@@ -552,10 +583,8 @@ export default function ChatScreen() {
                 />
               </Pressable>
             </View>
-          ),
-        }}
-      />
-      <View style={styles.container}>
+          </View>
+        </View>
         <IntimacyGauge roundTrips={roundTrips} />
         <FlatList
           ref={flatListRef}
@@ -901,6 +930,38 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    backgroundColor: colors.background,
+  },
+  // 헤더 본문 행 (백버튼 ↔ 우측 버튼). 높이는 네이티브 헤더와 유사한 52.
+  headerRow: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+  },
+  // 절대중앙 제목. 좌우 버튼 영역과 겹치지 않도록 가로 패딩으로 말줄임 유도.
+  headerTitleWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 72,
+  },
+  headerTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 19,
+    color: colors.text,
+  },
+  headerBackBtn: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerMenuBtn: {
     paddingHorizontal: 8,

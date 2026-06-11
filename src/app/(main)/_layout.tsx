@@ -1,7 +1,5 @@
 import { Redirect, Stack } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
-import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
 
 export default function MainLayout() {
   const { isAuthenticated } = useAuthStore();
@@ -22,23 +20,11 @@ export default function MainLayout() {
       <Stack.Screen name="settings/edit-profile" />
       <Stack.Screen name="settings/edit-bio" />
       <Stack.Screen name="settings/language" />
-      <Stack.Screen
-        name="chat/[matchId]"
-        options={{
-          headerShown: true,
-          headerBackTitle: 'Back',
-          headerTintColor: colors.text,
-          headerTitleStyle: {
-            fontFamily: fonts.bold,
-            color: colors.text,
-            fontSize: 19,
-          },
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerShadowVisible: false,
-        }}
-      />
+      {/* chat 헤더는 화면 내부에서 완전 커스텀 렌더 (뒤로/전구/메뉴 버튼을
+          iOS·Android 동일하게 통일). 네이티브 헤더의 플랫폼별 기본 백버튼·
+          여백 차이를 제거하기 위해 headerShown:false. 실제 헤더는
+          chat/[matchId].tsx 의 ChatHeader 참조. */}
+      <Stack.Screen name="chat/[matchId]" options={{ headerShown: false }} />
     </Stack>
   );
 }

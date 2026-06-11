@@ -1,11 +1,17 @@
-import { useCallback } from 'react';
-import { Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SwipeCard } from '@/components/discover/SwipeCard';
-import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Button } from '@/components/ui/Button';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
 import { useReceivedLikes } from '@/hooks/useReceivedLikes';
@@ -30,6 +36,16 @@ export default function LikesScreen() {
     dailyLimitReached,
   } = useReceivedLikes();
 
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadCandidates();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadCandidates]);
+
   // 탭 focus 마다 refetch — 푸시 알림으로 새 좋아요가 도착했거나, 사용자가 디스커버
   // 등 다른 탭에 머무는 사이 누군가 like 했을 때 탭 진입 시 자동으로 fresh 반영.
   // Realtime 채널은 안 씀(swipes publication 미포함 + RLS 변경 부담) — focus refetch +
@@ -40,9 +56,18 @@ export default function LikesScreen() {
     }, [loadCandidates]),
   );
 
-  // dailyCountReady 가 false 인 동안엔 quota 미확정 → LoadingScreen 으로 깜빡임 방지.
+  // dailyCountReady 가 false 인 동안에도 PhotoBackground 를 루트로 유지하고
+  // 그 안에 스피너만 띄운다. 사진 없는 별도 LoadingScreen 을 반환하면 탭 진입
+  // 마다 배경 사진이 통째로 unmount→remount 되며 회색 화면 후 사진이 늦게
+  // 뜨는 깜빡임이 생긴다(useFocusEffect refetch 와 맞물려 더 자주 노출).
   if (!dailyCountReady) {
-    return <LoadingScreen />;
+    return (
+      <PhotoBackground variant="app">
+        <View style={styles.loadingCenter}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </PhotoBackground>
+    );
   }
 
   const onSwipe = async (direction: 'like' | 'pass') => {
@@ -67,17 +92,27 @@ export default function LikesScreen() {
     }
   };
 
+  // RefreshControl 의 refreshing 은 사용자 당김에만 묶는다. loading 을 그대로
+  // 묶으면 useFocusEffect 의 포커스 refetch 가 탭 진입마다 refreshing=true 를
+  // 프로그램적으로 발화 → iOS 에서 content inset 이 stuck 되어 카드가 아래로
+  // 밀리는 회귀(matches 탭과 동일 원인)를 만든다.
   const refreshControl = (
     <RefreshControl
-      refreshing={loading}
-      onRefresh={() => loadCandidates()}
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
       tintColor={colors.primary}
       colors={[colors.primary]}
     />
   );
 
   if (loading && candidates.length === 0) {
-    return <LoadingScreen />;
+    return (
+      <PhotoBackground variant="app">
+        <View style={styles.loadingCenter}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </PhotoBackground>
+    );
   }
 
   const current = candidates[0];
@@ -155,6 +190,11 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  loadingCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   container: {
     flexGrow: 1,

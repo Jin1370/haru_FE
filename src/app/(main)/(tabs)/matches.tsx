@@ -1,5 +1,11 @@
 import { useCallback, useState } from 'react';
-import { View, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { MatchItem } from '@/components/matches/MatchItem';
@@ -16,6 +22,23 @@ export default function MatchesScreen() {
   const { t } = useTranslation();
   const { matches, loading, hasMore, loadMatches, loadMore, toggleMute } = useMatches();
   const [actionTarget, setActionTarget] = useState<MatchListItem | null>(null);
+  // RefreshControl 의 refreshing 은 "사용자가 직접 당긴" 경우에만 true 로 둔다.
+  // 일반 loading(=isValidating)을 그대로 묶으면, useFocusEffect 의 focus
+  // revalidate + SWR revalidateOnFocus 가 탭 진입마다 refreshing=true 를
+  // 프로그램적으로 발화 → iOS UIRefreshControl 이 콘텐츠를 아래로 밀고 그
+  // content inset 이 간헐적으로 stuck 되어 첫 메시지 위에 스피너 없는 빈
+  // 공간이 남는다(탭 전환 시 재레이아웃되며 해소되던 증상). 당김 제스처와
+  // 분리해 이 회로 자체를 끊는다.
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadMatches();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadMatches]);
 
   // mig 022: 액션시트의 "알림 끄기/켜기" 발화 시 옵티미스틱 토글 + BE 호출
   // (useMatches.toggleMute 내부에서 처리). 실패 시 공통 에러 알럿 + 자동 롤백.
@@ -71,7 +94,15 @@ export default function MatchesScreen() {
   }, []);
 
   const renderEmpty = () => {
-    if (loading) return null;
+    // 첫 로드 동안에는 빈 화면 대신 중앙 스피너로 표시(이전엔 RefreshControl
+    // 이 첫 로드 인디케이터를 겸했으나 위 분리로 더는 발화하지 않으므로).
+    if (loading) {
+      return (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      );
+    }
     return (
       <EmptyState
         iconName="sparkles-outline"
@@ -96,12 +127,17 @@ export default function MatchesScreen() {
         onEndReachedThreshold={0.3}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
-            onRefresh={loadMatches}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
             tintColor={colors.primary}
             colors={[colors.primary]}
           />
         }
+        // iOS 가 네비게이터 헤더/세이프영역 기준으로 top content inset 을
+        // 자동 보정하며 첫 행 위에 여백을 더하는 경로도 차단(헤더가 상단을
+        // 가리므로 자동 보정 불필요). RefreshControl 분리와 함께 빈 공간
+        // 회귀를 이중으로 막는다.
+        contentInsetAdjustmentBehavior="never"
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         style={styles.list}
       />
@@ -142,5 +178,10 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

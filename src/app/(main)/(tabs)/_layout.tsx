@@ -44,6 +44,9 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textLight,
         headerShown: true,
+        // react-navigation 헤더 타이틀 기본 정렬이 iOS='center' / Android='left' 라
+        // 같은 headerTitle 컴포넌트가 플랫폼마다 다른 위치에 떴다. 양쪽 'left' 로 고정.
+        headerTitleAlign: 'left',
         headerTitleStyle: {
           fontFamily: fonts.bold,
           color: colors.text,
