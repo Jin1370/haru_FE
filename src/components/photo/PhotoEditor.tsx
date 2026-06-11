@@ -5,7 +5,6 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  Image as RNImage,
   type LayoutChangeEvent,
 } from 'react-native';
 import Animated, {
@@ -79,20 +78,30 @@ export function PhotoEditor({
     savedTy.value = 0;
   };
 
-  // Load the working image's pixel dimensions whenever the source changes.
+  // Load the working image whenever the source changes. We normalize EXIF
+  // orientation up-front by re-baking the source through expo-image-manipulator
+  // (no ops → decode applies orientation, encode strips EXIF). Android gallery/
+  // camera photos commonly carry EXIF orientation, and Image.getSize vs the
+  // crop buffer disagreed on whether it was applied — so the computed crop
+  // origin landed in the wrong corner (the top-left got cut off). After this
+  // bake the on-screen <Image>, the reported width/height, and the crop buffer
+  // are all in the same upright space, making the crop math exact. (rotate/flip
+  // already re-bake the same way.)
   useEffect(() => {
     let active = true;
-    RNImage.getSize(
-      uri,
-      (w, h) => {
+    setWorking(null);
+    setErrorMsg(null);
+    (async () => {
+      try {
+        const ref = await ImageManipulator.manipulate(uri).renderAsync();
+        const out = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 1 });
         if (!active) return;
-        setWorking({ uri, w, h });
+        setWorking({ uri: out.uri, w: out.width, h: out.height });
         resetTransforms();
-      },
-      () => {
+      } catch {
         if (active) setErrorMsg(t('photoEditor.failed'));
-      },
-    );
+      }
+    })();
     return () => {
       active = false;
     };
