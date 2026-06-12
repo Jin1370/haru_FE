@@ -27,13 +27,15 @@ module.exports = ({ config }) => {
     ...config,
     name: 'haru (dev)',
     scheme: 'haruvoice-dev',
-    // dev Metro 의 manifest 응답이 runtimeVersion(policy:fingerprint) 계산에 ~15초
-    // 걸려, dev client 의 okhttp 10초 read 타임아웃을 넘겨 SocketTimeout 으로
-    // 앱이 안 켜지던 문제 우회 (2026-06-08). 설치된 dev 빌드의 실제 fingerprint
-    // 값으로 고정 → Metro 가 node_modules 해싱 없이 manifest 를 즉시 응답하고,
-    // 값이 APK 와 동일해 dev launcher 도 통과한다. prod(app.json)는 fingerprint
-    // policy 그대로. ⚠️ 네이티브 의존성/플러그인 변경으로 dev client 를 새로
-    // EAS 빌드하면 새 빌드의 runtimeVersion 으로 이 값을 갱신해야 한다.
+    // dev Metro 의 manifest 응답이 옛 policy:fingerprint 계산에 ~15초 걸려, dev
+    // client 의 okhttp 10초 read 타임아웃을 넘겨 SocketTimeout 으로 앱이 안 켜지던
+    // 문제 우회 (2026-06-08). 설치된 dev 빌드의 runtimeVersion 으로 고정 → Metro 가
+    // node_modules 해싱 없이 manifest 를 즉시 응답하고, 값이 APK 와 동일해 dev
+    // launcher 도 통과한다. prod(app.json)는 2026-06-12 부터 명시적 문자열
+    // runtimeVersion("1") — fingerprint policy 가 로컬 eas update 와 클라우드 eas
+    // build 사이에서 다른 해시를 내 OTA 가 빌드에 도달 못 하던 문제 때문에 전환
+    // ([[project_eas_update_ota]]). ⚠️ 네이티브 의존성/플러그인 변경 시 dev 는 이
+    // 값을, prod 는 app.json 의 runtimeVersion 을 각각 bump + 새 빌드 해야 한다.
     runtimeVersion: 'haru-dev-20260611-worklets',
     android: {
       ...config.android,
