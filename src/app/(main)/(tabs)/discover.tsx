@@ -55,11 +55,19 @@ export default function DiscoverScreen() {
   const hasPhoto = (profile?.photos.length ?? 0) > 0;
   const gated = !voiceReady || !bioReady || !hasPhoto;
 
-  // Wait for the daily count to hydrate before the first fetch so we don't
-  // overshoot the quota by fetching against a stale count of 0.
+  // 초기 후보 fetch 를 quota 동기화(syncQuota)와 병렬로 — dailyCountReady 를
+  // 더는 기다리지 않는다. 예전엔 syncQuota → dailyCountReady → loadCandidates
+  // 직렬이라 첫 이미지 앞에 BE 왕복이 2개 쌓여 콜드 진입이 느렸다. 후보를
+  // dailyCount=0 기준(=full BATCH_SIZE)으로 미리 받아도, 일일 한도는 swipe
+  // POST 에서 서버가 429 로 하드 캡하므로 over-fetch 는 무해하다(한도 근접
+  // 사용자가 안 받아도 될 카드 몇 장을 더 받는 정도). 병렬로 도는 syncQuota
+  // 가 dailyCount 를 곧 정정해 한도 화면도 정상 노출된다. 초기 1회만 발화.
+  const didInitialFetchRef = useRef(false);
   useEffect(() => {
-    if (!gated && dailyCountReady) loadCandidates();
-  }, [gated, dailyCountReady, loadCandidates]);
+    if (gated || didInitialFetchRef.current) return;
+    didInitialFetchRef.current = true;
+    loadCandidates();
+  }, [gated, loadCandidates]);
 
   // Auto-refresh trigger: the preferences screen bumps `reloadVersion` on
   // save so the candidate list refetches with the new filters without the

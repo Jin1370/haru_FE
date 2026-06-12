@@ -1,8 +1,26 @@
+import { useEffect, useRef } from 'react';
+import { Image } from 'react-native';
 import { Redirect, Stack } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 
 export default function MainLayout() {
   const { isAuthenticated } = useAuthStore();
+  const photos = useAuthStore((s) => s.profile?.photos);
+
+  // 로그인 직후 내 프로필 사진을 prefetch 한다. 목적 두 가지:
+  //  (1) Supabase storage 호스트로의 TLS 연결을 미리 warm — 탐색 첫 카드가
+  //      그 연결을 재사용해 콜드 핸드셰이크(~1~2초)를 건너뛴다. 탐색 후보
+  //      사진도 같은 storage 호스트라 워밍 효과를 공유한다.
+  //  (2) 내 프로필 탭 사진을 디스크 캐시에 미리 채운다.
+  // 세션당 1회만 (warmedRef). 실패는 무시 — 캐시 워밍이지 기능이 아님.
+  const warmedRef = useRef(false);
+  useEffect(() => {
+    if (warmedRef.current || !photos?.length) return;
+    warmedRef.current = true;
+    for (const url of photos) {
+      if (url) Image.prefetch(url).catch(() => {});
+    }
+  }, [photos]);
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
