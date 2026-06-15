@@ -25,8 +25,8 @@ import { MAX_INTERESTS } from '@/constants/interests';
 import { InterestSelector } from '@/components/profile/InterestSelector';
 import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { isLanguageCode, type LanguageCode } from '@/constants/languages';
-import { validateDisplayName, DISPLAY_NAME_MAX } from '@/utils/validators';
-import { isValidAdultBirthDate } from '@/utils/age';
+import { ErrorText } from '@/components/ui/ErrorText';
+import { validateDisplayName, validateBirthDate, DISPLAY_NAME_MAX } from '@/utils/validators';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
 
@@ -63,6 +63,17 @@ export default function EditProfileScreen() {
   });
   const [nationalityOpen, setNationalityOpen] = useState(false);
   const [interests, setInterests] = useState<string[]>(profile?.interests ?? []);
+  // Inline validation errors, keyed by field. Populated on Save, surfaced as
+  // small red text under each field, and cleared per-field as the user edits.
+  const [errors, setErrors] = useState<{
+    display_name?: string;
+    birth_date?: string;
+    nationality?: string;
+    language?: string;
+  }>({});
+
+  const clearError = (field: 'display_name' | 'birth_date' | 'nationality' | 'language') =>
+    setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e));
 
   useEffect(() => {
     if (profile) {
@@ -104,11 +115,27 @@ export default function EditProfileScreen() {
     setInterests((prev) => [...prev, id]);
   };
 
-  // The Save button is disabled until `canSave` (below), so handleSave runs
-  // only on a valid form — no inline errors. The `!form.language` guard is
-  // defensive and narrows the type from `LanguageCode | null` for TS.
+  // The Save button is always enabled so a tap always produces feedback. On tap
+  // we validate every required field at once and render an inline red message
+  // under each invalid one, instead of leaving a silently-disabled button (App
+  // Review flagged the disabled-button pattern under Guideline 2.1(a)). Only
+  // saves once all fields are valid.
   const handleSave = async () => {
-    if (!form.language) return;
+    const next: typeof errors = {};
+
+    const nameErr = validateDisplayName(form.display_name.trim());
+    if (nameErr) next.display_name = t(nameErr.key, nameErr.vars);
+
+    const birthErr = validateBirthDate(form.birth_date);
+    if (birthErr) next.birth_date = t(birthErr.key, birthErr.vars);
+
+    if (!form.nationality) next.nationality = t('setupProfile.selectNationalityRequired');
+    if (!form.language) next.language = t('setupProfile.selectLanguageRequired');
+
+    setErrors(next);
+    if (Object.keys(next).length > 0) return;
+    if (!form.language) return; // type narrow: LanguageCode | null → LanguageCode
+
     try {
       await upsertProfile({
         display_name: form.display_name.trim(),
@@ -131,15 +158,6 @@ export default function EditProfileScreen() {
     return t('setupProfile.genderOther');
   };
 
-  // Save stays disabled until every required field is valid: name (valid after
-  // trimming), a real calendar birth date for an 18+ user, and a selected
-  // nationality + language. Replaces the old tap-time inline errors.
-  const canSave =
-    validateDisplayName(form.display_name.trim()) === null &&
-    isValidAdultBirthDate(form.birth_date) &&
-    !!form.nationality &&
-    !!form.language;
-
   return (
     <View style={styles.container}>
       <WizardHeader
@@ -158,23 +176,29 @@ export default function EditProfileScreen() {
           <RequiredLabel text={t('setupProfile.displayName')} />
           <FormField
             value={form.display_name}
-            onChangeText={(v) => setForm((f) => ({ ...f, display_name: v }))}
+            onChangeText={(v) => {
+              setForm((f) => ({ ...f, display_name: v }));
+              clearError('display_name');
+            }}
             placeholder={t('setupProfile.displayNamePlaceholder')}
             maxLength={DISPLAY_NAME_MAX}
             inputStyle={styles.inputCompact}
+            error={errors.display_name}
           />
         </View>
         <View>
           <RequiredLabel text={t('setupProfile.birthDate')} gap />
           <FormField
             value={form.birth_date}
-            onChangeText={(v) =>
-              setForm((f) => ({ ...f, birth_date: formatBirthDate(v) }))
-            }
+            onChangeText={(v) => {
+              setForm((f) => ({ ...f, birth_date: formatBirthDate(v) }));
+              clearError('birth_date');
+            }}
             placeholder={t('setupProfile.birthDatePlaceholder')}
             keyboardType="number-pad"
             maxLength={10}
             inputStyle={styles.inputCompact}
+            error={errors.birth_date}
           />
         </View>
 
@@ -224,6 +248,7 @@ export default function EditProfileScreen() {
                     onPress={() => {
                       setForm((f) => ({ ...f, nationality: code as NationalityCode }));
                       setNationalityOpen(false);
+                      clearError('nationality');
                     }}
                   >
                     <Text style={[styles.chipText, selected && styles.chipActiveText]}>
@@ -234,6 +259,7 @@ export default function EditProfileScreen() {
               })}
             </View>
           )}
+          <ErrorText>{errors.nationality ?? null}</ErrorText>
         </View>
 
         <View>
@@ -241,8 +267,12 @@ export default function EditProfileScreen() {
           <LanguagePicker
             mode="single"
             value={form.language}
-            onChange={(next) => setForm((f) => ({ ...f, language: next }))}
+            onChange={(next) => {
+              setForm((f) => ({ ...f, language: next }));
+              clearError('language');
+            }}
           />
+          <ErrorText>{errors.language ?? null}</ErrorText>
         </View>
 
         <Text style={[styles.label, styles.sectionGap]}>
@@ -262,7 +292,7 @@ export default function EditProfileScreen() {
           ScrollView paddingBottom still adds kbHeight so the input can be
           scrolled above the keyboard line. */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        <Button title={t('common.save')} onPress={handleSave} loading={loading} disabled={!canSave || loading} />
+        <Button title={t('common.save')} onPress={handleSave} loading={loading} disabled={loading} />
       </View>
     </View>
   );

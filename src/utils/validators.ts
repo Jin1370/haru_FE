@@ -3,6 +3,8 @@
 // exist, with extra UX-level rejections (zero-width / RTL-override unicode)
 // for fields a hostile or accidental user could otherwise smuggle through.
 
+import { isValidAdultBirthDate } from './age';
+
 export type ValidationError = {
   key: string;
   vars?: Record<string, string | number>;
@@ -46,19 +48,34 @@ export function validatePassword(value: string): ValidationError | null {
 // Tinder/Hinge sit at 50 too.
 export const DISPLAY_NAME_MAX = 50;
 
+// Callers pass an already-trimmed value and cap input with maxLength={DISPLAY_NAME_MAX},
+// so the leading/trailing-space and over-length cases are unreachable here — only
+// empty and forbidden-character checks remain.
 export function validateDisplayName(value: string): ValidationError | null {
   if (value.length === 0) return { key: 'validation.displayNameRequired' };
-  if (value !== value.trim()) return { key: 'validation.displayNameTrimmed' };
-  if (value.length > DISPLAY_NAME_MAX) {
-    return {
-      key: 'validation.displayNameTooLong',
-      vars: { max: DISPLAY_NAME_MAX },
-    };
-  }
   if (FORBIDDEN_NAME_RE.test(value)) {
     return { key: 'validation.displayNameInvalidChars' };
   }
   return null;
+}
+
+// Birth date for the 18+ signup gate. Returns null when valid, otherwise a
+// specific key: a well-formed real calendar date that simply fails the age gate
+// gets `birthDateAdult`, while a malformed value (wrong format / impossible day,
+// e.g. an MM-DD-YYYY entry) gets `birthDateInvalid`.
+export function validateBirthDate(value: string): ValidationError | null {
+  if (isValidAdultBirthDate(value)) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (m) {
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    const d = Number(m[3]);
+    const dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d) {
+      return { key: 'validation.birthDateAdult' };
+    }
+  }
+  return { key: 'validation.birthDateInvalid' };
 }
 
 // Voice intro is optional — empty value passes (caller decides whether
