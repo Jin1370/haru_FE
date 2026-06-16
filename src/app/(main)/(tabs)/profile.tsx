@@ -21,7 +21,6 @@ import * as MediaLibrary from 'expo-media-library';
 import * as ScreenCapture from 'expo-screen-capture';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ErrorText } from '@/components/ui/ErrorText';
 import { VoiceIntroMultiLangPreview } from '@/components/profile/VoiceIntroMultiLangPreview';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
 import { useProfile, MAX_PHOTOS } from '@/hooks/useProfile';
@@ -85,10 +84,6 @@ export default function ProfileScreen() {
   // immediately without a hot reload.
   const [photoBust, setPhotoBust] = useState(0);
   const bustUri = (uri: string) => (photoBust > 0 ? `${uri}${uri.includes('?') ? '&' : '?'}cb=${photoBust}` : uri);
-  // Transient inline message for photo-pick failures (format / size / cap).
-  // Cleared on every new pick attempt or successful upload.
-  const [photoError, setPhotoError] = useState<string | null>(null);
-
   // photo-original-blur-preview: 변환 중(inflight) 슬롯 배경에 깔 흐린 원본 URI 는
   // 공유 store 에서 읽는다. 회원가입 step5 배치 업로드도 같은 store 에 기록하므로,
   // 가입 직후 프로필 탭에 진입해도 같은 세션 동안 흐린 미리보기가 보인다(옛 컴포넌트
@@ -159,7 +154,6 @@ export default function ProfileScreen() {
   }, [bioSet, allSlotsSettled, loadProfile]);
 
   const pickAndValidate = async () => {
-    setPhotoError(null);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
@@ -174,7 +168,7 @@ export default function ProfileScreen() {
     if (!edited) return null;
     const info = await FileSystem.getInfoAsync(edited);
     if (info.exists && info.size && info.size > 5 * 1024 * 1024) {
-      setPhotoError(t('profile.photoSizeLimit'));
+      showAlert({ variant: 'info', title: t('profile.photoSizeLimit') });
       return null;
     }
     return edited;
@@ -182,7 +176,7 @@ export default function ProfileScreen() {
 
   const handleAddPhoto = async () => {
     if ((profile?.photos.length ?? 0) >= MAX_PHOTOS) {
-      setPhotoError(t('profile.maxPhotosReached'));
+      showAlert({ variant: 'info', title: t('profile.maxPhotosReached') });
       return;
     }
     const uri = await pickAndValidate();
@@ -296,10 +290,13 @@ export default function ProfileScreen() {
     // Block the last-photo delete: a profile with zero photos becomes
     // invisible on every other user's discover/match screen, and we already
     // gate the discover tab on `hasPhoto` — letting the user delete down to
-    // zero would trap them in the photo-required gate. Surface this as an
-    // inline message rather than an Alert so it lives next to the grid.
+    // zero would trap them in the photo-required gate. Surface this as a modal.
     if ((profile?.photos.length ?? 0) <= 1) {
-      setPhotoError(t('profile.lastPhotoLocked'));
+      showAlert({
+        variant: 'info',
+        title: t('profile.lastPhotoLockedTitle'),
+        message: t('profile.lastPhotoLockedBody'),
+      });
       return;
     }
     showAlert({
@@ -697,8 +694,6 @@ export default function ProfileScreen() {
           <Text style={styles.photoBusyText}>{t('profile.photoConverting')}</Text>
         </View>
       ) : null}
-
-      <ErrorText testID="profile-photo-error">{photoError}</ErrorText>
 
       {/* Profile Info Card */}
       <LinearGradient
