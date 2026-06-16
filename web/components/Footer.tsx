@@ -9,9 +9,9 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-[color:var(--color-border)] bg-white/60 px-6 py-10 text-center text-xs text-[color:var(--color-text-secondary)] backdrop-blur">
+    <footer className="border-t border-[color:var(--color-border)]/50 px-6 py-10 text-center text-xs text-[color:var(--color-text-secondary)]">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-3">
-        <p className="text-sm font-semibold text-[color:var(--color-primary-dark)]">
+        <p className="font-pixel text-sm font-semibold text-[color:var(--color-primary-dark)]">
           haru
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">

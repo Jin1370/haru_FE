@@ -75,9 +75,17 @@ export default function Waitlist() {
     'w-full rounded-full border border-[color:var(--color-border)] bg-white px-5 py-3 text-sm text-[color:var(--color-text)] outline-none transition focus:border-[color:var(--color-primary)] focus:ring-2 focus:ring-[color:var(--color-primary)]/20';
 
   return (
-    <section>
-      <div className="mx-auto max-w-3xl px-6 pt-10 md:pt-14">
-        <div className="rounded-3xl border border-[color:var(--color-border)] bg-white/70 p-6 shadow-glow backdrop-blur md:p-8">
+    <section id="waitlist" className="scroll-mt-24">
+      <div className="mx-auto max-w-3xl px-6 py-20 md:py-28">
+        <div className="mb-8 text-center">
+          <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[color:var(--color-primary-dark)]">
+            {t('eyebrow')}
+          </span>
+          <h2 className="mt-4 break-keep text-3xl font-bold leading-tight text-[color:var(--color-text)] md:text-4xl">
+            {t('title')}
+          </h2>
+        </div>
+        <div className="rounded-3xl border border-[color:var(--color-border)] bg-white/80 p-6 shadow-glow backdrop-blur md:p-8">
           <p className="break-keep text-sm leading-relaxed text-[color:var(--color-text)] md:text-base">
             {t('description')}
           </p>
@@ -181,6 +189,9 @@ export default function Waitlist() {
             </form>
           )}
         </div>
+        <p className="mt-5 text-center text-xs text-[color:var(--color-text-light)]">
+          {t('ageNote')}
+        </p>
       </div>
     </section>
   );

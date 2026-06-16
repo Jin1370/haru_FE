@@ -1,20 +1,59 @@
 {
   "meta": {
     "title": "haru — Voice-first cross-language dating",
-    "description": "Your message arrives in their language, in your own voice. Hear before you swipe. Slow dating, on purpose."
+    "description": "A first impression you can hear, not just see. haru is a global dating app where hearts connect across languages."
   },
   "hero": {
-    "eyebrow": "VOICE-FIRST · CROSS-LANGUAGE",
-    "title": "Your voice, in their language.",
-    "mockup": {
-      "cardLabel": "Voice intro",
-      "name": "Aiko, 27",
-      "distance": "Tokyo · 3km",
-      "intro": "Which café are you headed to today?",
-      "play": "Play"
+    "eyebrow": "Meet friends & partners worldwide by voice",
+    "title": "First impressions, met by voice",
+    "subtitle": "Swipe through profiles and listen to each person's voice.\nFeel the mood and tone behind the photo, and discover their real charm.",
+    "ctaPrimary": "Get free early access",
+    "ctaStore": "Google Play",
+    "imageAlt": "haru Discover screen — listening to someone's voice intro on a profile card"
+  },
+  "features": {
+    "eyebrow": "Three things that make haru, haru",
+    "title": "Start with a voice, stay for the connection",
+    "art": {
+      "tag": "Art profile",
+      "title": "Your very own art profile",
+      "body": "haru turns your real photos into an art profile that's all yours — a spoonful of mood and two spoonfuls of charm. If showing real photos always made you hesitate, start comfortably with an art profile instead.",
+      "imageAlt": "haru profile screen — photos rendered in a warm illustrated style"
+    },
+    "translate": {
+      "tag": "Auto translation",
+      "title": "Talk with no language wall",
+      "body": "Send a message and it reaches them auto-translated into their language — delivered in your own voice. No separate translator app, just chat naturally inside haru.",
+      "imageAlt": "haru chat screen — a message translated into the other person's language"
+    },
+    "emotion": {
+      "tag": "Lifelike voice messages",
+      "title": "Voice messages that carry feeling",
+      "body": "When you send a message, pick an emotion like joy or sadness and it rides right in your voice's tone — even a 'lol' comes alive as real laughter.",
+      "imageAlt": "haru chat screen — sending a message with emotion in the voice"
+    },
+    "voiceintro": {
+      "tag": "Voice intro",
+      "title": "A line you want them to hear",
+      "body": "Pick a line you'd like to share or write your own, and it's auto-generated in your own voice. It appears next to your profile photo on the Discover tab.",
+      "imageAlt": "haru voice intro screen — a chosen line synthesized in your own voice"
     }
   },
+  "recommend": {
+    "eyebrow": "Who haru is for",
+    "title": "Who haru is for",
+    "imageAlt": "haru matching preferences screen — choosing preferred age, gender, and nationality",
+    "items": [
+      "Anyone hoping to meet someone new from Korea, Japan, and beyond",
+      "Anyone who wants to exchange languages with people abroad",
+      "Anyone whose ideal type is a great voice",
+      "Anyone who wants to show off their own voice",
+      "Anyone who feels uneasy showing real photos"
+    ]
+  },
   "waitlist": {
+    "eyebrow": "Early access",
+    "title": "Be the first to meet haru",
     "description": "Want to try haru for free? Enter your device model and email — we'll reach out at that address as soon as the app launches.",
     "devicePlaceholder": "Select your device",
     "emailPlaceholder": "Email address",
@@ -23,47 +62,8 @@
     "success": "You're on the list. We'll email you the moment we launch.",
     "errorGeneric": "Something went wrong. Please try again in a moment.",
     "errorEmail": "Please enter a valid email address.",
-    "errorDevice": "Please enter your device model."
-  },
-  "crossLanguage": {
-    "eyebrow": "WHY 1",
-    "title": "Break the language wall, keep the human trace.",
-    "body": "Translated messages are not robot TTS. They are synthesized in the sender's own ElevenLabs voice clone — tone, pacing, accent all survive.",
-    "mockup": {
-      "partnerName": "Aiko",
-      "online": "Online",
-      "mineText": "Beautiful weather today — want to take a walk?",
-      "mineLang": "You · English",
-      "translatedHint": "✨ Translating, voicing as you…",
-      "translatedText": "今日は天気がとても良いですね、散歩しませんか?",
-      "translatedLang": "Delivered · 日本語 · your voice",
-      "caption": "Same waveform = same voice. Only the language changes."
-    }
-  },
-  "slowDating": {
-    "eyebrow": "WHY 2",
-    "title": "Slowness, by design.",
-    "subtitle": "The opposite of instant matching. haru gives you less information up front on purpose — so a first impression can actually take shape.",
-    "discover": {
-      "label": "Discover",
-      "title": "Hear first, look later",
-      "body": "Profile photos stay blurred while the voice intro plays. We reduce the pure-photo filter loop on purpose."
-    },
-    "message": {
-      "label": "Messages",
-      "title": "Listen before you read",
-      "body": "Incoming messages arrive sealed like a letter. Playing the audio once is what unlocks the translated text — the voice is part of the meeting."
-    },
-    "photo": {
-      "label": "Photo reveal",
-      "title": "Photos unlock with the chat",
-      "body": "After 5 message round-trips you see part of their photo. At 10, it's fully revealed. Connection is paced by conversation, not by a paywall."
-    }
-  },
-  "cta": {
-    "title": "Start with haru",
-    "playStore": "Google Play",
-    "disclaimer": "Must be 18 or older to use haru."
+    "errorDevice": "Please enter your device model.",
+    "ageNote": "Must be 18 or older to use haru."
   },
   "footer": {
     "terms": "Terms of Service",

@@ -1,100 +1,100 @@
 {
-  "meta": {
-    "title": "haru — 목소리로 시작되는 크로스언어 데이팅",
-    "description": "내가 보낸 메시지가 상대 언어로 번역되어 내 목소리 그대로 도착해요. 사진보다 목소리를 먼저 듣는, 느린 데이팅."
-  },
-  "hero": {
-    "eyebrow": "VOICE-FIRST · CROSS-LANGUAGE",
-    "title": "내 목소리 그대로, 상대 언어로 도착해요",
-    "mockup": {
-      "cardLabel": "보이스 인트로",
-      "name": "Aiko, 27",
-      "distance": "Tokyo · 3km",
-      "intro": "오늘 어디 카페에 가실 거예요?",
-      "play": "재생"
+    "meta": {
+        "title": "haru — 목소리로 시작되는 크로스언어 데이팅",
+        "description": "사진과 텍스트만으론 느낄 수 없던 진짜 첫인상을 목소리로. haru는 언어가 달라도 마음이 통하는 글로벌 데이팅 앱이에요."
+    },
+    "hero": {
+        "eyebrow": "목소리로 만나는 글로벌 친구·연인",
+        "title": "목소리로 만나는 첫인상",
+        "subtitle": "프로필을 넘기며 상대의 목소리를 직접 들어보세요.\n사진 뒤에 가려진 분위기와 말투로 진짜 매력을 확인하게 됩니다.",
+        "ctaPrimary": "무료 체험 신청하기",
+        "ctaStore": "Google Play",
+        "imageAlt": "haru 탐색 화면 — 프로필 카드에서 상대의 보이스 인트로를 듣는 모습"
+    },
+    "features": {
+        "eyebrow": "haru의 세 가지 매력",
+        "title": "목소리로 시작해, 마음으로 이어져요",
+        "art": {
+            "tag": "아트 프로필",
+            "title": "나만의 아트 프로필",
+            "body": "실제 사진에 감성 한 스푼과 매력 두 스푼을 더한 나만의 아트 프로필을 생성해요. 실사 노출이 부담스러워 망설였다면, 이제 아트 프로필로 편하게 시작하세요.",
+            "imageAlt": "haru 프로필 화면 — 사진이 감성적인 그림체로 변환된 모습"
+        },
+        "translate": {
+            "tag": "자동 번역",
+            "title": "언어 장벽 없는 대화",
+            "body": "메시지를 보내면 상대 언어로 자동 번역된 내용이 '당신의 목소리'로 전달돼요. 번역기를 따로 켤 필요 없이 haru 안에서 자연스럽게 대화하세요.",
+            "imageAlt": "haru 채팅 화면 — 메시지가 상대의 언어로 번역되는 모습"
+        },
+        "emotion": {
+            "tag": "생생한 음성 메시지",
+            "title": "감정까지 담는 음성 메시지",
+            "body": "메시지를 보낼 때 기쁨·슬픔 같은 감정을 선택하면 목소리 톤에 그 감정이 그대로 실리고, 'ㅋㅋㅋ' 같은 표현도 진짜 웃음소리로 살아나요.",
+            "imageAlt": "haru 채팅 화면 - 메시지에 감정을 실어 보내는 모습"
+        },
+        "voiceintro": {
+            "tag": "보이스 한마디",
+            "title": "네게 전하고 싶은 한마디",
+            "body": "상대에게 들려주고 싶은 말을 선택하거나 직접 작성하면, 나의 목소리로 음성이 자동 생성돼요. 탐색 탭에서 프로필 사진과 함께 상대에게 노출돼요.",
+            "imageAlt": "haru 보이스 한마디 등록 화면 — 고른 문장이 내 목소리로 합성되는 모습"
+        }
+    },
+    "recommend": {
+        "eyebrow": "이런 분께 추천해요",
+        "title": "이런 분께 추천해요",
+        "imageAlt": "haru 매칭 선호 설정 화면 — 선호 나이·성별·국적을 고르는 모습",
+        "items": [
+            "일본, 미국 등 다른 나라 사람과 새로운 인연을 만들고 싶으신 분",
+            "외국인과 언어 교환을 하고 싶으신 분",
+            "좋은 목소리가 이상형이신 분",
+            "자신의 목소리를 뽐내고 싶으신 분",
+            "실사 사진 노출이 부담스러우신 분"
+        ]
+    },
+    "waitlist": {
+        "eyebrow": "사전 신청",
+        "title": "haru를 가장 먼저 만나보세요",
+        "description": "무료 체험을 원하시면 기종과 메일 주소를 입력해주세요. 앱이 출시되는 대로 해당 주소로 연락드리겠습니다.",
+        "devicePlaceholder": "기종 선택",
+        "emailPlaceholder": "메일 주소",
+        "submit": "신청하기",
+        "submitting": "신청 중...",
+        "success": "신청이 완료됐어요. 출시되면 입력하신 주소로 연락드릴게요.",
+        "errorGeneric": "잠시 후 다시 시도해주세요.",
+        "errorEmail": "올바른 메일 주소를 입력해주세요.",
+        "errorDevice": "기종을 입력해주세요.",
+        "ageNote": "만 18세 이상만 이용할 수 있어요."
+    },
+    "footer": {
+        "terms": "이용약관",
+        "privacy": "개인정보처리방침",
+        "accountDeletion": "계정 삭제 안내",
+        "childSafety": "아동 안전 정책",
+        "contact": "문의"
+    },
+    "legal": {
+        "privacy": {
+            "title": "개인정보처리방침 — haru",
+            "description": "haru 서비스의 개인정보 수집·이용·보존 및 제3자 처리 위탁 정책."
+        },
+        "terms": {
+            "title": "이용약관 — haru",
+            "description": "haru 서비스 이용 조건, 회원 의무, 콘텐츠 모더레이션 및 책임 한계."
+        },
+        "accountDeletion": {
+            "title": "계정 삭제 안내 — haru",
+            "description": "haru 서비스의 계정 삭제 절차 및 삭제·보관 데이터 안내."
+        },
+        "childSafety": {
+            "title": "아동 안전 표준 정책 — haru",
+            "description": "haru 의 아동 성적 학대·착취(CSAE) 대응 표준, 신고 방법 및 연령 정책 안내."
+        },
+        "localeNotice": "현재 한국어 원문만 제공됩니다. 번역본은 출시 후 순차 제공 예정입니다."
+    },
+    "authCallback": {
+        "badge": "인증 완료",
+        "title": "이메일 인증이 완료되었어요",
+        "body": "이제 haru 앱으로 돌아가 로그인해주세요.",
+        "hint": "이 창은 닫으셔도 됩니다."
     }
-  },
-  "waitlist": {
-    "description": "무료 체험을 원하시면 기종과 메일 주소를 입력해주세요. 앱이 출시되는 대로 해당 주소로 연락드리겠습니다.",
-    "devicePlaceholder": "기종 선택",
-    "emailPlaceholder": "메일 주소",
-    "submit": "신청하기",
-    "submitting": "신청 중...",
-    "success": "신청이 완료됐어요. 출시되면 입력하신 주소로 연락드릴게요.",
-    "errorGeneric": "잠시 후 다시 시도해주세요.",
-    "errorEmail": "올바른 메일 주소를 입력해주세요.",
-    "errorDevice": "기종을 입력해주세요."
-  },
-  "crossLanguage": {
-    "eyebrow": "핵심 가치 1",
-    "title": "언어의 벽은 없애되, 사람의 흔적은 지우지 않아요",
-    "body": "번역된 메시지는 기계 음성이 아니에요. 내가 직접 녹음한 보이스 클론으로 합성돼, 말투·호흡·억양이 살아 있는 채로 상대에게 도착해요.",
-    "mockup": {
-      "partnerName": "Aiko",
-      "online": "온라인",
-      "mineText": "오늘 날씨 너무 좋네요, 산책하실래요?",
-      "mineLang": "내가 보냄 · 한국어",
-      "translatedHint": "✨ 자동 번역 + 내 목소리로 합성 중",
-      "translatedText": "今日は天気がとても良いですね、散歩しませんか?",
-      "translatedLang": "상대에게 도착 · 日本語 · 내 목소리",
-      "caption": "같은 파형 = 같은 목소리. 언어만 바뀝니다."
-    }
-  },
-  "slowDating": {
-    "eyebrow": "핵심 가치 2",
-    "title": "비효율과 느림의 미학",
-    "subtitle": "빠른 매칭·즉시 노출의 반대편에서, haru는 의도적으로 느립니다. 정보를 한 번에 다 주지 않는 게 첫인상을 더 깊게 만들어요.",
-    "discover": {
-      "label": "탐색",
-      "title": "사진 대신 목소리 먼저",
-      "body": "프로필 사진은 블러 처리된 상태로, 카드 중앙에서 보이스 인트로 한마디부터 들어요. 외모로 거르는 패턴 자체를 줄였어요."
-    },
-    "message": {
-      "label": "메시지",
-      "title": "음성을 듣고 나서야 텍스트가 열려요",
-      "body": "수신된 메시지는 '편지'처럼 잠겨 있어요. 한 번 청취하면 그제서야 번역문이 펼쳐져요. 음성 자체가 만남의 일부예요."
-    },
-    "photo": {
-      "label": "사진 공개",
-      "title": "왕복 채팅으로 단계적 공개",
-      "body": "채팅이 5회 오가면 사진 일부, 10회 오가면 전체가 공개돼요. 대화가 쌓일수록 서로의 윤곽이 또렷해지는 구조."
-    }
-  },
-  "cta": {
-    "title": "지금 haru를 시작하세요",
-    "playStore": "Google Play",
-    "disclaimer": "만 18세 이상만 이용할 수 있어요."
-  },
-  "footer": {
-    "terms": "이용약관",
-    "privacy": "개인정보처리방침",
-    "accountDeletion": "계정 삭제 안내",
-    "childSafety": "아동 안전 정책",
-    "contact": "문의"
-  },
-  "legal": {
-    "privacy": {
-      "title": "개인정보처리방침 — haru",
-      "description": "haru 서비스의 개인정보 수집·이용·보존 및 제3자 처리 위탁 정책."
-    },
-    "terms": {
-      "title": "이용약관 — haru",
-      "description": "haru 서비스 이용 조건, 회원 의무, 콘텐츠 모더레이션 및 책임 한계."
-    },
-    "accountDeletion": {
-      "title": "계정 삭제 안내 — haru",
-      "description": "haru 서비스의 계정 삭제 절차 및 삭제·보관 데이터 안내."
-    },
-    "childSafety": {
-      "title": "아동 안전 표준 정책 — haru",
-      "description": "haru 의 아동 성적 학대·착취(CSAE) 대응 표준, 신고 방법 및 연령 정책 안내."
-    },
-    "localeNotice": "현재 한국어 원문만 제공됩니다. 번역본은 출시 후 순차 제공 예정입니다."
-  },
-  "authCallback": {
-    "badge": "인증 완료",
-    "title": "이메일 인증이 완료되었어요",
-    "body": "이제 haru 앱으로 돌아가 로그인해주세요.",
-    "hint": "이 창은 닫으셔도 됩니다."
-  }
 }

@@ -59,13 +59,13 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale}>
-      <body className="flex min-h-screen flex-col bg-[color:var(--color-bg)] text-[color:var(--color-text)] antialiased">
+      <body className="flex min-h-screen flex-col text-[color:var(--color-text)] antialiased">
         <NextIntlClientProvider messages={messages}>
           <Navbar />
-          {/* Navbar is position:fixed, so it leaves no flow space.
+          {/* Navbar is position:absolute, so it leaves no flow space.
               The pt-* here matches the navbar's vertical footprint
               (py-4 + the wordmark line-height) so the hero doesn't
-              hide under the floating header. */}
+              start under the floating header. */}
           <div className="flex-1 pt-20 md:pt-24">{children}</div>
           <Footer />
         </NextIntlClientProvider>

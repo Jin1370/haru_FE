@@ -1,6 +1,63 @@
 @import "tailwindcss";
 
+/* Pretendard — the page-wide body/heading typeface (matches the font the
+   mobile app also bundles in haru_FE/assets/fonts). Five static weights
+   copied as woff2 static assets; 400→800 cover the Tailwind weight
+   utilities used here (font-medium/semibold/bold/extrabold). SIL OFL 1.1. */
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Galmuri11 — the pixel font the mobile app renders its UI in. On the web
+   it is reserved for the brand wordmark / logo only (via .font-pixel),
+   while everything else uses Pretendard. SIL OFL 1.1.
+   Single weight (no separate bold cut) — the browser synthesises bolding. */
+@font-face {
+  font-family: 'Galmuri11';
+  src: url('/fonts/Galmuri11.woff2') format('woff2');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
+  /* Pretendard is the page default. The fallback chain keeps the ja locale
+     safe: any glyph Pretendard lacks falls through to the system font. */
+  --font-sans: 'Pretendard', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --default-font-family: 'Pretendard', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
   /* Mirror of the mobile app palette (haru_FE/src/constants/colors.ts).
      Keeping the same brand tokens here avoids a drifted "marketing look"
      when prospects land in the app right after seeing the page. */
@@ -29,15 +86,50 @@
   color-scheme: light;
 }
 
-html,
-body {
+html {
   height: 100%;
 }
 
-body {
+/* Giving <html> its own background stops the body→canvas background
+   propagation. Without this, Chrome sizes the propagated body gradient to the
+   viewport, compressing the whole ramp into the first screen (and resetting
+   below it). With propagation stopped, the body gradient paints on the body's
+   own box — which grows to the full content height — so the ramp spans the
+   entire page. This colour is also the overscroll / fallback tint. */
+html {
   background-color: var(--color-bg);
+}
+
+body {
+  /* One continuous top→bottom gradient spanning the WHOLE page, so the warm
+     dawn sky descends into soft lavender without per-section seams. Every
+     section is transparent and lets this single ramp show through (the old
+     per-section `.bg-dawn` restarted the ramp on each block → visible bands).
+     background-size 100% 100% pins the ramp to the full body height. The body
+     box itself is left at its auto (content) height — never `height: 100%`,
+     which would cap it at one viewport and cut the ramp off mid-page — with
+     `min-height` only setting a viewport-height floor for short pages. */
+  min-height: 100%;
+  background-color: var(--color-bg);
+  background-image: linear-gradient(
+    180deg,
+    #FFF2F5 0%,
+    #FCE8ED 35%,
+    #FBDEE6 68%,
+    #FBD7E2 100%
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-attachment: scroll;
   color: var(--color-text);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Brand wordmark / logo only — keeps the in-app pixel type voice while the
+   rest of the page reads in Pretendard. */
+.font-pixel {
+  font-family: 'Galmuri11', system-ui, sans-serif;
 }
 
 /* Sunset gradient used by the hero — defined here so multiple sections can
@@ -67,6 +159,99 @@ body {
   box-shadow:
     0 30px 80px -20px rgba(226, 122, 160, 0.45),
     0 12px 32px -8px rgba(58, 35, 64, 0.18);
+}
+
+/* ───────────────────────────────────────────────────────────
+   haru iPhone mockup — ported verbatim from the design drop-in
+   (landing/phone.html). A raw app screen (public/screenshots/*)
+   is wrapped with a dark bezel + rounded screen + status bar
+   (time / Dynamic Island / signal·wifi·battery). All sizes derive
+   from the --w custom property so one value scales the whole frame.
+   Set --w responsively on the element; set --header to the screen's
+   app-header colour so the status bar blends into the screenshot.
+   ─────────────────────────────────────────────────────────── */
+.haru-phone {
+  --w: min(300px, 78vw);
+  --header: #fff4ee; /* status-bar bg = app header colour */
+  --bezel: calc(var(--w) * 0.03);
+  --ink: #1d1320;
+  width: var(--w);
+  padding: var(--bezel);
+  background: #0e0a12; /* phone body */
+  border-radius: calc(var(--w) * 0.15);
+  box-shadow:
+    0 calc(var(--w) * 0.09) calc(var(--w) * 0.2) rgba(58, 35, 64, 0.28),
+    0 calc(var(--w) * 0.015) calc(var(--w) * 0.04) rgba(58, 35, 64, 0.16);
+  box-sizing: border-box;
+}
+.haru-phone .screen {
+  position: relative;
+  border-radius: calc(var(--w) * 0.12);
+  overflow: hidden;
+  background: var(--header);
+  line-height: 0;
+}
+.haru-phone .statusbar {
+  position: relative;
+  height: calc(var(--w) * 0.132);
+  background: var(--header);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 calc(var(--w) * 0.07);
+  color: var(--ink);
+  box-sizing: border-box;
+  line-height: 1;
+}
+.haru-phone .time {
+  font-weight: 700;
+  font-size: calc(var(--w) * 0.044);
+  letter-spacing: 0.2px;
+}
+.haru-phone .island {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--w) * 0.03);
+  transform: translateX(-50%);
+  width: calc(var(--w) * 0.25);
+  height: calc(var(--w) * 0.066);
+  background: #0a0a0a;
+  border-radius: 999px;
+}
+.haru-phone .icons {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--w) * 0.014);
+  height: calc(var(--w) * 0.04);
+}
+.haru-phone .icons svg {
+  height: 100%;
+  width: auto;
+  display: block;
+  fill: var(--ink);
+}
+.haru-phone img.app {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* Bottom safe-area strip in the screen's own nav-bar colour, with the iOS
+   home-indicator pill — gives the screenshot breathing room above the rounded
+   bottom bezel instead of butting against it. */
+.haru-phone .homebar {
+  height: calc(var(--w) * 0.058);
+  background: var(--footer);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.haru-phone .homebar::after {
+  content: '';
+  width: calc(var(--w) * 0.36);
+  height: calc(var(--w) * 0.012);
+  border-radius: 999px;
+  background: rgba(29, 19, 32, 0.32);
+  margin-bottom: calc(var(--w) * 0.008);
 }
 
 /* Subtle blur ring behind the phone — sits below the device frame. */

@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLocale } from 'next-intl';
-import { usePathname, useRouter } from 'next/navigation';
-import { routing, type AppLocale } from '@/i18n/routing';
+import { usePathname, useRouter } from '@/i18n/navigation';
+import { type AppLocale } from '@/i18n/routing';
 
 const LABELS: Record<AppLocale, string> = {
   ko: '한국어',
@@ -14,27 +14,11 @@ const LABELS: Record<AppLocale, string> = {
 // Surface all three supported locales. Order: Korean, English, Japanese.
 const VISIBLE_LOCALES: readonly AppLocale[] = ['ko', 'en', 'ja'];
 
-/**
- * Rewrite the current pathname for a target locale, respecting
- * routing.localePrefix='as-needed' (default locale gets no prefix).
- * Example: '/ja/privacy' → 'ko'  →  '/privacy'
- *          '/privacy'    → 'ja'  →  '/ja/privacy'
- */
-function buildHref(target: AppLocale, currentPath: string): string {
-  const parts = currentPath.split('/').filter(Boolean);
-  const head = parts[0];
-  const isLocaleSegment = (routing.locales as readonly string[]).includes(head);
-  const rest = (isLocaleSegment ? parts.slice(1) : parts).join('/');
-  const tail = rest ? `/${rest}` : '';
-  if (target === routing.defaultLocale) {
-    return tail || '/';
-  }
-  return `/${target}${tail}`;
-}
-
 export default function LangSwitcher() {
   const locale = useLocale() as AppLocale;
   const router = useRouter();
+  // next-intl's usePathname returns the path WITHOUT the locale prefix
+  // (e.g. '/privacy' or '/'), so we can re-navigate under any target locale.
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -60,7 +44,10 @@ export default function LangSwitcher() {
   const choose = (target: AppLocale) => {
     setOpen(false);
     if (target === locale) return;
-    router.push(buildHref(target, pathname));
+    // Passing { locale } sets the NEXT_LOCALE cookie and prefixes correctly,
+    // so switching to Korean (the prefixless default) is no longer overridden
+    // by the middleware's Accept-Language detection.
+    router.replace(pathname, { locale: target });
   };
 
   return (
