@@ -584,9 +584,7 @@ export default {
   changePassword: {
     title: 'Change Password',
     currentPassword: 'Current Password',
-    currentPasswordPlaceholder: 'Enter your current password',
     newPassword: 'New Password',
-    newPasswordPlaceholder: 'New password (8+ chars, letters & numbers)',
     submit: 'Change Password',
     successTitle: 'Password changed',
     successBody: 'Use your new password the next time you sign in.',

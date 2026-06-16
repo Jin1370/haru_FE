@@ -104,7 +104,6 @@ export default function ChangePasswordScreen() {
       >
         <FormField
           label={t('changePassword.currentPassword')}
-          placeholder={t('changePassword.currentPasswordPlaceholder')}
           value={currentPassword}
           onChangeText={(v) => {
             setCurrentPassword(v);
@@ -119,7 +118,6 @@ export default function ChangePasswordScreen() {
         />
         <FormField
           label={t('changePassword.newPassword')}
-          placeholder={t('changePassword.newPasswordPlaceholder')}
           value={newPassword}
           onChangeText={(v) => {
             setNewPassword(v);

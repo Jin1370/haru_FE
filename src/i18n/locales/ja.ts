@@ -583,9 +583,7 @@ export default {
     changePassword: {
         title: "パスワード変更",
         currentPassword: "現在のパスワード",
-        currentPasswordPlaceholder: "現在のパスワードを入力",
         newPassword: "新しいパスワード",
-        newPasswordPlaceholder: "新しいパスワード (8文字以上、英字+数字)",
         submit: "変更する",
         successTitle: "パスワードを変更しました",
         successBody: "次回のログインから新しいパスワードを使用してください。",

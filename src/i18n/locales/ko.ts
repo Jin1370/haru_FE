@@ -583,9 +583,7 @@ export default {
     changePassword: {
         title: "비밀번호 변경",
         currentPassword: "현재 비밀번호",
-        currentPasswordPlaceholder: "현재 비밀번호를 입력하세요",
         newPassword: "새 비밀번호",
-        newPasswordPlaceholder: "새 비밀번호 (8자 이상, 영문+숫자)",
         submit: "변경하기",
         successTitle: "비밀번호가 변경되었어요",
         successBody: "다음 로그인부터 새 비밀번호를 사용해주세요.",

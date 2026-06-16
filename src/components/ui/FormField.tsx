@@ -113,11 +113,17 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSoft,
     borderRadius: radii.md,
     paddingHorizontal: 16,
-    paddingVertical: 13,
     fontSize: 16,
     color: colors.text,
     backgroundColor: colors.card,
     fontFamily: fonts.regular,
+    // 높이를 고정하고 세로 패딩을 0 으로 둬 "내용영역 = 박스 전체(52px)" 로 만든다.
+    // 픽셀 폰트가 빈칸-신규 / 빈칸-입력후삭제 의 자연 높이를 다르게 측정해 출렁이던
+    // 문제를, 높이를 못 박아 제거 (minHeight 는 floor 만 잡아 못 막음). 내용영역이
+    // 박스 전체라 16px 글자는 절대 안 잘리고, 세로 위치는 textAlignVertical 로 중앙.
+    height: 52,
+    paddingVertical: 0,
+    textAlignVertical: 'center',
   },
   inputFocused: {
     borderColor: colors.primary,
@@ -127,17 +133,17 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
   },
   placeholder: {
-    // Fill the entire input area; baseline alignment comes from padding,
-    // not from `top`, so callers can override paddingVertical via inputStyle
-    // (e.g. login uses 14) and the placeholder follows.
+    // Fill the entire input area. 세로 중앙 정렬은 lineHeight = 박스 높이(52) 로
+    // 맞춘다 — 이러면 textAlignVertical:center 로 중앙 정렬된 실제 입력 텍스트와
+    // placeholder 위치가 정확히 겹친다(상하 패딩 기반이면 고정 높이에서 어긋남).
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     paddingHorizontal: 16,
-    paddingVertical: 13,
     fontSize: 16,
+    lineHeight: 52,
     color: colors.textLight,
     fontFamily: fonts.pixel,
   },

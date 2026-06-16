@@ -52,11 +52,14 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSoft,
     borderRadius: radii.md,
     paddingHorizontal: 16,
-    paddingVertical: 13,
     fontSize: 16,
     color: colors.text,
     backgroundColor: colors.card,
     fontFamily: fonts.regular,
+    // height 고정 + 세로 패딩 0 → 빈칸/입력/삭제 간 높이 항상 일정 (FormField 동일 방식).
+    height: 52,
+    paddingVertical: 0,
+    textAlignVertical: 'center',
   },
   inputFocused: {
     borderColor: colors.primary,
