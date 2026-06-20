@@ -42,7 +42,7 @@ export function ChatBubble({
   onListened,
   onRegenerateAudio,
 }: ChatBubbleProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const sharedState = useSharedAudioState();
   // chat-audio-singleton sprint: 본 메시지가 shared singleton player 의 현재
   // source 인지 확인. 채팅 화면 전체에서 native player 인스턴스가 1 개라 두
@@ -139,8 +139,13 @@ export function ChatBubble({
   //   * 'failed' — TTS 파이프라인 실패 → 텍스트 전용으로 영구 저장. 사용자는
   //     같은 텍스트로 새 메시지를 보내 재시도. 별도 retry UI 없음 (mid-session
   //     UPDATE 패턴을 폐기했기 때문).
-  const timeLabel = new Date(message.created_at).toLocaleTimeString([], {
-    hour: '2-digit',
+  // Follow the app language (i18n), not the device OS locale — otherwise an
+  // English-language user on a Korean device sees "오전/오후". Use a full BCP-47
+  // tag for Hermes Intl reliability (mirrors formatDateLabel in the chat screen).
+  const timeLocale =
+    i18n.language === 'ko' ? 'ko-KR' : i18n.language === 'ja' ? 'ja-JP' : 'en-US';
+  const timeLabel = new Date(message.created_at).toLocaleTimeString(timeLocale, {
+    hour: 'numeric',
     minute: '2-digit',
   });
 

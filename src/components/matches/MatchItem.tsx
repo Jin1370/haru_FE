@@ -14,7 +14,7 @@ interface MatchItemProps {
 }
 
 export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const partner = item.partner;
   const hasUnread = item.unread_count > 0;
   // Tombstone states:
@@ -128,7 +128,7 @@ export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
           )}
           {item.last_message && (
             <Text style={styles.time}>
-              {formatRelativeTime(item.last_message.created_at)}
+              {formatRelativeTime(item.last_message.created_at, t, i18n.language)}
             </Text>
           )}
         </View>

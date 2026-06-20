@@ -632,6 +632,13 @@ export default {
         button: "업데이트하기",
     },
 
+    relativeTime: {
+        now: "방금",
+        minutes: "{{n}}분",
+        hours: "{{n}}시간",
+        days: "{{n}}일",
+    },
+
     tabs: {
         discover: "탐색",
         likes: "좋아요",

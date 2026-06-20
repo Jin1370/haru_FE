@@ -34,7 +34,7 @@ export default {
   photoEditor: {
     title: 'Edit photo',
     rotate: 'Rotate',
-    flipHorizontal: 'Flip',
+    flipHorizontal: 'Flip horizontal',
     flipVertical: 'Flip vertical',
     processing: 'Processing...',
     failed: 'Could not edit the photo. Please try again.',
@@ -47,9 +47,9 @@ export default {
     step2Title: 'Register My Voice',
     step2Subtitle: 'Register the voice that will be used in voice chats.',
     step2SkipWarning: "Without registering your voice, you can't discover potential matches.",
-    step3Title: 'Voice Line',
+    step3Title: 'Voice intro',
     step3Subtitle: 'Your chosen line is auto-generated with your registered voice.',
-    step3VoiceLockedAutoSkip: "We'll skip the voice line for now since your voice isn't registered yet.",
+    step3VoiceLockedAutoSkip: "We'll skip the voice intro for now since your voice isn't registered yet.",
     step4Title: 'Matching Preferences',
     step4Subtitle: 'Tell us who you want to meet. You can change this later.',
     step5Title: 'Profile Photos',
@@ -57,7 +57,7 @@ export default {
     step5AtLeastOne: 'Please add at least one photo to continue.',
     step5MorePhotosBoost: 'More photos = more matches.',
     step5ConvertingLocked: 'Your photos are being converted to illustrations. Please finish setting up your profile.',
-    bioRequired: 'Please pick a voice line',
+    bioRequired: 'Please pick a voice intro',
     voiceRequired: 'Please register your voice first',
     displayNameRequired: 'Please enter your nickname',
     birthDateRequired: 'Birth date must be YYYY-MM-DD',
@@ -70,7 +70,7 @@ export default {
 
   auth: {
     appName: 'HARU',
-    tagline: 'Different language, same day',
+    tagline: 'Different languages, one shared day',
     email: 'Email',
     password: 'Password',
     login: 'Log In',
@@ -137,14 +137,14 @@ export default {
     dailyLimitText: 'Come back tomorrow for fresh faces',
     playBio: 'Play bio',
     lockedVoiceTitle: 'Register your voice first',
-    lockedBioTitle: 'Set your voice line first',
+    lockedBioTitle: 'Set your voice intro first',
     lockedPhotoTitle: 'Add a profile photo first',
     lockedVoiceHint:
       'To hear other people\'s voices, you need to register your own voice first.',
     lockedBioHint:
       'It will be auto-generated in your own voice and played for others.',
     lockedGoVoice: 'Register your voice',
-    lockedGoBio: 'Set your voice line',
+    lockedGoBio: 'Set your voice intro',
     lockedPhotoHint: 'Please add at least one profile photo.',
     lockedGoPhoto: 'Add a photo',
     voiceProcessingTitle: 'Generating your voice',
@@ -233,8 +233,8 @@ export default {
     voiceSettings: 'Register My Voice',
     interestsSettings: 'Interests',
     matchingPreferences: 'Matching Preferences',
-    editBio: 'Set Voice Line',
-    bioEmpty: 'Pick a voice line to introduce yourself',
+    editBio: 'Set Voice intro',
+    bioEmpty: 'Pick a voice intro',
     editProfileSubtitle: 'Manage your basic info and voice.',
     editInterestsSubtitle: 'Pick interests so we can match you better.',
     editBioSubtitle: 'Your chosen line is auto-generated with your registered voice.',
@@ -293,7 +293,7 @@ export default {
       regeneratePlay: 'Regenerate and play voice',
     },
     intimacy: 'Intimacy',
-    intimacyUntilAll: '{{count}} more to unlock all photos',
+    intimacyUntilAll: '{{count}} more for all photos',
     intimacyAllUnlocked: 'All photos unlocked',
     swipeForMore: 'Swipe for more',
     newMessagesBadge: '{{count}} new messages',
@@ -312,7 +312,7 @@ export default {
     },
     profileSheet: {
       age: 'Age',
-      origin: 'Origin',
+      origin: 'Nationality',
       interests: 'Interests',
     },
     prompts: {
@@ -361,13 +361,13 @@ export default {
     selectLanguageRequired: 'Please select a language',
     addLanguage: 'Add language',
     removeLanguage: 'Remove',
-    bio: 'Voice Line',
+    bio: 'Voice intro',
     bioPlaceholder: 'Pick the line you like',
     bioLockedPlaceholder: 'Register your voice clone first to pick a line',
-    bioLockedHint: "Your voice line is generated automatically once your voice clone is registered. Please register your voice in 'Register My Voice' first.",
+    bioLockedHint: "Your voice intro is generated automatically once your voice clone is registered. Please register your voice in 'Register My Voice' first.",
     bioPicker: {
       subtitle: 'Pick the first line your voice will speak.',
-      customPlaceholder: 'Or type your own message',
+      customPlaceholder: 'Type your own message',
       category: {
         taste: 'Taste',
         simple: 'Casual',
@@ -633,10 +633,19 @@ export default {
     button: 'Update Now',
   },
 
+  // Compact relative timestamps for the chat list. {{n}} (not i18next's plural
+  // `count`) keeps the key set identical across locales.
+  relativeTime: {
+    now: 'now',
+    minutes: '{{n}}m',
+    hours: '{{n}}h',
+    days: '{{n}}d',
+  },
+
   tabs: {
     discover: 'Discover',
     likes: 'Likes',
     matches: 'Chats',
-    profile: 'My Profile',
+    profile: 'Profile',
   },
 };

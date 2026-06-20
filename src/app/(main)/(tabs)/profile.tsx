@@ -42,7 +42,13 @@ const BIO_AUDIO_POLL_TIMEOUT_MS = 60_000;
 
 
 export default function ProfileScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // English info labels ("Nationality", "Interests") overflow the 64px label
+  // column and wrap to a second line, while ko/ja ("국적", "国籍") fit. Widen the
+  // label column for English only so other locales keep their tighter layout.
+  const infoLabelStyle = i18n.language?.startsWith('en')
+    ? [styles.infoLabel, styles.infoLabelWide]
+    : styles.infoLabel;
   const { labelFor: interestLabelFor } = useInterestResolver();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -716,13 +722,13 @@ export default function ProfileScreen() {
           {profile.display_name}
         </Text>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>{t('profile.infoLabels.age')}</Text>
+          <Text style={infoLabelStyle}>{t('profile.infoLabels.age')}</Text>
           <Text style={styles.infoValue} numberOfLines={1}>
             {t('common.ageSuffix', { age: calculateAge(profile.birth_date) })}
           </Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>{t('profile.infoLabels.gender')}</Text>
+          <Text style={infoLabelStyle}>{t('profile.infoLabels.gender')}</Text>
           <Text style={styles.infoValue} numberOfLines={1}>
             {t(
               profile.gender === 'male'
@@ -735,7 +741,7 @@ export default function ProfileScreen() {
         </View>
         {profile.nationality ? (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('profile.infoLabels.nationality')}</Text>
+            <Text style={infoLabelStyle}>{t('profile.infoLabels.nationality')}</Text>
             <View style={styles.infoValueInline}>
               <CountryFlag isoCode={profile.nationality} size={11} style={styles.infoFlag} />
               <Text style={styles.infoValue} numberOfLines={1}>
@@ -749,7 +755,7 @@ export default function ProfileScreen() {
             it in on save. */}
         {profile.language ? (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('profile.infoLabels.language')}</Text>
+            <Text style={infoLabelStyle}>{t('profile.infoLabels.language')}</Text>
             <Text style={styles.infoValue} numberOfLines={1}>
               {t(`languages.${profile.language}`, { defaultValue: profile.language })}
             </Text>
@@ -757,7 +763,7 @@ export default function ProfileScreen() {
         ) : null}
         {profile.interests.length > 0 ? (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t('profile.infoLabels.interests')}</Text>
+            <Text style={infoLabelStyle}>{t('profile.infoLabels.interests')}</Text>
             <View style={styles.infoTags}>
               {profile.interests.map((tag, i) => (
                 <View key={i} style={styles.infoTag}>
@@ -1109,6 +1115,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.medium,
     letterSpacing: 0.4,
     paddingTop: 2,
+  },
+  infoLabelWide: {
+    width: 92,
   },
   infoValue: {
     flexShrink: 1,

@@ -60,11 +60,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    // Guarantee spacing so the label ("Intimacy 2/10") and hint never touch
+    // when a long locale string (e.g. English) fills the row and collapses the
+    // space-between gap to zero.
+    gap: 12,
   },
   labelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 0,
   },
   label: {
     fontSize: 13,
@@ -76,6 +81,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     fontFamily: fonts.medium,
+    flexShrink: 1,
+    textAlign: 'right',
   },
   track: {
     height: 8,

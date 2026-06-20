@@ -78,7 +78,7 @@ function isSameDay(a: string, b: string) {
 
 function formatDateLabel(iso: string, locale: string) {
   const d = new Date(iso);
-  const tag = locale === 'ko' ? 'ko-KR' : 'en-US';
+  const tag = locale === 'ko' ? 'ko-KR' : locale === 'ja' ? 'ja-JP' : 'en-US';
   return d.toLocaleDateString(tag, {
     year: 'numeric',
     month: 'long',

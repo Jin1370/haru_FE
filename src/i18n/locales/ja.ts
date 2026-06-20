@@ -46,7 +46,7 @@ export default {
         step1Subtitle: "プロフィールに表示される基本情報を入力してください。",
         step2Title: "自分の声を登録",
         step2Subtitle: "ボイスチャットに使う声を登録します。",
-        step2SkipWarning: "声を登録しないと、相手の探索が制限されます。",
+        step2SkipWarning: "声を登録しないと、相手を探せる範囲が制限されます。",
         step3Title: "ボイスひとこと",
         step3Subtitle: "選んだひとことが登録された声で自動生成されます。",
         step3VoiceLockedAutoSkip: "声がまだ登録されていないので、ボイスひとことはスキップします。",
@@ -132,8 +132,8 @@ export default {
         sendMessage: "メッセージを送る",
         keepDiscovering: "もっと探す",
         noMoreProfiles: "これ以上のプロフィールはありません",
-        checkBackLater: "また後で新しい人を確認してみてください",
-        dailyLimitTitle: "今日はもう十分見ました",
+        checkBackLater: "また後で新しい人をのぞいてみてください",
+        dailyLimitTitle: "今日はたくさん見ましたね",
         dailyLimitText: "明日また新しい人に出会いましょう",
         playBio: "自己紹介を聞く",
         lockedVoiceTitle: "先に声を登録してください",
@@ -149,7 +149,7 @@ export default {
         lockedGoPhoto: "写真を登録する",
         voiceProcessingTitle: "音声を生成中です",
         voiceProcessingHint: "少々お待ちください。",
-        likeGateMessage: "「いいね」を送るにはプロフィールを完成してください",
+        likeGateMessage: "「いいね」を送るにはプロフィールを完成させてください",
         passReset: {
             button: "スキップした人をもう一度見る",
             empty_zero: "まだスキップした人がいません",
@@ -160,7 +160,7 @@ export default {
         headerTitle: "もらったいいね",
         empty: {
             title: "まだ「いいね」を受け取っていません",
-            text: "探索タブでもっと多くの人に出会ってみましょう。",
+            text: "「探す」タブでもっと多くの人に出会ってみましょう。",
             cta: "今すぐ探す",
         },
     },
@@ -279,7 +279,7 @@ export default {
 
     chat: {
         title: "チャット",
-        typeMessage: "メッセージを入力してください...",
+        typeMessage: "メッセージを入力…",
         partnerDeletedNotice: "相手が退会したため、これ以上メッセージを送信できません。",
         matchEndedNotice: "マッチが終了したため、これ以上メッセージを送信できません。",
         playbackError: "再生エラー",
@@ -296,7 +296,7 @@ export default {
         swipeForMore: "横にスワイプしてもっと見る",
         newMessagesBadge: "新着メッセージ {{count}}件",
         emotion: {
-            neutral: "通常",
+            neutral: "ふつう",
             happy: "うれしい",
             sad: "悲しい",
             angry: "怒り",
@@ -329,7 +329,7 @@ export default {
                 body: "耳が冴えわたるプレイリストを交換しよう",
             },
             step4: {
-                title: "気軽に、MBTIって何ですか？",
+                title: "重く考えないで、MBTIって何ですか？",
                 body: "似ていて落ち着くか、違っていて刺激的か、気になります",
             },
             step5: {
@@ -522,7 +522,7 @@ export default {
         exampleScript:
             "こんにちは。今日はどんな一日でしたか？穏やかに過ごせていたらいいなと思います。私は毎日同じ道を歩いているのに、ある日はふっと気持ちが沈んでしまうこともあれば、ある日は些細なことで心が弾んだりするんです。今日、誰かの一言で気分が良くなった瞬間はありましたか？それとも逆に、ちょっと傷ついたことはありませんでしたか？不思議と、近くにいる人よりも、遠くにいる誰かの短い一言の方が心に響くことってありますよね。お気に入りのプレイリストのメロディーみたいに、ある声はただ聴いているだけで、なんだか慰められる気がします。だから今日は、お互いに小さな挨拶をひとつずつ交わしてみませんか？",
         uploadVoice: "ボイスクローンを作成",
-        reRecord: "撮り直す",
+        reRecord: "録り直す",
         processingHint: "少々お待ちください...",
         regenerateVoiceClone: "ボイスクローン再生成",
         regenerateConfirm: "新しい録音で既存のボイスクローンが上書きされます。続行しますか？",
@@ -632,10 +632,17 @@ export default {
         button: "アップデート",
     },
 
+    relativeTime: {
+        now: "たった今",
+        minutes: "{{n}}分",
+        hours: "{{n}}時間",
+        days: "{{n}}日",
+    },
+
     tabs: {
         discover: "探す",
         likes: "いいね",
         matches: "チャット",
-        profile: "マイプロフィール",
+        profile: "マイページ",
     },
 };

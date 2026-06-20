@@ -36,7 +36,19 @@ export function isValidAdultBirthDate(value: string): boolean {
   return age >= MIN_SIGNUP_AGE && age <= 120;
 }
 
-export function formatRelativeTime(dateString: string): string {
+// Minimal shape of i18next's `t` — kept local so this util has no react-i18next
+// dependency. Callers pass their component's `t`.
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+// `t` localises the compact buckets (now/m/h/d); `locale` is the app i18n
+// language (ko/ja/en), NOT the device OS locale — pass it so the >7d date
+// fallback formats per the in-app language instead of the phone's system
+// locale. Locale defaults to en-US when omitted (deterministic).
+export function formatRelativeTime(
+  dateString: string,
+  t: TranslateFn,
+  locale?: string,
+): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -44,10 +56,11 @@ export function formatRelativeTime(dateString: string): string {
   const diffHr = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHr / 24);
 
-  if (diffMin < 1) return 'now';
-  if (diffMin < 60) return `${diffMin}m`;
-  if (diffHr < 24) return `${diffHr}h`;
-  if (diffDay < 7) return `${diffDay}d`;
+  if (diffMin < 1) return t('relativeTime.now');
+  if (diffMin < 60) return t('relativeTime.minutes', { n: diffMin });
+  if (diffHr < 24) return t('relativeTime.hours', { n: diffHr });
+  if (diffDay < 7) return t('relativeTime.days', { n: diffDay });
 
-  return date.toLocaleDateString();
+  const tag = locale === 'ko' ? 'ko-KR' : locale === 'ja' ? 'ja-JP' : 'en-US';
+  return date.toLocaleDateString(tag);
 }
