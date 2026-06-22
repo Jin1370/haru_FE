@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { routing } from '@/i18n/routing';
 import { appStoreUrl, playStoreUrl } from '@/lib/links';
 import LangSwitcher from './LangSwitcher';
@@ -17,7 +17,6 @@ import StoreBadge from './StoreBadge';
  */
 export default function Navbar() {
   const locale = useLocale();
-  const t = useTranslations('download');
   const prefix = locale === routing.defaultLocale ? '' : `/${locale}`;
 
   return (
@@ -43,15 +42,15 @@ export default function Navbar() {
         </Link>
 
         {/* Right cluster: small store badges (same black design as the
-            DownloadCTA section, smaller scale) + language toggle. They reuse
-            the locale-aware links (Play forces hl/gl, App Store pins
-            storefront). Caption/name collapse below `sm` so the row fits on
-            phones (logo-only black pill). */}
+            DownloadCTA section, height-matched to the LangSwitcher pill) +
+            language toggle. Single-line (store name only, no localized
+            caption); they reuse the locale-aware links (Play forces hl/gl,
+            App Store pins storefront). The name collapses below `sm` so the
+            row fits on phones (logo-only black pill). */}
         <div className="flex items-center gap-2">
           <StoreBadge
             href={appStoreUrl(locale)}
             store="apple"
-            caption={t('appStoreCaption')}
             name="App Store"
             size="sm"
             collapseTextOnMobile
@@ -59,7 +58,6 @@ export default function Navbar() {
           <StoreBadge
             href={playStoreUrl(locale)}
             store="google"
-            caption={t('playCaption')}
             name="Google Play"
             size="sm"
             collapseTextOnMobile
