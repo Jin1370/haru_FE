@@ -22,6 +22,18 @@ export async function upsertProfile(data: ProfileUpsertRequest): Promise<Profile
   return api.put<Profile>('/api/profile/me', data);
 }
 
+// LAUNCH_CHECKLIST #5 — 재동의 기록. mig 039 이전 가입 회원이 앱 진입 시 동의
+// 모달에서 동의하면 호출되어 동의 시각·버전을 서버에 기록한다 (소급 간주 금지).
+export interface ConsentResponse {
+  terms_accepted_at: string;
+  consent_policy_version: string;
+  voice_consent_at: string;
+}
+
+export async function recordConsent(): Promise<ConsentResponse> {
+  return api.post<ConsentResponse>('/api/profile/consent');
+}
+
 const MIME_MAP: Record<string, string> = {
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',

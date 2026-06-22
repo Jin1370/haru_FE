@@ -24,6 +24,10 @@ interface SignupDraftState {
   // INSERT happens (handleNext in step5.tsx).
   photoUris: string[];
   hasStep1: boolean;
+  // LAUNCH_CHECKLIST #5 — 가입 동의 모달(step1) 완료 여부. true 면 약관/개인정보·
+  // 국외이전/음성 생체정보 동의를 모두 받은 상태. buildProfilePayload 가 이 값을
+  // terms_consent/voice_consent 로 실어 보내 BE 가 동의 시각·버전을 기록한다.
+  consentAccepted: boolean;
 
   setStep1: (data: {
     display_name: string;
@@ -39,6 +43,7 @@ interface SignupDraftState {
   setBioPhraseId: (phraseId: string | null) => void;
   setInterests: (interests: string[]) => void;
   setPhotoUris: (uris: string[]) => void;
+  setConsentAccepted: () => void;
   reset: () => void;
   buildProfilePayload: () => ProfileUpsertRequest;
 }
@@ -54,6 +59,7 @@ const initial = {
   interests: [] as string[],
   photoUris: [] as string[],
   hasStep1: false,
+  consentAccepted: false,
 };
 
 export const useSignupDraftStore = create<SignupDraftState>((set, get) => ({
@@ -63,6 +69,7 @@ export const useSignupDraftStore = create<SignupDraftState>((set, get) => ({
   setBioPhraseId: (bioPhraseId) => set({ bioPhraseId }),
   setInterests: (interests) => set({ interests }),
   setPhotoUris: (photoUris) => set({ photoUris }),
+  setConsentAccepted: () => set({ consentAccepted: true }),
   reset: () => set(initial),
   buildProfilePayload: () => {
     const s = get();
@@ -80,6 +87,10 @@ export const useSignupDraftStore = create<SignupDraftState>((set, get) => ({
       language: s.language,
       ...buildVoiceIntroPayload(s.bio, s.bioPhraseId),
       interests: s.interests,
+      // LAUNCH_CHECKLIST #5 — 최초 프로필 생성 시 동의 플래그 동봉. BE 가 동의
+      // 시각·버전을 stamp. 동의 모달(step1)을 통과해야 여기까지 도달하므로 항상 true.
+      terms_consent: s.consentAccepted,
+      voice_consent: s.consentAccepted,
     };
   },
 }));

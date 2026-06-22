@@ -84,9 +84,16 @@ export default {
         enterEmailAndPassword: "メールアドレスとパスワードを入力してください",
         googleNotInExpoGo: "Googleログインは dev-client または製品ビルドでのみ利用できます。メールログインをご利用ください。",
         appleNoToken: "Apple認証トークンを取得できませんでした。もう一度お試しください。",
-        legalDisclaimer: "登録すると、{{terms}}および{{privacy}}に同意したものとみなされます",
-        termsOfService: "利用規約",
-        privacyPolicy: "プライバシーポリシー",
+    },
+
+    consent: {
+        modalTitle: "規約同意",
+        agreeAll: "規約にすべて同意",
+        terms: "（必須）利用規約",
+        privacy: "（必須）個人情報の収集・利用および国外移転",
+        voiceBiometric: "（必須）音声（生体情報）の処理",
+        view: "見る",
+        startButton: "同意して続ける",
     },
 
     verifyEmail: {

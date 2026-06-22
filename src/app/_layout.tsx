@@ -15,6 +15,7 @@ import { requestAndRegisterPushToken } from '@/hooks/usePushToken';
 import { getActiveChatMatchId, isMatchesTabActive } from '@/lib/activeChat';
 import { AlertHost } from '@/components/ui/AlertHost';
 import { PhotoEditorHost } from '@/components/photo/PhotoEditorHost';
+import { ReconsentGate } from '@/components/setup/ReconsentGate';
 import { UpdateRequiredScreen } from '@/components/UpdateRequiredScreen';
 import { useForceUpdate } from '@/hooks/useForceUpdate';
 import { showAlert } from '@/stores/alertStore';
@@ -129,6 +130,9 @@ function RootShell() {
         </Stack>
         <AlertHost />
         <PhotoEditorHost />
+        {/* LAUNCH_CHECKLIST #5 — mig 039 이전 가입 회원 재동의 게이트. 동의
+            미기록자에게 약관동의 화면(ConsentForm)을 전체화면으로 띄운다(소급 간주 금지). */}
+        <ReconsentGate />
       </SWRConfigProvider>
     </SafeAreaProvider>
   );

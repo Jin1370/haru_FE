@@ -70,6 +70,10 @@ export interface Profile {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // LAUNCH_CHECKLIST #5 — 동의 기록. mig 039 이전 가입 회원은 NULL → 앱 진입 시
+  // 재동의 게이트(ReconsentGate)가 voice_consent_at NULL 을 보고 동의 모달을 띄운다.
+  terms_accepted_at?: string | null;
+  voice_consent_at?: string | null;
 }
 
 export interface ProfileUpsertRequest {
@@ -87,6 +91,10 @@ export interface ProfileUpsertRequest {
   // voice-intro-preset-bypass sprint to skip Gemini for known catalog entries.
   voice_intro_phrase_id?: string | null;
   interests?: string[];
+  // LAUNCH_CHECKLIST #5 — 가입 동의 모달에서 받은 동의 플래그. 최초 프로필 생성
+  // 시에만 전송되며 BE 가 동의 시각·버전을 기록한다 (PIPA §23 음성 생체정보 별도 동의).
+  terms_consent?: boolean;
+  voice_consent?: boolean;
 }
 
 // photo-watercolor-pipeline sprint (mig 028): 사진 업로드 라우트가 동기 응답에서

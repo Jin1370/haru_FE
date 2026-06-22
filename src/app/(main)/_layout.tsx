@@ -29,6 +29,7 @@ export default function MainLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="setup/consent" />
       <Stack.Screen name="setup/step1" />
       <Stack.Screen name="setup/step2" />
       <Stack.Screen name="setup/step3" />

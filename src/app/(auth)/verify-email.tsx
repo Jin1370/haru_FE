@@ -62,7 +62,7 @@ export default function VerifyEmailScreen() {
   }, [expiresIn]);
 
   if (isAuthenticated) {
-    return <Redirect href={hasProfile ? '/(main)/(tabs)/discover' : '/(main)/setup/step1'} />;
+    return <Redirect href={hasProfile ? '/(main)/(tabs)/discover' : '/(main)/setup/consent'} />;
   }
   // 이메일 파라미터 없이 진입(비정상 딥링크) — 로그인으로 되돌린다.
   if (!email) {

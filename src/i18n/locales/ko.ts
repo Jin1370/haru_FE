@@ -84,9 +84,16 @@ export default {
         enterEmailAndPassword: "이메일과 비밀번호를 입력해주세요",
         googleNotInExpoGo: "Google 로그인은 dev-client 또는 정식 빌드에서만 동작해요. 이메일 로그인을 사용해주세요.",
         appleNoToken: "Apple 인증 토큰을 받지 못했어요. 다시 시도해주세요.",
-        legalDisclaimer: "회원가입 시 {{terms}}과 {{privacy}}에 동의한 것으로 간주됩니다",
-        termsOfService: "이용약관",
-        privacyPolicy: "개인정보처리방침",
+    },
+
+    consent: {
+        modalTitle: "약관동의",
+        agreeAll: "약관에 전체 동의",
+        terms: "(필수) 이용약관",
+        privacy: "(필수) 개인정보 수집·이용 및 국외이전",
+        voiceBiometric: "(필수) 음성(생체정보) 처리",
+        view: "보기",
+        startButton: "동의하고 계속하기",
     },
 
     verifyEmail: {
