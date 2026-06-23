@@ -2,7 +2,7 @@
   "expo": {
     "name": "haru",
     "slug": "voicemate",
-    "version": "1.1",
+    "version": "1.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "haruvoice",

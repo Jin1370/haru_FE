@@ -161,6 +161,11 @@ export default {
       button: 'See skipped people again',
       empty_zero: "You haven't skipped anyone yet",
     },
+    launchPromo: {
+      title: 'Launch celebration event',
+      body: 'Enjoy premium features free for now.\n• Unlimited voice chat\n• See everyone who liked you',
+      dismiss: 'Dismiss',
+    },
   },
 
   likes: {
@@ -200,6 +205,7 @@ export default {
       descriptionPlaceholder: 'Anything else we should know? (optional)',
       submit: 'Submit report',
       sideEffectNotice: "Reporting will automatically unmatch and you'll no longer receive messages from this user.",
+      sideEffectNoticeDiscover: "Reporting will hide this user from your feed.",
       successTitle: 'Report received',
       successBody: "We'll review and act on it. Thanks for keeping the community safe.",
       alreadyReported: "You've already reported this user.",

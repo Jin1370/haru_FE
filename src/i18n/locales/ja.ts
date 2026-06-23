@@ -161,6 +161,11 @@ export default {
             button: "スキップした人をもう一度見る",
             empty_zero: "まだスキップした人がいません",
         },
+        launchPromo: {
+            title: "リリース記念イベント",
+            body: "プレミアム機能を今だけ無料でお楽しみください。\n• ボイスチャット無制限\n• もらったLikeを無制限に確認",
+            dismiss: "閉じる",
+        },
     },
 
     likes: {
@@ -200,6 +205,7 @@ export default {
             descriptionPlaceholder: "追加で伝えたい内容（任意）",
             submit: "通報を送信",
             sideEffectNotice: "通報すると自動的にマッチが解除され、これ以上メッセージは届きません。",
+            sideEffectNoticeDiscover: "通報するとこのユーザーは今後表示されなくなります。",
             successTitle: "通報を受け付けました",
             successBody: "確認のうえ必要な対応を取ります。安全を守ってくださりありがとうございます。",
             alreadyReported: "すでに通報済みのユーザーです。",

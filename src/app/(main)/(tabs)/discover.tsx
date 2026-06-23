@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SwipeCard } from '@/components/discover/SwipeCard';
+import { LaunchPromoCard } from '@/components/discover/LaunchPromoCard';
 import { computeDiscoverGate, showLikeGate } from '@/components/discover/DiscoverGate';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Button } from '@/components/ui/Button';
@@ -25,6 +26,7 @@ export default function DiscoverScreen() {
     loading,
     loadCandidates,
     handleSwipe,
+    removeCandidate,
     dailyCountReady,
     dailyLimitReached,
     passResetEnabled,
@@ -189,8 +191,12 @@ export default function DiscoverScreen() {
           gated={gate.gated}
           onLike={() => onSwipe('like')}
           onPass={() => onSwipe('pass')}
+          onReported={() => removeCandidate(current.id)}
         />
       </ScrollView>
+      {/* 카드를 밀어내지 않고 위에 겹쳐 뜨는 오버레이 — ScrollView 뒤에 둬서
+          paint 순서상으로도 위로 올라오게 한다(absolute + zIndex/elevation). */}
+      <LaunchPromoCard />
     </PhotoBackground>
   );
 }

@@ -243,6 +243,15 @@ export function useDiscover() {
     }
   }, [userId, globalMutate]);
 
+  // 신고 등 비-스와이프 사유로 현재 카드를 덱에서 즉시 제거한다. 신고는
+  // 스와이프가 아니므로 dailyCount 를 증가시키지 않는다. swipedIdsRef 에 등록해
+  // in-flight prefetch 가 (BE auto-block 전파 전에) 이 후보를 재노출하지 못하게
+  // 막는다 — handleSwipe 와 동일한 FE 권위 가드.
+  const removeCandidate = useCallback((id: string) => {
+    swipedIdsRef.current.add(id);
+    setCandidates((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
   // "넘긴 사람 다시 보기" — viewer 의 pass 스와이프 행을 BE 에서 일괄 삭제한 뒤
   // 세션 권위 집합을 비우고 디스커버/quota 를 재동기화해 pass 했던 후보를 다시
   // 노출한다. swipedIdsRef.current.clear() 가 핵심: 이 집합(2026-05-31 sprint 의
@@ -277,6 +286,7 @@ export function useDiscover() {
     error,
     loadCandidates,
     handleSwipe,
+    removeCandidate,
     dailyCount,
     dailyCountReady,
     dailyLimitReached,

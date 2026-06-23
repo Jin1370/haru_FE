@@ -95,12 +95,20 @@ export function useReceivedLikes() {
     [userId, globalMutate],
   );
 
+  // 신고 등 비-스와이프 사유로 현재 카드를 덱에서 즉시 제거. 받은 좋아요는
+  // focus refetch 라 BE auto-block 전파 후 자연히 제외되지만, 제거 즉시 UI 에서
+  // 사라지게 한다.
+  const removeCandidate = useCallback((id: string) => {
+    setCandidates((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
   return {
     candidates,
     loading,
     error,
     loadCandidates,
     handleSwipe,
+    removeCandidate,
     dailyCount,
     dailyCountReady,
     dailyLimitReached,

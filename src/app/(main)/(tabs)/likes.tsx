@@ -37,6 +37,7 @@ export default function LikesScreen() {
     loading,
     loadCandidates,
     handleSwipe,
+    removeCandidate,
     dailyCountReady,
     dailyLimitReached,
   } = useReceivedLikes();
@@ -193,6 +194,7 @@ export default function LikesScreen() {
           gated={gate.gated}
           onLike={() => onSwipe('like')}
           onPass={() => onSwipe('pass')}
+          onReported={() => removeCandidate(current.id)}
         />
       </ScrollView>
     </PhotoBackground>

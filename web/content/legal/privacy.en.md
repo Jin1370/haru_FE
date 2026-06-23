@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: June 22, 2026
+Last updated: June 23, 2026
 
 > haru (hereinafter the "Operator") publishes this Privacy Policy to protect members' personal information and to comply with applicable laws (the Personal Information Protection Act, the Network Act, etc.). This service is a voice-chat-based cross-language matching service and outsources some processing — such as voice synthesis, automatic translation, and content moderation — to overseas processors, as described in Article 3 below.
 
@@ -51,6 +51,8 @@ Members may at any time request access to, correction of, deletion of, or suspen
 ## 6. Security Measures
 
 The Operator takes reasonable technical and administrative measures to protect personal information, including encryption of communication channels, access control, secure storage of passwords, and restricted access to operational records.
+
+In the event of a personal data breach, the Operator will, in accordance with applicable law, notify affected members of the incident and its response measures without undue delay, and report to the relevant authorities where required.
 
 ## 7. Personal Information Protection Officer and Contact
 

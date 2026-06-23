@@ -161,6 +161,11 @@ export default {
             button: "넘긴 사람 다시 보기",
             empty_zero: "아직 넘긴 사람이 없어요",
         },
+        launchPromo: {
+            title: "출시 기념 이벤트",
+            body: "프리미엄 기능을 지금 무료로 즐기세요.\n• 음성 채팅 무제한\n• 받은 좋아요 무제한 확인",
+            dismiss: "닫기",
+        },
     },
 
     likes: {
@@ -201,6 +206,7 @@ export default {
             descriptionPlaceholder: "추가로 알려주실 내용 (선택)",
             submit: "신고 제출",
             sideEffectNotice: "신고하면 자동으로 매치가 해제되고 더 이상 메시지를 받지 않습니다.",
+            sideEffectNoticeDiscover: "신고하면 이 사용자가 더 이상 표시되지 않습니다.",
             successTitle: "신고가 접수되었습니다",
             successBody: "검토 후 필요한 조치를 취할게요. 안전을 지켜주셔서 감사합니다.",
             alreadyReported: "이미 신고한 사용자입니다.",

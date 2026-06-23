@@ -18,6 +18,7 @@ import {
     type PanGestureHandlerStateChangeEvent,
 } from "react-native-gesture-handler";
 import { ProfilePhoto } from "@/components/ui/ProfilePhoto";
+import { ReportModal } from "@/components/moderation/ReportModal";
 import { colors, gradients, radii, shadows } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 import { calculateAge } from "@/utils/age";
@@ -135,10 +136,15 @@ interface SwipeCardProps {
     // 이 경우 카드를 화면 밖으로 날려보내면 모달을 닫아도 빈 화면이 남으므로,
     // like-스와이프 시 fly-out 대신 제자리로 스프링백한다.
     gated?: boolean;
+    // 신고 접수 성공 직후 발화. 호출 화면이 덱에서 이 후보를 제거한다(신고는
+    // 스와이프가 아니므로 일일 카운트는 증가하지 않는다). BE report 라우트가
+    // auto-block 하므로 이후 fetch 에서도 제외된다.
+    onReported?: () => void;
 }
 
-export function SwipeCard({ candidate, onLike, onPass, gated = false }: SwipeCardProps) {
+export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported }: SwipeCardProps) {
     const { t } = useTranslation();
+    const [reportOpen, setReportOpen] = useState(false);
     const { width: SCREEN_WIDTH } = useWindowDimensions();
     const CARD_WIDTH = SCREEN_WIDTH - 64;
     const COVER_SIZE = Math.round((CARD_WIDTH - 40) * 0.9);
@@ -270,6 +276,7 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false }: SwipeCar
     });
 
     return (
+        <>
         <PanGestureHandler
             onGestureEvent={onGestureEvent}
             onHandlerStateChange={onHandlerStateChange}
@@ -285,6 +292,28 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false }: SwipeCar
                     },
                 ]}
             >
+                {/* 신고 진입점 — 우상단 방패(shield-outline) 아이콘. 안전 신고
+                    컨트롤임을 명확히 하면서도 카드 표면의 핵심 액션(보이스 재생/
+                    스와이프) 시각 우위를 침범하지 않도록 작게 둔다. PanGestureHandler
+                    는 activeOffsetX=[-12,12] 라 탭(수평 이동 없음)은 제스처를
+                    발화시키지 않고 이 Pressable 이 캡처한다. 액션이 신고 1개라
+                    중간 시트 없이 신고 모달 직행. */}
+                <Pressable
+                    onPress={() => setReportOpen(true)}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("matches.actions.report")}
+                    style={({ pressed }) => [
+                        styles.reportBtn,
+                        pressed && styles.pressed,
+                    ]}
+                >
+                    <Ionicons
+                        name="shield-outline"
+                        size={18}
+                        color={colors.white}
+                    />
+                </Pressable>
                 <Animated.View
                     style={[
                         styles.stamp,
@@ -433,6 +462,15 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false }: SwipeCar
                 </View>
             </Animated.View>
         </PanGestureHandler>
+        <ReportModal
+            visible={reportOpen}
+            targetId={candidate.id}
+            targetName={candidate.display_name}
+            notice={t("matches.report.sideEffectNoticeDiscover")}
+            onClose={() => setReportOpen(false)}
+            onResolved={onReported}
+        />
+        </>
     );
 }
 
@@ -541,6 +579,18 @@ const styles = StyleSheet.create({
     },
     pressed: {
         transform: [{ scale: 0.92 }],
+    },
+    reportBtn: {
+        position: "absolute",
+        top: 12,
+        right: 12,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(0,0,0,0.35)",
+        zIndex: 20,
     },
     stamp: {
         position: "absolute",
