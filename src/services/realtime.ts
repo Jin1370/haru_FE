@@ -1,6 +1,6 @@
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@/constants/config';
-import { getAccessToken, getRefreshToken } from './api';
+import { getAccessToken, refreshSession } from './api';
 import type { Message } from '@/types';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -235,13 +235,52 @@ export async function unsubscribeFromAllMatchUpdates() {
   }
 }
 
+// Decode a JWT's `exp` (unix seconds) without pulling a dependency. Returns true
+// when the token is missing/unparseable or expires within the next 60s — i.e.
+// unsafe to hand to the realtime socket. RN/Hermes (Expo SDK 54) exposes a
+// global `atob`; any failure falls through to `true` so we refresh defensively.
+function tokenExpiringSoon(token: string): boolean {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return true;
+    const b64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(b64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    );
+    const { exp } = JSON.parse(json) as { exp?: number };
+    if (!exp) return true;
+    return exp * 1000 - Date.now() < 60_000;
+  } catch {
+    return true;
+  }
+}
+
+// Authenticate the realtime SOCKET as the `authenticated` Postgres role.
+//
+// mig 037 (037_lock_client_db_access) REVOKEd anon's SELECT on `messages` /
+// `matches` and pinned their SELECT policies to `TO authenticated`. Realtime
+// postgres_changes only delivers a row to a socket whose JWT passes RLS as
+// `authenticated`; an anon/unauthenticated socket silently receives NOTHING
+// (no error). The BE writes with service_role (RLS-exempt) so the row still
+// INSERTs — which is exactly the "row lands in DB but the other side never
+// receives it" symptom.
+//
+// We push the JWT directly with `realtime.setAuth()` instead of the previous
+// `auth.setSession()`. With `persistSession:false`, setSession() tried a GoTrue
+// refresh whenever the stored access token was expired, using a refresh_token
+// the BE had already rotated/consumed — that refresh failed and the socket fell
+// back to anon. realtime.setAuth() skips GoTrue entirely; we only have to make
+// sure the token we hand it is fresh, refreshing via the BE-mediated, deduped
+// refreshSession() first when it's at/near expiry.
 export async function setRealtimeAuth() {
-  const accessToken = await getAccessToken();
-  const refreshToken = await getRefreshToken();
-  if (accessToken && refreshToken) {
-    await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
+  let token = await getAccessToken();
+  if (!token || tokenExpiringSoon(token)) {
+    token = await refreshSession();
+  }
+  if (token) {
+    await supabase.realtime.setAuth(token);
   }
 }
