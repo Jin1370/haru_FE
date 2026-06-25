@@ -18,11 +18,15 @@ import {
   type Message,
   type MatchSummary,
   type MyProfile,
+  type NotifySinkStatus,
   type PhotoStatus,
   type ProfileUpsertPayload,
   type UserPreferences,
+  connectNotifySink,
+  disconnectNotifySink,
   getDiscover,
   getMyProfile,
+  getNotifySink,
   getPreferences,
   getReceivedLikes,
   listDevAccounts,
@@ -298,15 +302,18 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
             dev/QA only
           </span>
         </div>
-        <button
-          onClick={onSignOut}
-          className="text-xs transition"
-          style={{ color: C.textSecondary }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
-          onMouseLeave={(e) => (e.currentTarget.style.color = C.textSecondary)}
-        >
-          logout
-        </button>
+        <div className="flex items-center gap-4">
+          <NotifySinkControl />
+          <button
+            onClick={onSignOut}
+            className="text-xs transition"
+            style={{ color: C.textSecondary }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = C.text)}
+            onMouseLeave={(e) => (e.currentTarget.style.color = C.textSecondary)}
+          >
+            logout
+          </button>
+        </div>
       </header>
 
       {loadError && (
@@ -447,6 +454,141 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+// ===== 알림 싱크 컨트롤 (헤더) =====
+//
+// 테스터 폰 1대로 모든 dev seed 계정의 푸시 알림을 받기 위한 매핑 관리.
+// "폰에 로그인된 실계정 이메일" 을 입력하면 그 계정의 푸시 토큰을 모든 dev seed
+// 계정 앞으로 복제 → 어느 dev 계정이 메시지를 받아도 그 폰으로 알림이 온다.
+// 알림 제목이 "haru · <받은 계정명>" 이라 10개 계정이 섞여도 구분 가능.
+
+function NotifySinkControl() {
+  const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState<NotifySinkStatus | null>(null);
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const loadStatus = useCallback(() => {
+    getNotifySink()
+      .then(setStatus)
+      .catch(() => setStatus(null));
+  }, []);
+
+  useEffect(() => {
+    loadStatus();
+    const saved =
+      typeof window === 'undefined' ? null : sessionStorage.getItem('notify_sink_email');
+    if (saved) setEmail(saved);
+  }, [loadStatus]);
+
+  const connect = async () => {
+    const e = email.trim();
+    if (!e || busy) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await connectNotifySink(e);
+      sessionStorage.setItem('notify_sink_email', e);
+      setMsg(`✓ 연결됨: ${r.account_count}개 계정 · ${r.token_count}개 토큰`);
+      loadStatus();
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : '연결 실패');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disconnect = async () => {
+    if (busy) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await disconnectNotifySink();
+      setMsg(`해제됨 (${r.cleared}건)`);
+      loadStatus();
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : '해제 실패');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const linked = (status?.linked_accounts ?? 0) > 0;
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="rounded-full border px-3 py-1.5 text-xs font-medium transition"
+        style={{
+          background: linked ? C.primaryLight : C.card,
+          borderColor: linked ? C.primary : C.border,
+          color: linked ? C.primaryDark : C.textSecondary,
+        }}
+      >
+        🔔 알림 폰 {linked ? `· ON (${status?.linked_accounts})` : 'OFF'}
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 z-50 mt-2 w-[340px] rounded-2xl border p-4 shadow-[0_8px_30px_rgba(17,24,39,0.12)]"
+          style={{ background: C.card, borderColor: C.border }}
+        >
+          <p className="mb-3 text-xs leading-relaxed" style={{ color: C.textSecondary }}>
+            폰에 로그인된 계정의 푸시 토큰을 <b>모든 dev 계정</b>에 연결합니다. 이후 어느
+            계정이 메시지를 받아도 그 폰으로 알림이 와요 (제목에 받은 계정명 표시).
+          </p>
+          <FieldLabel>폰에 로그인된 계정 이메일</FieldLabel>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') connect();
+            }}
+            placeholder="예: you@gmail.com"
+            className="w-full rounded-xl border px-3 py-2 text-sm outline-none transition"
+            style={fieldInputStyle}
+            onFocus={(e) => (e.currentTarget.style.borderColor = C.primary)}
+            onBlur={(e) => (e.currentTarget.style.borderColor = C.borderSoft)}
+          />
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={connect}
+              disabled={busy || !email.trim()}
+              className="flex-1 rounded-full py-2 text-xs font-semibold text-white transition disabled:opacity-50"
+              style={{ background: C.primary }}
+            >
+              {busy ? '...' : '연결 / 재동기화'}
+            </button>
+            <button
+              onClick={disconnect}
+              disabled={busy || !linked}
+              className="rounded-full border px-4 py-2 text-xs font-semibold transition disabled:opacity-50"
+              style={{ background: C.card, borderColor: C.border, color: C.textSecondary }}
+            >
+              해제
+            </button>
+          </div>
+          {msg && (
+            <p className="mt-2 text-xs" style={{ color: C.text }}>
+              {msg}
+            </p>
+          )}
+          {status && (
+            <p className="mt-2 text-[11px]" style={{ color: C.textLight }}>
+              현재: {status.linked_accounts}개 계정 / {status.tokens}개 토큰
+              {status.labels.length > 0 && ` · ${status.labels.join(', ')}`}
+            </p>
+          )}
+          <p className="mt-2 text-[11px]" style={{ color: C.textLight }}>
+            폰 토큰이 바뀌거나(앱 재설치 등) 알림이 끊기면 다시 “연결 / 재동기화”.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

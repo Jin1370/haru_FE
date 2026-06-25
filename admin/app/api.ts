@@ -215,6 +215,35 @@ export async function listDevAccounts(): Promise<DevAccount[]> {
   return res.accounts;
 }
 
+// ----- dev 알림 싱크 (mig 040) -----
+// 테스터 폰 1대로 모든 dev seed 계정의 푸시 알림을 받기 위한 매핑.
+
+export type NotifySinkStatus = {
+  linked_accounts: number;
+  tokens: number;
+  labels: string[];
+};
+
+export function getNotifySink(): Promise<NotifySinkStatus> {
+  return adminFetch<NotifySinkStatus>('/api/admin/notify-sink');
+}
+
+export function connectNotifySink(sinkEmail: string): Promise<{
+  ok: boolean;
+  sink_email: string;
+  account_count: number;
+  token_count: number;
+}> {
+  return adminFetch('/api/admin/notify-sink', {
+    method: 'POST',
+    body: { sink_email: sinkEmail },
+  });
+}
+
+export function disconnectNotifySink(): Promise<{ cleared: number }> {
+  return adminFetch('/api/admin/notify-sink', { method: 'DELETE' });
+}
+
 export async function listMatches(asUserId: string): Promise<MatchSummary[]> {
   // 기존 GET /api/matches 는 응답 shape 가 평면 array 가 아니라 partner / last_message
   // 가 nested 된 RPC 결과 + match row 조합. 본 클라이언트는 BE 가 반환하는 그대로 받는다.
