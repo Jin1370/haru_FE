@@ -132,6 +132,21 @@ body {
   font-family: 'Galmuri11', system-ui, sans-serif;
 }
 
+/* `break-keep` (word-break: keep-all) is applied to every heading/body across
+   the page so KOREAN wraps at 어절 (word) boundaries — Korean has spaces
+   between words, so keep-all gives clean line breaks. JAPANESE has no
+   inter-word spaces, so keep-all finds no break opportunity and a long
+   sentence overflows its container (max-w-md / card widths) — the page looks
+   "broken" only in the ja locale. Restore natural per-character wrapping for
+   Japanese. `:lang(ja)` matches because the locale layout sets <html lang="ja">,
+   and this rule (unlayered) overrides Tailwind's layered `.break-keep` utility.
+   The ja legal pages render their Korean source via LegalMarkdown, which does
+   NOT use `.break-keep`, so this rule never touches that Korean text. */
+:lang(ja) .break-keep {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
 /* Sunset gradient used by the hero — defined here so multiple sections can
    layer it (background + soft-glow accents) without repeating the stops. */
 .bg-sunset {
