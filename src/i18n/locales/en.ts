@@ -631,11 +631,11 @@ export default {
       toast: "This message can't be sent. Some expressions are limited to keep haru a safe space.",
     },
     // message-moderation-v1 (PR2): account-frozen global modal.
-    // CS email is the operator's personal address for v1 (sejinim02@gmail.com).
+    // CS email is the operator's personal address for v1 (haru.official.app@gmail.com).
     // Swap to a proper domain (support@haru.app, etc.) in a 3-locale simultaneous commit when acquired.
     frozen: {
       title: 'Notice',
-      notice: 'Your account has been suspended. If you have any concerns, please reach out to sejinim02@gmail.com.',
+      notice: 'Your account has been suspended. If you have any concerns, please reach out to haru.official.app@gmail.com.',
     },
   },
 

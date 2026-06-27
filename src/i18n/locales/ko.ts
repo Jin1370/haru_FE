@@ -630,11 +630,11 @@ export default {
             toast: "이 메시지는 보낼 수 없어요. 안전한 대화를 위해 일부 표현은 제한돼 있어요.",
         },
         // message-moderation-v1 (PR2): 누적 신고 자동 freeze 시 글로벌 모달 1회 노출.
-        // CS 이메일은 1차 출시 운영자 개인 이메일 (sejinim02@gmail.com).
+        // CS 이메일은 1차 출시 운영자 개인 이메일 (haru.official.app@gmail.com).
         // 정식 도메인 (support@haru.app 등) 입수 시 3 locale 동시 commit 으로 교체.
         frozen: {
             title: "안내",
-            notice: "계정 이용이 일시 중지되었어요. 이의가 있으시면 sejinim02@gmail.com 으로 문의해 주세요.",
+            notice: "계정 이용이 일시 중지되었어요. 이의가 있으시면 haru.official.app@gmail.com 으로 문의해 주세요.",
         },
     },
 

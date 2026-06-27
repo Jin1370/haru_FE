@@ -57,7 +57,7 @@ In the event of a personal data breach, the Operator will, in accordance with ap
 ## 7. Personal Information Protection Officer and Contact
 
 - Personal Information Protection Officer — Sejin Lim
-- Inquiries / appeals — sejinim02@gmail.com
+- Inquiries / appeals — haru.official.app@gmail.com
 
 Members may use the above contact for inquiries about personal information processing, refusal of cross-border transfer, appeals regarding suspended accounts, data deletion requests, and the like.
 

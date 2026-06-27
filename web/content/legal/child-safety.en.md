@@ -19,7 +19,7 @@ Inappropriate behavior by other users, or profiles suspected of belonging to min
 - **Report**: Tap the report button on Discover and Likes-Received cards, the profile screen, or the chat screen to report a user or content. Reporting is available even before matching (in Discover).
 - **Block**: Blocking cuts off mutual visibility and contact with that user.
 - **Review**: Reports received are reviewed within 24 hours, and if a violation is confirmed we take action such as removing content and suspending the account.
-- **Urgent reports**: Urgent matters related to child safety can be reported directly to the contact below (**sejinim02@gmail.com**) in addition to the in-app report flow.
+- **Urgent reports**: Urgent matters related to child safety can be reported directly to the contact below (**haru.official.app@gmail.com**) in addition to the in-app report flow.
 
 ## 4. Response to CSAM
 
@@ -36,4 +36,4 @@ haru complies with applicable child safety laws and cooperates with lawful reque
 
 ## 6. Contact
 
-- Child safety contact: **sejinim02@gmail.com**
+- Child safety contact: **haru.official.app@gmail.com**

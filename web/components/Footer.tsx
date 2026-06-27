@@ -48,10 +48,10 @@ export default function Footer() {
         <p>
           {t('contact')}:{' '}
           <a
-            href="mailto:sejinim02@gmail.com"
+            href="mailto:haru.official.app@gmail.com"
             className="transition hover:text-[color:var(--color-primary-dark)] hover:underline"
           >
-            sejinim02@gmail.com
+            haru.official.app@gmail.com
           </a>
         </p>
       </div>

@@ -8,7 +8,7 @@ Last updated: May 27, 2026
 
 - App name: haru
 - Developer name (operator): Sejin Lim (임세진)
-- Customer support email: sejinim02@gmail.com
+- Customer support email: haru.official.app@gmail.com
 
 ## Account Deletion Procedure
 
@@ -26,7 +26,7 @@ Deletion is processed immediately and does not require a separate operator appro
 
 ### 2. Out-of-app path (when the app cannot be installed)
 
-Send a deletion request to the operator customer support email (sejinim02@gmail.com) with the following information.
+Send a deletion request to the operator customer support email (haru.official.app@gmail.com) with the following information.
 
 - The email address used at sign-up (for Google OAuth users, the OAuth-identified email address)
 - An explicit statement of intent to request deletion
@@ -97,4 +97,4 @@ Voice message files are subject to the general policy (automatic purge 30 days a
 
 ## Contact
 
-For questions about the account deletion procedure, data processing, or appeals regarding suspended accounts, please contact the operator customer support email (sejinim02@gmail.com).
+For questions about the account deletion procedure, data processing, or appeals regarding suspended accounts, please contact the operator customer support email (haru.official.app@gmail.com).

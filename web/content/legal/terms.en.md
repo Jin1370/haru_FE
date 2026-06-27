@@ -47,7 +47,7 @@ The collection, use, retention, and destruction of members' personal information
 
 ## Account Deletion and Data Removal
 
-Members may delete their account at any time via [Settings → Account → Delete Account] within the Service, or by request to the customer support email (sejinim02@gmail.com) through an out-of-app channel. The deletion, anonymization, and retention of member data upon account deletion are governed by the Privacy Policy and the Account Deletion Guide.
+Members may delete their account at any time via [Settings → Account → Delete Account] within the Service, or by request to the customer support email (haru.official.app@gmail.com) through an out-of-app channel. The deletion, anonymization, and retention of member data upon account deletion are governed by the Privacy Policy and the Account Deletion Guide.
 
 ## Limitation of Liability
 
@@ -67,4 +67,4 @@ These Terms are interpreted under the laws of the Republic of Korea, and any dis
 ## Operator Information
 
 - Operator: Sejin Lim (임세진)
-- Customer support email: sejinim02@gmail.com
+- Customer support email: haru.official.app@gmail.com

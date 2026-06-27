@@ -630,11 +630,11 @@ export default {
             toast: "このメッセージは送信できません。安心して話せる場のために、一部の表現は制限されています。",
         },
         // message-moderation-v1 (PR2): 自動 freeze 時のグローバルモーダル。
-        // CS メールは初回リリース運営者の個人メール (sejinim02@gmail.com)。
+        // CS メールは初回リリース運営者の個人メール (haru.official.app@gmail.com)。
         // 正式ドメイン (support@haru.app など) 取得後に 3 locale 同時 commit で差し替え。
         frozen: {
             title: "お知らせ",
-            notice: "アカウントの利用が一時停止されました。ご意見・お問い合わせは sejinim02@gmail.com までご連絡ください。",
+            notice: "アカウントの利用が一時停止されました。ご意見・お問い合わせは haru.official.app@gmail.com までご連絡ください。",
         },
     },
 
