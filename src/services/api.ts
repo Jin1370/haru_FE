@@ -4,7 +4,7 @@ import type { TokenRefreshResponse } from '@/types';
 
 const TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
-const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 25000;
 const UPLOAD_TIMEOUT_MS = 60000;
 
 export class ApiRequestError extends Error {
@@ -35,6 +35,49 @@ async function fetchWithTimeout(input: string, init: RequestInit, timeoutMs = RE
     throw new ApiRequestError(0, 'Network error. Please check your connection.', 'network_error');
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// A timed-out / dropped request may have actually reached the server (we just
+// never saw the response), so blindly retrying a write could double-submit
+// (e.g. send the same message twice). Only auto-retry requests that are safe
+// to repeat: reads (GET/HEAD) and the auth endpoints, where re-issuing is
+// harmless — you simply re-authenticate.
+function isNetworkRetrySafe(path: string, method?: string): boolean {
+  const m = (method ?? 'GET').toUpperCase();
+  if (m === 'GET' || m === 'HEAD') return true;
+  return (
+    path.startsWith('/api/auth/login') ||
+    path.startsWith('/api/auth/signup') ||
+    path.startsWith('/api/auth/google') ||
+    path.startsWith('/api/auth/apple') ||
+    path.startsWith('/api/auth/refresh')
+  );
+}
+
+const NETWORK_RETRY_DELAY_MS = 600;
+
+// Wraps fetchWithTimeout with a single automatic retry on transient network
+// failures (timeout / connection drop). Flaky Wi-Fi often fails the first
+// attempt and succeeds on the second. HTTP error *responses* (4xx/5xx) are NOT
+// retried here — those are real server answers and flow through normally.
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  path: string,
+): Promise<Response> {
+  try {
+    return await fetchWithTimeout(url, init, timeoutMs);
+  } catch (e) {
+    const transient =
+      e instanceof ApiRequestError &&
+      (e.code === 'network_timeout' || e.code === 'network_error');
+    if (transient && isNetworkRetrySafe(path, init.method)) {
+      await new Promise((resolve) => setTimeout(resolve, NETWORK_RETRY_DELAY_MS));
+      return await fetchWithTimeout(url, init, timeoutMs);
+    }
+    throw e;
   }
 }
 
@@ -92,11 +135,16 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return null;
 
   try {
-    const res = await fetchWithTimeout(`${API_BASE_URL}/api/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
+    const res = await fetchWithRetry(
+      `${API_BASE_URL}/api/auth/refresh`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      },
+      REQUEST_TIMEOUT_MS,
+      '/api/auth/refresh',
+    );
 
     if (!res.ok) {
       await clearTokens();
@@ -164,10 +212,11 @@ class ApiClient {
       headers['Content-Type'] = 'application/json';
     }
 
-    const res = await fetchWithTimeout(
+    const res = await fetchWithRetry(
       `${API_BASE_URL}${path}`,
       { ...options, headers },
       timeoutMs,
+      path,
     );
 
     // Token-issuing auth endpoints (login/signup/google) returning 401 means
