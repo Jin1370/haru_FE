@@ -8,7 +8,7 @@
 [![Expo](https://img.shields.io/badge/Expo-SDK%2054-000020)](https://expo.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-이 레포는 모바일 앱(Expo + RN) 만 다룹니다. **백엔드는 별도 레포** → [`perso-devrel/haru_BE`](https://github.com/perso-devrel/haru_BE)
+이 레포는 모바일 앱(Expo + RN) 만 다룹니다. **백엔드는 별도 레포** → [`Jin1370/haru_BE`](https://github.com/Jin1370/haru_BE)
 
 ---
 
@@ -106,14 +106,14 @@
 
 ```bash
 # 1) 백엔드 먼저 띄우기 (별도 레포)
-git clone https://github.com/perso-devrel/haru_BE
+git clone https://github.com/Jin1370/haru_BE
 cd haru_BE
 npm install
 cp .env.example .env       # 값 채우기 (BE 레포 README 참고)
 npm run dev                # http://localhost:3000
 
 # 2) FE — 이 레포
-git clone https://github.com/perso-devrel/haru_FE
+git clone https://github.com/Jin1370/haru_FE
 cd haru_FE
 npm install --legacy-peer-deps
 cp .env.example .env       # 값 채우기 (아래 환경 변수 섹션)
@@ -242,7 +242,7 @@ src/
 
 ## 함께 보는 레포
 
-- **BE (Express + Supabase + ElevenLabs + Vertex AI)** → [`perso-devrel/haru_BE`](https://github.com/perso-devrel/haru_BE)
+- **BE (Express + Supabase + ElevenLabs + Vertex AI)** → [`Jin1370/haru_BE`](https://github.com/Jin1370/haru_BE)
 
 ---
 
