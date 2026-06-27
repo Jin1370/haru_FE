@@ -42,11 +42,11 @@
 
 <p align="center">
   <a href="https://apps.apple.com/kr/app/%ED%95%98%EB%A3%A8-%EB%AA%A9%EC%86%8C%EB%A6%AC-%EB%8D%B0%EC%9D%B4%ED%8C%85-%EC%99%B8%EA%B5%AD%EC%9D%B8-%EC%86%8C%EA%B0%9C%ED%8C%85/id6779128759">
-    <img alt="App Store에서 다운로드" src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" height="52">
+    <img alt="Download on the App Store" src="https://img.shields.io/badge/App_Store-1a1a1a?style=for-the-badge&logo=apple&logoColor=white">
   </a>
-  &nbsp;&nbsp;
+  &nbsp;
   <a href="https://play.google.com/store/apps/details?id=com.haruvoice.app&hl=ko&gl=KR">
-    <img alt="Google Play에서 다운로드" src="https://play.google.com/intl/ko/badges/static/images/badges/ko_badge_web_generic.png" height="76">
+    <img alt="Get it on Google Play" src="https://img.shields.io/badge/Google_Play-1a1a1a?style=for-the-badge&logo=googleplay&logoColor=white">
   </a>
 </p>
 
