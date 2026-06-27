@@ -30,6 +30,7 @@ export default function DiscoverScreen() {
     dailyCountReady,
     dailyLimitReached,
     passResetEnabled,
+    hasPasses,
     resetting,
     handleResetPasses,
   } = useDiscover();
@@ -163,7 +164,7 @@ export default function DiscoverScreen() {
           </LinearGradient>
           <Text style={styles.emptyTitle}>{t(titleKey)}</Text>
           <Text style={styles.emptyText}>{t(textKey)}</Text>
-          {passResetEnabled && (
+          {passResetEnabled && hasPasses && (
             <Button
               title={t('discover.passReset.button')}
               onPress={onReset}

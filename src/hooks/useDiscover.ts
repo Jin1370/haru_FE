@@ -4,6 +4,7 @@ import { useSWRConfig } from 'swr';
 import * as discoverService from '@/services/discover';
 import { ApiRequestError } from '@/services/api';
 import { photoAccessStore } from '@/stores/photoAccess';
+import { swipedSession } from '@/stores/swipedSession';
 import { useAuthStore } from '@/stores/authStore';
 import { matchesKey } from '@/lib/swr';
 import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
@@ -34,6 +35,9 @@ export function useDiscover() {
   // env 게이트(quota 응답의 pass_reset_enabled). 디스커버 화면이 "다시 보기"
   // 버튼 노출 여부를 판단. 기본 false — quota 동기화 전까진 버튼 미노출(안전).
   const [passResetEnabled, setPassResetEnabled] = useState(false);
+  // 넘긴(pass) 사람이 실제로 있는지(quota.has_passes). 버튼은 passResetEnabled &&
+  // hasPasses 일 때만 — 넘긴 적 없는 빈 풀 사용자에게 버튼이 뜨는 어색함을 제거.
+  const [hasPasses, setHasPasses] = useState(false);
   const [resetting, setResetting] = useState(false);
   const prefetchingRef = useRef(false);
   // Block prefetch until the screen's initial loadCandidates() has finished.
@@ -54,16 +58,10 @@ export function useDiscover() {
     candidatesRef.current = candidates;
   }, [candidates]);
 
-  // Session-level set of ids the user has swiped (believed recorded server-side).
-  // The BE exclude list is built from committed `swipes` rows at fetch time, so
-  // there's a window — widened by optimistic removal — where a just-swiped card's
-  // POST is still in flight when a prefetch fires: the BE doesn't see the swipe
-  // yet and returns that user again. The queue-only dedup in prefetchMore can't
-  // catch it (the card already left the queue). This set makes the FE
-  // authoritative: anything swiped this session is filtered out of every fetch
-  // regardless of BE commit timing. Entries are removed on rollback (the swipe
-  // wasn't recorded) so a restored card can reappear.
-  const swipedIdsRef = useRef<Set<string>>(new Set());
+  // 세션 동안 스와이프된 id 집합은 디스커버 ↔ 받은 좋아요 탭이 공유하는 모듈 레벨
+  // swipedSession 으로 승격됐다. 한 탭에서 스와이프하면 다른 탭이 즉시 같은 카드를
+  // 덱에서 제거하도록(refetch 불필요) + BE 커밋 타이밍과 무관하게 모든 fetch 에서
+  // 필터. 상세는 stores/swipedSession.ts. rollback 시 delete 로 복원 카드 재노출 허용.
 
   // Warm the image cache for the next couple of cards so they paint instantly
   // when surfaced. The queue prefetch above only pulls candidate *data* (URLs);
@@ -91,6 +89,7 @@ export function useDiscover() {
       const q = await discoverService.getDiscoverQuota();
       setDailyCount(q.count);
       setPassResetEnabled(q.pass_reset_enabled === true);
+      setHasPasses(q.has_passes === true);
     } catch {
       // Network failures fall back to 0 to avoid blocking offline users —
       // they'll re-sync next mount. Leave the flag as-is (don't flip a button
@@ -103,6 +102,8 @@ export function useDiscover() {
   // overshoot the quota by fetching against a stale count of 0.
   useEffect(() => {
     if (!userId) return;
+    // 계정 전환 시 옛 계정의 스와이프 집합을 비운다(같은 owner 면 no-op).
+    swipedSession.ensureOwner(userId);
     let cancelled = false;
     setDailyCountReady(false);
     syncQuota().finally(() => {
@@ -112,6 +113,16 @@ export function useDiscover() {
       cancelled = true;
     };
   }, [userId, syncQuota]);
+
+  // 크로스탭 동기화: 받은 좋아요 탭에서 스와이프(또는 신고)하면 swipedSession 에
+  // 추가되며 알림이 온다 → 디스커버 덱에서도 같은 카드를 즉시 제거(refetch 불필요).
+  useEffect(
+    () =>
+      swipedSession.subscribe(() => {
+        setCandidates((prev) => prev.filter((c) => !swipedSession.has(c.id)));
+      }),
+    [],
+  );
 
   const dailyLimitReached = dailyCount >= MAX_PER_DAY;
 
@@ -129,7 +140,7 @@ export function useDiscover() {
       ingestCandidates(data);
       // Filter out anything swiped this session — guards against the BE
       // returning a just-swiped user whose POST hasn't committed yet.
-      setCandidates(data.filter((c) => !swipedIdsRef.current.has(c.id)));
+      setCandidates(data.filter((c) => !swipedSession.has(c.id)));
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -154,7 +165,7 @@ export function useDiscover() {
       setCandidates((prev) => {
         const seen = new Set(prev.map((c) => c.id));
         const fresh = data.filter(
-          (c) => !seen.has(c.id) && !swipedIdsRef.current.has(c.id),
+          (c) => !seen.has(c.id) && !swipedSession.has(c.id),
         );
         return [...prev, ...fresh];
       });
@@ -191,12 +202,16 @@ export function useDiscover() {
 
     setCandidates((prev) => prev.filter((c) => c.id !== swipedId));
     setDailyCount((c) => Math.min(MAX_PER_DAY, c + 1));
-    // Register in the session swiped-set so an in-flight (not-yet-committed)
-    // POST can't let this user re-surface via a concurrent prefetch.
-    swipedIdsRef.current.add(swipedId);
+    // Register in the shared session swiped-set so an in-flight (not-yet-committed)
+    // POST can't let this user re-surface via a concurrent prefetch — and so the
+    // 받은 좋아요 탭이 같은 카드를 즉시 덱에서 제거한다(구독 알림).
+    swipedSession.add(swipedId);
 
     try {
       const res = await discoverService.swipe({ swiped_id: swipedId, direction });
+      // 방금 pass 행이 생겼으므로 "다시 보기" 버튼 노출 조건을 즉시 충족시킨다
+      // (다음 quota 동기화를 기다리지 않고 in-session 으로 반영).
+      if (direction === 'pass') setHasPasses(true);
       // A new mutual match means the matches list has a new row — drop the
       // SWR cache so the Matches tab shows it immediately on next view.
       if (res.match && userId) {
@@ -225,9 +240,9 @@ export function useDiscover() {
         });
       }
       // 스와이프 미기록 → 세션 집합에서도 제거. 그렇지 않으면 복원된 카드가
-      // loadCandidates/prefetchMore 의 swipedIdsRef 필터에 걸려 다시 사라진다.
+      // loadCandidates/prefetchMore 의 swipedSession 필터에 걸려 다시 사라진다.
       // (409 는 위에서 early-return 했으므로 여기 도달하지 않음 — 집합에 유지)
-      swipedIdsRef.current.delete(swipedId);
+      swipedSession.delete(swipedId);
 
       if (status === 429) {
         // BE 하드 캡 도달 — 세션 카운트를 한도로 끌어올려 한도 화면을 노출하고
@@ -244,17 +259,17 @@ export function useDiscover() {
   }, [userId, globalMutate]);
 
   // 신고 등 비-스와이프 사유로 현재 카드를 덱에서 즉시 제거한다. 신고는
-  // 스와이프가 아니므로 dailyCount 를 증가시키지 않는다. swipedIdsRef 에 등록해
+  // 스와이프가 아니므로 dailyCount 를 증가시키지 않는다. swipedSession 에 등록해
   // in-flight prefetch 가 (BE auto-block 전파 전에) 이 후보를 재노출하지 못하게
-  // 막는다 — handleSwipe 와 동일한 FE 권위 가드.
+  // 막는다 + 받은 좋아요 탭도 즉시 제거 — handleSwipe 와 동일한 FE 권위 가드.
   const removeCandidate = useCallback((id: string) => {
-    swipedIdsRef.current.add(id);
+    swipedSession.add(id);
     setCandidates((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
   // "넘긴 사람 다시 보기" — viewer 의 pass 스와이프 행을 BE 에서 일괄 삭제한 뒤
   // 세션 권위 집합을 비우고 디스커버/quota 를 재동기화해 pass 했던 후보를 다시
-  // 노출한다. swipedIdsRef.current.clear() 가 핵심: 이 집합(2026-05-31 sprint 의
+  // 노출한다. swipedSession.clear() 가 핵심: 이 공유 집합(2026-05-31 sprint 의
   // FE 권위 재노출 가드)을 비우지 않으면 BE 가 pass 행을 지워도 FE 가 계속 필터해
   // 재노출되지 않는다. 반드시 clear → loadCandidates → syncQuota 순서.
   const handleResetPasses = useCallback(async (): Promise<number | null> => {
@@ -262,7 +277,7 @@ export function useDiscover() {
     setResetting(true);
     try {
       const { reset_count } = await discoverService.resetPasses();
-      swipedIdsRef.current.clear();
+      swipedSession.clear();
       // 다음 카드용 이미지 프리페치 dedupe 도 비워 재노출 후보 사진이 다시 캐시됨.
       prefetchedPhotosRef.current.clear();
       await loadCandidates();
@@ -291,6 +306,7 @@ export function useDiscover() {
     dailyCountReady,
     dailyLimitReached,
     passResetEnabled,
+    hasPasses,
     resetting,
     handleResetPasses,
   };

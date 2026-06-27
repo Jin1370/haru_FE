@@ -189,6 +189,9 @@ export interface DiscoverQuota {
   // env 게이트(DISCOVER_PASS_RESET_ENABLED) 상태. false 면 FE 가 "다시 보기"
   // 버튼을 렌더하지 않는다(일몰 시 자동 소멸). 구버전 BE 응답엔 없을 수 있어 옵셔널.
   pass_reset_enabled?: boolean;
+  // 넘긴(pass) 사람이 실제로 있는지. false 면 버튼을 숨겨 "넘긴 적 없는데 다시 보기
+  // 버튼이 뜨는" 어색함을 제거. 구버전 BE 응답엔 없을 수 있어 옵셔널.
+  has_passes?: boolean;
 }
 
 // === Match ===
