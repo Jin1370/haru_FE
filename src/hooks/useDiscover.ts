@@ -6,6 +6,7 @@ import { ApiRequestError } from '@/services/api';
 import { photoAccessStore } from '@/stores/photoAccess';
 import { swipedSession } from '@/stores/swipedSession';
 import { useAuthStore } from '@/stores/authStore';
+import { useCatStore } from '@/stores/catStore';
 import { matchesKey } from '@/lib/swr';
 import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
 import {
@@ -216,6 +217,7 @@ export function useDiscover() {
       // SWR cache so the Matches tab shows it immediately on next view.
       if (res.match && userId) {
         globalMutate(matchesKey(userId));
+        useCatStore.getState().celebrate();
       }
       return res;
     } catch (e: any) {

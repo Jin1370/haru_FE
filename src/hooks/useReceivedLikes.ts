@@ -5,6 +5,7 @@ import { ApiRequestError } from '@/services/api';
 import { photoAccessStore } from '@/stores/photoAccess';
 import { swipedSession } from '@/stores/swipedSession';
 import { useAuthStore } from '@/stores/authStore';
+import { useCatStore } from '@/stores/catStore';
 import { matchesKey } from '@/lib/swr';
 import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
 import { MAX_PER_DAY } from '@/utils/discoverDaily';
@@ -119,6 +120,7 @@ export function useReceivedLikes() {
         // 받은 좋아요 화면의 like 응답은 거의 항상 match → 매치 리스트 갱신.
         if (res.match && userId) {
           globalMutate(matchesKey(userId));
+          useCatStore.getState().celebrate();
         }
         return res;
       } catch (e: any) {
