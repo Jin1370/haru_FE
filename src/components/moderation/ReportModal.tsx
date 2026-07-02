@@ -7,6 +7,7 @@ import {
   TextInput,
   ScrollView,
   StyleSheet,
+  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -90,6 +91,7 @@ export function ReportModal({
   const descriptionError = descriptionErr ? t(descriptionErr.key) : null;
 
   const handleSubmit = async () => {
+    Keyboard.dismiss();
     if (!snapshot || !reason || submitting) return;
     if (descriptionErr) return; // gate submit on inline error
     setSubmitting(true);
@@ -154,7 +156,10 @@ export function ReportModal({
               return (
                 <Pressable
                   key={r}
-                  onPress={() => setReason(r)}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setReason(r);
+                  }}
                   style={({ pressed }) => [
                     styles.reasonRow,
                     selected && styles.reasonRowSelected,

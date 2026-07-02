@@ -6,6 +6,7 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -76,6 +77,7 @@ export default function VerifyEmailScreen() {
   };
 
   const handleVerify = async () => {
+    Keyboard.dismiss();
     if (code.length < CODE_LENGTH || verifying) return;
     setVerifying(true);
     setError(null);
@@ -94,6 +96,7 @@ export default function VerifyEmailScreen() {
   };
 
   const handleResend = async () => {
+    Keyboard.dismiss();
     if (cooldown > 0) return;
     // 서버(Supabase)도 60초 쿨다운을 강제하지만, 성공/실패 무관하게 FE 쿨다운을
     // 걸어 버튼 연타를 막는다.

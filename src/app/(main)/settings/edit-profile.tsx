@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
+  Keyboard,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,6 +107,7 @@ export default function EditProfileScreen() {
   }, [interests, resolveId]);
 
   const toggleInterest = (id: string) => {
+    Keyboard.dismiss();
     if (selectedInterestIds.has(id)) {
       setInterests((prev) =>
         prev.filter((v) => v !== id && resolveId(v) !== id),
@@ -122,6 +124,7 @@ export default function EditProfileScreen() {
   // Review flagged the disabled-button pattern under Guideline 2.1(a)). Only
   // saves once all fields are valid.
   const handleSave = async () => {
+    Keyboard.dismiss();
     const next: typeof errors = {};
 
     const nameErr = validateDisplayName(form.display_name.trim());
@@ -209,7 +212,10 @@ export default function EditProfileScreen() {
             <Pressable
               key={g}
               style={[styles.genderBtn, form.gender === g && styles.genderActive]}
-              onPress={() => setForm((f) => ({ ...f, gender: g }))}
+              onPress={() => {
+                Keyboard.dismiss();
+                setForm((f) => ({ ...f, gender: g }));
+              }}
             >
               <Text style={[styles.genderText, form.gender === g && styles.genderActiveText]}>
                 {genderLabel(g)}
@@ -225,7 +231,10 @@ export default function EditProfileScreen() {
               styles.selectBtn,
               nationalityOpen && styles.selectBtnOpen,
             ]}
-            onPress={() => setNationalityOpen((v) => !v)}
+            onPress={() => {
+              Keyboard.dismiss();
+              setNationalityOpen((v) => !v);
+            }}
           >
             <Text style={[styles.selectText, !form.nationality && styles.selectPlaceholder]}>
               {form.nationality
@@ -247,6 +256,7 @@ export default function EditProfileScreen() {
                     key={code}
                     style={[styles.chip, selected && styles.chipActive]}
                     onPress={() => {
+                      Keyboard.dismiss();
                       setForm((f) => ({ ...f, nationality: code as NationalityCode }));
                       setNationalityOpen(false);
                       clearError('nationality');
@@ -269,6 +279,7 @@ export default function EditProfileScreen() {
             mode="single"
             value={form.language}
             onChange={(next) => {
+              Keyboard.dismiss();
               setForm((f) => ({ ...f, language: next }));
               clearError('language');
             }}

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Pressable,
   BackHandler,
+  Keyboard,
 } from 'react-native';
 import { router, useNavigation, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -94,6 +95,7 @@ export default function SetupStep1() {
     setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e));
 
   const setLanguage = (next: LanguageCode | null) => {
+    Keyboard.dismiss();
     setForm((f) => ({ ...f, language: next }));
     clearError('language');
   };
@@ -114,6 +116,7 @@ export default function SetupStep1() {
   }, [interests, resolveId]);
 
   const toggleInterest = (id: string) => {
+    Keyboard.dismiss();
     if (selectedInterestIds.has(id)) {
       // Drop both forms: the canonical id and any legacy localized label
       // that points at this id (covers profiles registered before the
@@ -133,6 +136,7 @@ export default function SetupStep1() {
   // App Review flagged as "tapped Next, nothing happened" on iPad — Guideline
   // 2.1(a)). Only advances once all fields are valid.
   const handleNext = () => {
+    Keyboard.dismiss();
     const next: typeof errors = {};
 
     const nameErr = validateDisplayName(form.display_name.trim());
@@ -220,7 +224,10 @@ export default function SetupStep1() {
           <Pressable
             key={g}
             style={[styles.genderBtn, form.gender === g && styles.genderActive]}
-            onPress={() => setForm((f) => ({ ...f, gender: g }))}
+            onPress={() => {
+              Keyboard.dismiss();
+              setForm((f) => ({ ...f, gender: g }));
+            }}
           >
             <Text style={[styles.genderText, form.gender === g && styles.genderActiveText]}>
               {genderLabel(g)}
@@ -236,7 +243,10 @@ export default function SetupStep1() {
             styles.selectBtn,
             nationalityOpen && styles.selectBtnOpen,
           ]}
-          onPress={() => setNationalityOpen((v) => !v)}
+          onPress={() => {
+            Keyboard.dismiss();
+            setNationalityOpen((v) => !v);
+          }}
         >
           <Text style={[styles.selectText, !form.nationality && styles.selectPlaceholder]}>
             {form.nationality
@@ -258,6 +268,7 @@ export default function SetupStep1() {
                   key={code}
                   style={[styles.chip, selected && styles.chipActive]}
                   onPress={() => {
+                    Keyboard.dismiss();
                     setForm((f) => ({ ...f, nationality: code as NationalityCode }));
                     setNationalityOpen(false);
                     clearError('nationality');

@@ -6,6 +6,7 @@ import {
     Image,
     Platform,
     useWindowDimensions,
+    Keyboard,
 } from "react-native";
 import { Redirect, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -108,6 +109,7 @@ export default function LoginScreen() {
     }, [isSignup]);
 
     const handleGooglePress = async () => {
+        Keyboard.dismiss();
         if (loadingAction) return;
         if (isExpoGo) {
             showAlert({
@@ -171,6 +173,7 @@ export default function LoginScreen() {
     // 으로 identityToken 을 받아 BE(/apple)로 전달한다. 사용자가 시트를 닫으면
     // ERR_REQUEST_CANCELED 로 조용히 종료(에러 토스트 미노출).
     const handleApplePress = async () => {
+        Keyboard.dismiss();
         if (loadingAction) return;
         setLoadingAction("apple");
         try {
@@ -255,6 +258,7 @@ export default function LoginScreen() {
     };
 
     const handleEmailAuth = async () => {
+        Keyboard.dismiss();
         if (loadingAction) return;
 
         // 1) Email is the prerequisite — if it's syntactically wrong, surface
@@ -433,7 +437,12 @@ export default function LoginScreen() {
                             onPress={handleEmailAuth}
                             loading={loadingAction === "email"}
                         />
-                        <Pressable onPress={() => setIsSignup((v) => !v)}>
+                        <Pressable
+                            onPress={() => {
+                                Keyboard.dismiss();
+                                setIsSignup((v) => !v);
+                            }}
+                        >
                             <Text style={styles.toggleText}>
                                 {isSignup
                                     ? t("auth.toggleToLogin")
