@@ -591,6 +591,7 @@ export default {
             matches: "マッチ通知",
             permissionDenied: "システム設定で通知を許可してください",
         },
+        catAnimation: "タブバーの猫アニメーション",
     },
 
     changePassword: {

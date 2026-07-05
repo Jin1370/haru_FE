@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/Button';
 import { MenuCardButton } from '@/components/ui/MenuCardButton';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { useAuthStore } from '@/stores/authStore';
+import { useCatStore } from '@/stores/catStore';
 import { showAlert } from '@/stores/alertStore';
 import { userFacingError } from '@/utils/errors';
-import { colors } from '@/constants/colors';
+import { colors, radii } from '@/constants/colors';
+import { fonts } from '@/constants/fonts';
 import { LEGAL_URLS } from '@/constants/legal';
 
 export default function SettingsScreen() {
@@ -16,6 +18,8 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const logout = useAuthStore((s) => s.logout);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
+  const catEnabled = useCatStore((s) => s.enabled);
+  const setCatEnabled = useCatStore((s) => s.setEnabled);
 
   const handleLogout = () => {
     showAlert({
@@ -84,6 +88,14 @@ export default function SettingsScreen() {
             label={t('settings.languageSettings')}
             onPress={() => router.push('/(main)/settings/language')}
           />
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>{t('settings.catAnimation')}</Text>
+            <Switch
+              value={catEnabled}
+              onValueChange={setCatEnabled}
+              trackColor={{ false: colors.borderSoft, true: colors.primary }}
+            />
+          </View>
         </View>
         <Button
           title={t('common.logout')}
@@ -121,6 +133,23 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20 },
   menuList: { gap: 10 },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.card,
+  },
+  toggleLabel: {
+    fontSize: 15,
+    fontFamily: fonts.semibold,
+    color: colors.text,
+    letterSpacing: 0.2,
+  },
   legalLinks: {
     flexDirection: 'row',
     justifyContent: 'center',

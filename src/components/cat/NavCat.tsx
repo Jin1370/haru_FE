@@ -46,6 +46,7 @@ const idleSheet = require('../../../assets/images/cat_idle.png');
 const fwSheet = require('../../../assets/images/cat_fireworks.png');
 
 export function NavCat() {
+  const enabled = useCatStore((s) => s.enabled);
   const celebrating = useCatStore((s) => s.celebrating);
   const reset = useCatStore((s) => s.reset);
 
@@ -101,13 +102,22 @@ export function NavCat() {
 
   useEffect(() => {
     clearTimer();
+    if (!enabled) {
+      // 꺼져 있는 동안 매칭이 나면 celebrating=true 만 남고 애니메이션은 못
+      // 돈다 — 그대로 두면 나중에 다시 켰을 때 뜬금없이 폭죽이 재생된다.
+      // 즉시 reset 해 stale 플래그가 남지 않게 한다.
+      if (celebrating) reset();
+      return clearTimer;
+    }
     if (celebrating) {
       startFireworks();
     } else {
       startIdle();
     }
     return clearTimer;
-  }, [celebrating, clearTimer, startFireworks, startIdle]);
+  }, [enabled, celebrating, clearTimer, startFireworks, startIdle, reset]);
+
+  if (!enabled) return null;
 
   const vpW = celebrating ? FW_DISPLAY_FRAME_W : FRAME_W;
   const wrapperH = celebrating ? FW_FRAME_H : IDLE_FRAME_H + IDLE_BOTTOM_PAD;
