@@ -7,7 +7,6 @@ import { getSiteUrl } from '@/lib/site-url';
 // classify haru as a (free, Android + iOS) social/dating app rather than
 // guessing from prose. Organization + WebSite establish site identity;
 // MobileApplication describes the product itself.
-const SCREENSHOTS = ['explore', 'voice', 'match', 'chat', 'profile'];
 const CURRENCY: Record<string, string> = { ko: 'KRW', ja: 'JPY', en: 'USD' };
 
 export default async function StructuredData({ locale }: { locale: string }) {
@@ -43,7 +42,6 @@ export default async function StructuredData({ locale }: { locale: string }) {
         url: homeUrl,
         installUrl: playStoreUrl(locale),
         downloadUrl: [playStoreUrl(locale), appStoreUrl(locale)],
-        screenshot: SCREENSHOTS.map((s) => `${base}/screenshots/${s}.png`),
         offers: {
           '@type': 'Offer',
           price: '0',

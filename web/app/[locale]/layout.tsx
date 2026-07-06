@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import ReactDOM from 'react-dom';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -36,7 +37,8 @@ export async function generateMetadata({
       title: t('title'),
       description: t('description'),
       url: ogUrl,
-      images: [`/og/${locale}.png`],
+      // og:image is supplied by the app/[locale]/opengraph-image route
+      // (dynamic next/og), so no static path is referenced here.
       locale,
       type: 'website',
     },
@@ -44,7 +46,6 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: t('title'),
       description: t('description'),
-      images: [`/og/${locale}.png`],
     },
   };
 }
@@ -61,6 +62,21 @@ export default async function LocaleLayout({
     notFound();
   }
   setRequestLocale(locale);
+
+  // Preload the two above-the-fold Pretendard weights (body Regular + heading
+  // SemiBold) so the hero text isn't gated on font download — improves FCP/LCP,
+  // a Core Web Vitals ranking signal. Fonts are fetched in CORS mode, so the
+  // preload must carry crossOrigin to match the @font-face request and hit.
+  ReactDOM.preload('/fonts/Pretendard-Regular.woff2', {
+    as: 'font',
+    type: 'font/woff2',
+    crossOrigin: 'anonymous',
+  });
+  ReactDOM.preload('/fonts/Pretendard-SemiBold.woff2', {
+    as: 'font',
+    type: 'font/woff2',
+    crossOrigin: 'anonymous',
+  });
 
   // 클라이언트 컴포넌트(예: LangSwitcher)가 useTranslations 로 메시지를 읽으려면
   // provider 에 messages 를 명시적으로 넘겨야 한다. 넘기지 않으면 클라 쪽엔
