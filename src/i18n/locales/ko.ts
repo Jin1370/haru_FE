@@ -591,7 +591,7 @@ export default {
             matches: "매칭 알림",
             permissionDenied: "시스템 설정에서 알림을 허용해주세요",
         },
-        catAnimation: "탭바 고양이 애니메이션",
+        catAnimation: "고양이 애니메이션",
     },
 
     changePassword: {

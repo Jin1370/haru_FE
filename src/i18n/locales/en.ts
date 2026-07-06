@@ -592,7 +592,7 @@ export default {
       matches: 'Match notifications',
       permissionDenied: 'Enable notifications in system settings',
     },
-    catAnimation: 'Tab bar cat animation',
+    catAnimation: 'Cat animation',
   },
 
   changePassword: {
