@@ -63,19 +63,16 @@ export default async function LocaleLayout({
   }
   setRequestLocale(locale);
 
-  // Preload the two above-the-fold Pretendard weights (body Regular + heading
-  // SemiBold) so the hero text isn't gated on font download — improves FCP/LCP,
-  // a Core Web Vitals ranking signal. Fonts are fetched in CORS mode, so the
-  // preload must carry crossOrigin to match the @font-face request and hit.
-  ReactDOM.preload('/fonts/Pretendard-Regular.woff2', {
-    as: 'font',
-    type: 'font/woff2',
-    crossOrigin: 'anonymous',
-  });
-  ReactDOM.preload('/fonts/Pretendard-SemiBold.woff2', {
-    as: 'font',
-    type: 'font/woff2',
-    crossOrigin: 'anonymous',
+  // Preload the hero card's background image — the LCP element. It's applied
+  // via CSS background, which the browser only discovers after CSS parses, so
+  // an explicit high-priority preload pulls it forward and improves LCP (the
+  // report's "LCP request discovery" insight). Fonts are intentionally NOT
+  // preloaded: font-display:swap already paints text immediately with a
+  // fallback, so preloading the ~765 KB weights only steals bandwidth from
+  // this LCP image and pushed LCP out.
+  ReactDOM.preload('/cards/discover-bg.webp', {
+    as: 'image',
+    fetchPriority: 'high',
   });
 
   // 클라이언트 컴포넌트(예: LangSwitcher)가 useTranslations 로 메시지를 읽으려면

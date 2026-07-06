@@ -184,7 +184,7 @@ body {
             rgba(0, 0, 0, var(--card-darken)),
             rgba(0, 0, 0, var(--card-darken))
         ),
-        url("/cards/discover-bg.png") center / cover no-repeat;
+        url("/cards/discover-bg.webp") center / cover no-repeat;
     border: none;
     box-shadow:
         /* tight contact shadow — darkens the back cards right behind the front
@@ -215,7 +215,7 @@ body {
             rgba(0, 0, 0, var(--deck-darken)),
             rgba(0, 0, 0, var(--deck-darken))
         ),
-        url("/cards/discover-bg.png") center / cover no-repeat;
+        url("/cards/discover-bg.webp") center / cover no-repeat;
     border: 1px solid rgba(255, 255, 255, 0.06);
     /* A downward drop plus an all-around soft halo. The halo is what makes the
        shadow read on the peeking top/left edges — a purely downward shadow
