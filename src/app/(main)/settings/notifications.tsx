@@ -79,6 +79,8 @@ export default function NotificationsSettingsScreen() {
               value={prefs.notify_messages}
               onValueChange={(v) => togglePref('notify_messages', v)}
               trackColor={{ false: colors.borderSoft, true: colors.primary }}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor={colors.borderSoft}
             />
           </View>
           <View style={styles.row}>
@@ -87,6 +89,8 @@ export default function NotificationsSettingsScreen() {
               value={prefs.notify_matches}
               onValueChange={(v) => togglePref('notify_matches', v)}
               trackColor={{ false: colors.borderSoft, true: colors.primary }}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor={colors.borderSoft}
             />
           </View>
         </View>

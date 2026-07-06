@@ -94,6 +94,8 @@ export default function SettingsScreen() {
               value={catEnabled}
               onValueChange={setCatEnabled}
               trackColor={{ false: colors.borderSoft, true: colors.primary }}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor={colors.borderSoft}
             />
           </View>
         </View>
