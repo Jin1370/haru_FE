@@ -54,6 +54,47 @@
       "Anyone who feels uneasy showing real photos"
     ]
   },
+  "faq": {
+    "metaTitle": "FAQ — haru",
+    "metaDescription": "Answers to common questions about haru's voice intro, auto-translation, art profiles, age requirement, and privacy.",
+    "eyebrow": "Have a question?",
+    "title": "Frequently Asked Questions",
+    "subtitle": "The things people most often ask about haru.",
+    "items": [
+      {
+        "q": "What is haru?",
+        "a": "haru is a voice-first global dating app. Swipe through profiles and listen to each person's voice intro, so you can feel their real vibe and tone instead of judging by photos alone."
+      },
+      {
+        "q": "Is haru free?",
+        "a": "Yes, haru is free to start. Download it from the App Store or Google Play and begin right away."
+      },
+      {
+        "q": "How does the voice intro work?",
+        "a": "Pick a line you want others to hear or write your own, and haru generates it in your own voice. It appears alongside your profile photo in the Explore tab, letting your voice make the first impression."
+      },
+      {
+        "q": "Can I chat with people who speak other languages?",
+        "a": "Yes. When you send a message, it's automatically translated into the other person's language and delivered in 'your own voice.' No separate translation app needed — you can have a natural cross-language conversation right inside haru."
+      },
+      {
+        "q": "Do I have to upload real photos?",
+        "a": "No. You can create an art profile that adds an artistic touch to your real photo. If sharing a real photo feels uncomfortable, you can start comfortably with an art profile."
+      },
+      {
+        "q": "Which countries can I meet people from?",
+        "a": "haru starts with Korea and Japan and is expanding to the US and beyond. It's a great fit if you want to make friends from other countries or practice a language."
+      },
+      {
+        "q": "What is the minimum age to use haru?",
+        "a": "haru is available only to users aged 18 and over."
+      },
+      {
+        "q": "Is my voice data kept safe?",
+        "a": "Your voice is used only to synthesize voice messages, and the original training audio used to create your voice clone is discarded right after generation. You can find the details in our Privacy Policy."
+      }
+    ]
+  },
   "download": {
     "eyebrow": "Download now",
     "title": "Start with haru today",
@@ -67,6 +108,7 @@
     "privacy": "Privacy Policy",
     "accountDeletion": "Account Deletion",
     "childSafety": "Child Safety",
+    "faq": "FAQ",
     "contact": "Contact"
   },
   "legal": {

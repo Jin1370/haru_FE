@@ -5,7 +5,7 @@ import { getSiteUrl } from '@/lib/site-url';
 // Every indexable route below the locale segment. '' is the home page; the
 // rest are the legal/standards pages. Each becomes one sitemap entry per
 // locale, cross-linked via hreflang `alternates`.
-const PATHS = ['', 'privacy', 'terms', 'child-safety', 'account-deletion'] as const;
+const PATHS = ['', 'faq', 'privacy', 'terms', 'child-safety', 'account-deletion'] as const;
 
 function localeUrl(base: string, locale: string, path: string): string {
   const prefix = locale === routing.defaultLocale ? '' : `/${locale}`;

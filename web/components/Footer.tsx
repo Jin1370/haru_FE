@@ -16,6 +16,13 @@ export default function Footer() {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
           <Link
+            href={`${prefix}/faq`}
+            className="transition hover:text-[color:var(--color-primary-dark)] hover:underline"
+          >
+            {t('faq')}
+          </Link>
+          <span className="text-[color:var(--color-text-light)]">·</span>
+          <Link
             href={`${prefix}/terms`}
             className="transition hover:text-[color:var(--color-primary-dark)] hover:underline"
           >
