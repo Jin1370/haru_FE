@@ -169,6 +169,10 @@ export interface DiscoverCandidate {
   photos: string[];
   // Optional until BE ships iter2. Always { false, false } by policy.
   photo_access?: PhotoAccess;
+  // 이 후보가 이미 나를 like 했는가(=like 하면 즉시 매치 = 매치 완성 like = 예산
+  // 면제). 좋아요 소진 시 사전 게이트 분기에만 사용(카드에 시각 표시 없음).
+  // 받은 좋아요 탭에선 항상 true. 구버전 BE 호환 위해 optional — 미제공 시 false 취급.
+  liked_you?: boolean;
 }
 
 export interface SwipeRequest {
@@ -182,6 +186,8 @@ export interface SwipeResponse {
 }
 
 export interface DiscoverQuota {
+  // count/limit/remaining 의미: 오늘(로컬 자정 이후) 보낸 좋아요(non-reciprocal like)
+  // 예산 소모/한도/잔여. pass(넘기기)와 매치 완성 like(면제)는 세지 않는다.
   count: number;
   limit: number;
   remaining: number;

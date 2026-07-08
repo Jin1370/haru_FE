@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SwipeCard } from '@/components/discover/SwipeCard';
-import { computeDiscoverGate, showLikeGate } from '@/components/discover/DiscoverGate';
+import { computeDiscoverGate, showLikeGate, showLikeLimit } from '@/components/discover/DiscoverGate';
 import { Button } from '@/components/ui/Button';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
 import { useReceivedLikes } from '@/hooks/useReceivedLikes';
@@ -38,9 +38,9 @@ export default function LikesScreen() {
     loadCandidates,
     syncQuota,
     handleSwipe,
+    consumeLikeLimitHit,
     removeCandidate,
     dailyCountReady,
-    dailyLimitReached,
     passResetEnabled,
     hasPasses,
     resetting,
@@ -98,7 +98,18 @@ export default function LikesScreen() {
       return;
     }
 
+    // 받은 좋아요 like 는 상대가 이미 나를 like 한 상태 → 항상 reciprocal → 항상
+    // 매치 완성 like = 면제다. 따라서 디스커버에서 예산을 소진했더라도 여기서는
+    // 절대 사전 차단하지 않는다(결정 #4: 매치 완성 like 면제 — 이 탭이 그 핵심
+    // 표면). 희귀 unlike 레이스(로드~스와이프 사이 상대가 취소)로 BE 가 non-reciprocal
+    // 로 처리해 429 를 주면 아래 consumeLikeLimitHit 가 방어한다.
     const res = await handleSwipe(candidate.id, direction);
+
+    // 멀티기기 stale 429 신호 소비 → 즉시 모달(디스커버와 동일 패턴).
+    if (consumeLikeLimitHit()) {
+      showLikeLimit(t);
+      return;
+    }
 
     // 받은 좋아요에서 like → 상대가 이미 like 한 상태이므로 거의 항상 즉시 match.
     // 디스커버 화면과 동일한 매치 성사 alert 재사용 (i18n 키도 그대로).
@@ -156,38 +167,8 @@ export default function LikesScreen() {
 
   const current = candidates[0];
 
-  // 일일 한도 소진 시엔 카드가 남아 있어도(서버가 swipe 를 429 로 하드 캡하므로
-  // 어차피 못 넘긴다) 카드 대신 한도 화면을 먼저 띄운다 — 디스커버 탭과 동일.
-  // 안 그러면 한도 도달 후에도 카드가 보이고 스와이프가 조용히 429 실패한다.
-  if (dailyLimitReached) {
-    return (
-      <PhotoBackground variant="app">
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.empty}>
-          <LinearGradient
-            colors={[...gradients.glow]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.emptyHalo, shadows.glow]}
-          >
-            <Ionicons name="time-outline" size={38} color={colors.white} />
-          </LinearGradient>
-          <Text style={styles.emptyTitle}>{t('discover.dailyLimitTitle')}</Text>
-          <Text style={styles.emptyText}>{t('discover.dailyLimitText')}</Text>
-          {passResetEnabled && hasPasses && (
-            <Button
-              title={t('discover.passReset.button')}
-              onPress={onReset}
-              loading={resetting}
-              disabled={resetting}
-              style={styles.ctaBtn}
-              textStyle={styles.ctaBtnText}
-            />
-          )}
-        </ScrollView>
-      </PhotoBackground>
-    );
-  }
-
+  // 받은 좋아요 like 는 항상 면제라 예산 소진이 이 탭 화면을 바꾸지 않는다
+  // (희귀 unlike 레이스만 BE 429 → showLikeLimit 모달).
   // 받은 좋아요 0개 — 디스커버로 유도하는 CTA. 출시 초기엔 사용자 풀 작아서
   // 자주 보일 화면이라 카피 + CTA 톤이 retention 에 직결.
   if (!current) {
@@ -239,6 +220,9 @@ export default function LikesScreen() {
         <SwipeCard
           key={current.id}
           candidate={current}
+          // 등록 게이트만 like 스프링백(기존 SwipeCard 로직 재사용). 받은 좋아요
+          // like 는 항상 면제라 예산 소진으로 막지 않는다 — BE 가 권위(희귀 unlike
+          // 레이스만 429 → showLikeLimit).
           gated={gate.gated}
           onLike={() => onSwipe('like')}
           onPass={() => onSwipe('pass')}

@@ -108,3 +108,17 @@ export function showLikeGate(state: DiscoverGateState, t: (key: string) => strin
     showAlert({ variant: 'info', title: step.title, message: step.hint });
   }
 }
+
+// 일일 좋아요 예산 소진 안내 — 등록 게이트(showLikeGate)와 별개다.
+// 라우팅 없는 정보 모달만 띄운다(설정으로 유도할 게 없으므로). 카드는 계속
+// 흐르고 pass(넘기기)는 무제한이라 화면 전체를 잠그지 않는다 — like 시도 시점에만
+// 이 모달을 띄운다. 키(discover.dailyLimitTitle/Text)는 이미 존재(카피 갱신은
+// voice-i18n-engineer 담당).
+export function showLikeLimit(t: (key: string) => string) {
+  showAlert({
+    variant: 'info',
+    title: t('discover.dailyLimitTitle'),
+    message: t('discover.dailyLimitText'),
+    // (후속 P1) 업셀 훅: confirmText t('discover.dailyLimitUpsell') → 무제한 좋아요 페이월.
+  });
+}

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SwipeCard } from '@/components/discover/SwipeCard';
 import { LaunchPromoCard } from '@/components/discover/LaunchPromoCard';
-import { computeDiscoverGate, showLikeGate } from '@/components/discover/DiscoverGate';
+import { computeDiscoverGate, showLikeGate, showLikeLimit } from '@/components/discover/DiscoverGate';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { Button } from '@/components/ui/Button';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
@@ -26,6 +26,7 @@ export default function DiscoverScreen() {
     loading,
     loadCandidates,
     handleSwipe,
+    consumeLikeLimitHit,
     removeCandidate,
     dailyCountReady,
     dailyLimitReached,
@@ -94,7 +95,24 @@ export default function DiscoverScreen() {
       return;
     }
 
+    // 좋아요 예산 소진 시: 이 후보가 나를 아직 like 하지 않은(non-reciprocal =
+    // 예산 소모) 카드면 카드를 넘기지 않고 즉시 한도 모달만 띄운다(카드 그대로).
+    // 매치를 완성하는 like(candidate.liked_you=true = 면제)는 소진 후에도 통과시켜
+    // 즉시 매치되게 한다(결정 #4). liked_you 가 stale(로드 후 상대가 unlike)이라
+    // BE 가 non-reciprocal 로 429 를 주면 아래 consumeLikeLimitHit 가 방어한다.
+    if (direction === 'like' && dailyLimitReached && !candidate.liked_you) {
+      showLikeLimit(t);
+      return;
+    }
+
     const res = await handleSwipe(candidate.id, direction);
+
+    // 멀티기기 stale: 로컬 카운트로는 여유였지만 BE 가 429 로 캡한 경우, 훅이 세운
+    // one-shot 신호를 소비해 즉시 모달을 띄운다(다음 렌더의 stale 상태에 의존하지 않음).
+    if (consumeLikeLimitHit()) {
+      showLikeLimit(t);
+      return;
+    }
 
     if (res?.match) {
       const matchId = res.match.id;
@@ -139,20 +157,17 @@ export default function DiscoverScreen() {
     />
   );
 
-  // 일일 한도 도달 시엔 후보가 남아 있어도(병렬 fetch 가 quota 도착 전 미리
-  // 받아둔 카드) 카드를 노출하지 않고 한도 화면을 보여준다. 서버가 swipe 를
-  // 429 로 캡하므로 그 카드들은 어차피 못 넘긴다 — "안 넘어가는 카드" 대신
-  // 명확한 한도 안내를 띄운다. (병렬화 이전의 한도 UX 를 그대로 보존)
-  if (!current || dailyLimitReached) {
-    const titleKey = dailyLimitReached ? 'discover.dailyLimitTitle' : 'discover.noMoreProfiles';
-    const textKey = dailyLimitReached ? 'discover.dailyLimitText' : 'discover.checkBackLater';
-    const iconName = dailyLimitReached ? 'time-outline' : 'sparkles';
+  // 풀 소진(카드 0장)일 때만 empty-state. 좋아요 예산 소진은 화면을 교체하지
+  // 않는다 — 카드는 계속 흐르고 pass 는 무제한이며, non-reciprocal like 소진은
+  // onSwipe 사전 게이트(카드 안 넘기고 showLikeLimit 모달)로 안내한다(매치 완성
+  // like 는 소진 후에도 통과). pass-reset 버튼은 풀 소진 시 탈출구로 이 화면에 유지.
+  if (!current) {
     return (
       <PhotoBackground variant="app">
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.empty}
-          refreshControl={dailyLimitReached ? undefined : refreshControl}
+          refreshControl={refreshControl}
         >
           <LinearGradient
             colors={[...gradients.glow]}
@@ -160,10 +175,10 @@ export default function DiscoverScreen() {
             end={{ x: 1, y: 1 }}
             style={[styles.emptyHalo, shadows.glow]}
           >
-            <Ionicons name={iconName} size={38} color={colors.white} />
+            <Ionicons name="sparkles" size={38} color={colors.white} />
           </LinearGradient>
-          <Text style={styles.emptyTitle}>{t(titleKey)}</Text>
-          <Text style={styles.emptyText}>{t(textKey)}</Text>
+          <Text style={styles.emptyTitle}>{t('discover.noMoreProfiles')}</Text>
+          <Text style={styles.emptyText}>{t('discover.checkBackLater')}</Text>
           {passResetEnabled && hasPasses && (
             <Button
               title={t('discover.passReset.button')}
@@ -189,7 +204,12 @@ export default function DiscoverScreen() {
         <SwipeCard
           key={current.id}
           candidate={current}
-          gated={gate.gated}
+          // like 게이트 = 등록 미완성 OR (예산 소진 AND 이 후보가 나를 아직 like
+          // 안 함=non-reciprocal). 게이트 시 like 제스처/버튼은 fly-out 대신 스프링백
+          // (카드 그대로) 후 onLike→onSwipe('like')→모달로 안내(SwipeCard 기존 로직
+          // 재사용). 매치 완성 like(liked_you=true, 면제)는 gated 아님 → fly-out 후
+          // 즉시 매치. pass 제스처는 무영향(항상 fly-out).
+          gated={gate.gated || (dailyLimitReached && !current.liked_you)}
           onLike={() => onSwipe('like')}
           onPass={() => onSwipe('pass')}
           onReported={() => removeCandidate(current.id)}

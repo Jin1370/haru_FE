@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSWRConfig } from 'swr';
 import * as discoverService from '@/services/discover';
 import { ApiRequestError } from '@/services/api';
@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useCatStore } from '@/stores/catStore';
 import { matchesKey } from '@/lib/swr';
 import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
-import { MAX_PER_DAY } from '@/utils/discoverDaily';
+import { DAILY_LIKE_LIMIT } from '@/utils/discoverDaily';
 import type { DiscoverCandidate, SwipeResponse } from '@/types';
 
 // 받은 좋아요 화면의 카드/스와이프 상태.
@@ -16,7 +16,8 @@ import type { DiscoverCandidate, SwipeResponse } from '@/types';
 //   1. 카드 풀 = "나를 like 한 사람들" — 별도 엔드포인트 (/api/discover/likes-received)
 //   2. 조회는 BATCH 없이 한 번에 fetch (BE 가 최신 LIKES_RECEIVED_MAX=300 개로 상한,
 //      받은 좋아요 풀은 보통 그보다 작아 FE 페이지네이션 불필요)
-//   3. 스와이프는 동일 엔드포인트 (POST /api/discover/swipe) 공유 → 일일 50장 한도 합산
+//   3. 스와이프는 동일 엔드포인트 (POST /api/discover/swipe) 공유. 단 받은 좋아요의
+//      like 는 항상 reciprocal(=매치 완성) 이라 하루 좋아요 예산을 소모하지 않는다(면제).
 //   4. 'like' 응답 시 즉시 match — 상대가 이미 like 한 상태이므로 reciprocal 항상 성립
 //   5. 세션 스와이프 집합(swipedSession)을 디스커버 탭과 공유 — 한 탭에서 스와이프하면
 //      다른 탭이 즉시 같은 카드를 덱에서 제거(refetch 불필요)
@@ -36,7 +37,15 @@ export function useReceivedLikes() {
   // 디스커버 quota 와 공유. 받은 좋아요 카드 빈 화면 vs 한도 소진 빈 화면을 구분하기
   // 위해 mount 시 같이 가져온다.
   const [dailyCount, setDailyCount] = useState(0);
+  // 오늘 보낸 좋아요 예산 한도. 디스커버 quota 와 공유(BE 단일 진실원=quota.limit).
+  const [dailyLimit, setDailyLimit] = useState(DAILY_LIKE_LIMIT);
   const [dailyCountReady, setDailyCountReady] = useState(false);
+  // handleSwipe identity 안정 + 429 stale 방어용 refs (디스커버 훅과 동일 패턴).
+  const dailyLimitRef = useRef(DAILY_LIKE_LIMIT);
+  const likeLimitHitRef = useRef(false);
+  useEffect(() => {
+    dailyLimitRef.current = dailyLimit;
+  }, [dailyLimit]);
   // "넘긴 사람 다시 보기" env 게이트(quota 응답의 pass_reset_enabled) + 진행 상태.
   // 디스커버와 동일 — 기본 false 라 quota 동기화 전엔 버튼 미노출(안전).
   const [passResetEnabled, setPassResetEnabled] = useState(false);
@@ -51,6 +60,7 @@ export function useReceivedLikes() {
     try {
       const q = await discoverService.getDiscoverQuota();
       setDailyCount(q.count);
+      if (typeof q.limit === 'number') setDailyLimit(q.limit);
       setPassResetEnabled(q.pass_reset_enabled === true);
       setHasPasses(q.has_passes === true);
     } catch {
@@ -82,7 +92,7 @@ export function useReceivedLikes() {
     [],
   );
 
-  const dailyLimitReached = dailyCount >= MAX_PER_DAY;
+  const dailyLimitReached = dailyCount >= dailyLimit;
 
   // 호출 시점은 화면이 결정 — 받은 좋아요 화면은 useFocusEffect 로 탭 focus 마다 호출.
   // 받은 좋아요는 비동기 알림으로 도착하기 때문에 stale 가능성 높음 — focus refetch +
@@ -116,7 +126,10 @@ export function useReceivedLikes() {
         // setCandidates 필터로 본 탭에서도 제거된다.
         swipedSession.add(swipedId);
         setCandidates((prev) => prev.filter((c) => c.id !== swipedId));
-        setDailyCount((c) => Math.min(MAX_PER_DAY, c + 1));
+        // 받은 좋아요의 like 는 항상 reciprocal(=매치 완성) 이라 예산을 소모하지
+        // 않는다(면제). 따라서 낙관적 +1 을 하지 않는다 — like 도 pass 도 카운트 불변.
+        // (드문 엣지: 로드~스와이프 사이 상대가 unlike → BE 는 예산 count 하나 FE
+        //  미반영 → 다음 syncQuota 가 정정. ±1급 허용.)
         // 받은 좋아요 화면의 like 응답은 거의 항상 match → 매치 리스트 갱신.
         if (res.match && userId) {
           globalMutate(matchesKey(userId));
@@ -124,12 +137,14 @@ export function useReceivedLikes() {
         }
         return res;
       } catch (e: any) {
-        // 서버 하드 캡(429) 도달 — 다른 탭에서 한도를 채운 뒤 stale 카운트로 들어와
-        // 스와이프한 경우의 방어선. 카운트를 한도로 끌어올려 다음 렌더에서 한도 화면을
-        // 노출(카드는 그대로 — 서버가 어차피 못 받으므로). 디스커버 handleSwipe 와 동일 사상.
+        // 서버 하드 캡(429) 도달 — 받은 좋아요 like 는 면제라 사실상 안 나지만,
+        // 디스커버에서 예산을 소진한 뒤 stale 카운트로 넘어와 스와이프한 멀티기기
+        // 케이스의 방어선. 화면을 잠그지 않고(전체 교체 제거됨) 예산 소진을 반영해
+        // 이후 like 제스처가 게이트에 걸리게 하고, one-shot 신호로 모달을 띄운다.
         const status = e instanceof ApiRequestError ? e.status : 0;
         if (status === 429) {
-          setDailyCount(MAX_PER_DAY);
+          setDailyCount(dailyLimitRef.current);
+          likeLimitHitRef.current = true;
         }
         setError(e.message);
         return null;
@@ -137,6 +152,13 @@ export function useReceivedLikes() {
     },
     [userId, globalMutate],
   );
+
+  // 화면 onSwipe 가 handleSwipe 직후 동기 호출해 429(예산 소진) 신호를 소비한다.
+  const consumeLikeLimitHit = useCallback(() => {
+    if (!likeLimitHitRef.current) return false;
+    likeLimitHitRef.current = false;
+    return true;
+  }, []);
 
   // 신고 등 비-스와이프 사유로 현재 카드를 덱에서 즉시 제거. swipedSession 에 등록해
   // 디스커버 탭도 즉시 제거 + 본 탭 refetch 시 재노출 방지.
@@ -174,8 +196,10 @@ export function useReceivedLikes() {
     loadCandidates,
     syncQuota,
     handleSwipe,
+    consumeLikeLimitHit,
     removeCandidate,
     dailyCount,
+    dailyLimit,
     dailyCountReady,
     dailyLimitReached,
     passResetEnabled,
