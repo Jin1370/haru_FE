@@ -88,18 +88,43 @@ Notifications.setNotificationHandler({
   },
 });
 
-// 알림 탭 → deep link. data.type 으로 분기.
-function handleNotificationResponse(
+// 알림 탭 → deep link.
+//
+// 콜드 스타트(앱 종료 상태에서 알림 탭)에서는 getLastNotificationResponseAsync
+// 가 폰트 로딩·auto-login 완료 전에 resolve 된다. 그 시점엔 (i) appReady=false
+// 라 Stack 네비게이터가 아직 마운트되지 않았고 (ii) isAuthenticated 가 아직
+// false 라 (main) 가드가 로그인으로 리다이렉트한다 → 이 상태에서 router.push 를
+// 호출하면 네비게이션이 유실되고, auto-login 완료 후 index.tsx 가 discover 로
+// 보내버려 채팅방으로 이동하지 못한다.
+//
+// 해결: 탭 응답을 pending 으로 저장만 하고, 실제 router.push 는 RootLayout 이
+// "네비게이션 마운트 + 인증/프로필 확정" 상태가 됐을 때 flush 한다. 아래
+// pendingDeepLink 은 모듈 스코프에 두고, 컴포넌트의 flush effect 가 소비한다.
+type DeepLink = { type: 'message'; match_id: string } | { type: 'match' };
+
+let pendingDeepLink: DeepLink | null = null;
+
+function extractDeepLink(
   response: Notifications.NotificationResponse | null | undefined,
-) {
-  if (!response) return;
+): DeepLink | null {
+  if (!response) return null;
   const data = response.notification.request.content.data as
     | { type?: string; match_id?: string }
     | undefined;
-  if (!data) return;
+  if (!data) return null;
   if (data.type === 'message' && data.match_id) {
-    router.push(`/chat/${data.match_id}`);
-  } else if (data.type === 'match') {
+    return { type: 'message', match_id: data.match_id };
+  }
+  if (data.type === 'match') {
+    return { type: 'match' };
+  }
+  return null;
+}
+
+function navigateToDeepLink(link: DeepLink) {
+  if (link.type === 'message') {
+    router.push(`/chat/${link.match_id}`);
+  } else {
     router.push('/(main)/(tabs)/matches');
   }
 }
@@ -206,15 +231,40 @@ function RootLayout() {
   // push-notifications sprint: 알림 탭 deep link.
   //   * addNotificationResponseReceivedListener — 앱이 background/foreground 일 때 탭.
   //   * getLastNotificationResponseAsync — cold start (앱 종료 상태에서 알림 탭).
+  //
+  // 두 경로 모두 즉시 router.push 하지 않고 pendingDeepLink 에 저장 + tick 을
+  // 올려 아래 flush effect 를 깨운다 (콜드 스타트 유실 방지 — 위 주석 참고).
+  const [deepLinkTick, setDeepLinkTick] = useState(0);
   useEffect(() => {
-    const sub = Notifications.addNotificationResponseReceivedListener(
-      handleNotificationResponse,
-    );
+    const capture = (
+      response: Notifications.NotificationResponse | null | undefined,
+    ) => {
+      const link = extractDeepLink(response);
+      if (link) {
+        pendingDeepLink = link;
+        setDeepLinkTick((t) => t + 1);
+      }
+    };
+    const sub = Notifications.addNotificationResponseReceivedListener(capture);
     Notifications.getLastNotificationResponseAsync()
-      .then(handleNotificationResponse)
+      .then(capture)
       .catch(() => undefined);
     return () => sub.remove();
   }, []);
+
+  // pending deep link flush — 네비게이션 트리가 마운트(appReady)되고 인증/프로필
+  // 이 확정된 뒤에만 router.push 한다. 이 조건 전에는 (main) 가드가 로그인으로
+  // 튕기거나 Stack 자체가 없어서 push 가 유실되기 때문. auto-login 이 늦게
+  // 끝나도 isAuthenticated/hasProfile 이 true 로 바뀌는 순간 이 effect 가 다시
+  // 돌며 저장해둔 딥링크로 이동한다.
+  useEffect(() => {
+    if (!pendingDeepLink) return;
+    if (!fontsLoaded || isLoading) return;
+    if (!isAuthenticated || !hasProfile) return;
+    const link = pendingDeepLink;
+    pendingDeepLink = null;
+    navigateToDeepLink(link);
+  }, [deepLinkTick, fontsLoaded, isLoading, isAuthenticated, hasProfile]);
 
   // push-notifications sprint follow-up: 인증·프로필 보유 사용자 자동 토큰 재등록.
   // setup step5 에만 권한 트리거를 두면 dev build 적용 이전에 회원가입을 끝낸
