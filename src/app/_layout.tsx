@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -257,14 +257,23 @@ function RootLayout() {
   // 튕기거나 Stack 자체가 없어서 push 가 유실되기 때문. auto-login 이 늦게
   // 끝나도 isAuthenticated/hasProfile 이 true 로 바뀌는 순간 이 effect 가 다시
   // 돌며 저장해둔 딥링크로 이동한다.
+  //
+  // 추가로 "탭 화면에 실제로 안착(segments 가 (main)/(tabs))했는지" 를 게이트로
+  // 건다. 콜드 스타트에서 index.tsx 의 discover 리다이렉트(replace)가 아직
+  // 처리되지 않은 시점에 chat 을 push 하면, 뒤늦게 도착한 리다이렉트가 chat 을
+  // 덮어써 사용자가 discover 로 떨어진다(관측된 회귀). 리다이렉트가 끝나 탭에
+  // 안착한 뒤에 push 하면 chat 이 탭 위에 얹혀 back 도 앱으로 정상 복귀한다.
+  const segments = useSegments() as string[];
   useEffect(() => {
     if (!pendingDeepLink) return;
     if (!fontsLoaded || isLoading) return;
     if (!isAuthenticated || !hasProfile) return;
+    const onTabs = segments[0] === '(main)' && segments[1] === '(tabs)';
+    if (!onTabs) return;
     const link = pendingDeepLink;
     pendingDeepLink = null;
     navigateToDeepLink(link);
-  }, [deepLinkTick, fontsLoaded, isLoading, isAuthenticated, hasProfile]);
+  }, [segments, deepLinkTick, fontsLoaded, isLoading, isAuthenticated, hasProfile]);
 
   // push-notifications sprint follow-up: 인증·프로필 보유 사용자 자동 토큰 재등록.
   // setup step5 에만 권한 트리거를 두면 dev build 적용 이전에 회원가입을 끝낸
