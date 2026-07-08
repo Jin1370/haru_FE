@@ -235,6 +235,13 @@ function RootLayout() {
   // 두 경로 모두 즉시 router.push 하지 않고 pendingDeepLink 에 저장 + tick 을
   // 올려 아래 flush effect 를 깨운다 (콜드 스타트 유실 방지 — 위 주석 참고).
   const [deepLinkTick, setDeepLinkTick] = useState(0);
+  // 콜드 스타트에서 getLastNotificationResponseAsync 는 비동기라, index.tsx 가
+  // 이미 discover 로 리다이렉트한 뒤에 딥링크가 도착한다. 그래서 딥링크 판정이
+  // 끝났는지(coldChecked) + 첫 레이아웃 완료(laidOut) 를 추적해, 딥링크가 있으면
+  // chat 이 얹힐 때까지 네이티브 스플래시를 유지한다 → 사용자에겐 discover 가
+  // 스치지 않고 스플래시에서 바로 채팅방으로 보인다 (아래 splash hide effect).
+  const [coldChecked, setColdChecked] = useState(false);
+  const [laidOut, setLaidOut] = useState(false);
   useEffect(() => {
     const capture = (
       response: Notifications.NotificationResponse | null | undefined,
@@ -248,7 +255,8 @@ function RootLayout() {
     const sub = Notifications.addNotificationResponseReceivedListener(capture);
     Notifications.getLastNotificationResponseAsync()
       .then(capture)
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setColdChecked(true));
     return () => sub.remove();
   }, []);
 
@@ -273,6 +281,8 @@ function RootLayout() {
     const link = pendingDeepLink;
     pendingDeepLink = null;
     navigateToDeepLink(link);
+    // chat push 완료 → splash hide effect 가 재평가하도록 tick 을 올린다.
+    setDeepLinkTick((t) => t + 1);
   }, [segments, deepLinkTick, fontsLoaded, isLoading, isAuthenticated, hasProfile]);
 
   // push-notifications sprint follow-up: 인증·프로필 보유 사용자 자동 토큰 재등록.
@@ -290,20 +300,37 @@ function RootLayout() {
 
   const appReady = fontsLoaded && !isLoading;
 
+  // 네이티브 스플래시 hide 제어. onLayout(첫 레이아웃) 이후에 내려 안드로이드
+  // 기본 회색 윈도우가 비치는 것을 막는 기존 의도는 유지하되(laidOut), 콜드
+  // 스타트 딥링크가 있으면 chat 이 얹힐 때까지 스플래시를 유지해 discover 가
+  // 스치지 않게 한다.
+  //   * updateBlocked: 앱 트리(RootShell)가 안 뜨므로 딥링크와 무관하게 내림.
+  //   * 딥링크 있고 인증/프로필 확정: flush 가 chat push 후 tick 을 올릴 때까지
+  //     대기 → 그 사이 전환이 스플래시 뒤에서 일어난다.
+  //   * 딥링크 있고 인증 불가(로그아웃 등): 이행 불가하므로 폐기하고 내림.
+  useEffect(() => {
+    if (!appReady || !laidOut) return;
+    if (updateBlocked) {
+      SplashScreen.hideAsync().catch(() => {});
+      return;
+    }
+    if (!coldChecked) return;
+    const canHonor = isAuthenticated && hasProfile;
+    if (pendingDeepLink && canHonor) return;
+    if (pendingDeepLink && !canHonor) pendingDeepLink = null;
+    SplashScreen.hideAsync().catch(() => {});
+  }, [appReady, laidOut, updateBlocked, coldChecked, deepLinkTick, isAuthenticated, hasProfile]);
+
   if (!appReady) return null;
 
-  // 네이티브 스플래시는 루트 뷰가 레이아웃된 직후에 내린다(단순 effect 보다
-  // 늦게) — 첫 화면이 그려지기 전에 splash 가 사라져 안드로이드 기본 회색
-  // 윈도우 배경이 잠깐 비치던 문제를 막는다. 루트 배경색도 splash 와 동일한
-  // #FEEEF0 으로 둬서, 혹시 남는 빈 프레임도 회색이 아니라 핑크로 채운다.
   return (
     <GestureHandlerRootView
       style={styles.root}
-      onLayout={() => SplashScreen.hideAsync().catch(() => {})}
+      onLayout={() => setLaidOut(true)}
     >
       {updateBlocked ? (
         // 차단 화면도 useSafeAreaInsets 를 쓰므로 SafeAreaProvider 로 감싼다.
-        // splash hide 는 위 onLayout 이 담당하므로 이 분기에서도 정상 해제됨.
+        // splash hide 는 위 effect 가 updateBlocked 분기로 담당 → 정상 해제됨.
         <SafeAreaProvider>
           <UpdateRequiredScreen storeUrl={storeUrl} />
         </SafeAreaProvider>
