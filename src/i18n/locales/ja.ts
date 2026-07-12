@@ -305,6 +305,11 @@ export default {
             regenerating: "音声を再生成中…",
             regeneratePlay: "音声を再生成して再生",
         },
+        send: {
+            failed: "送信できませんでした",
+            retry: "タップして再送信",
+            sending: "送信中",
+        },
         intimacy: "親密度",
         intimacyUntilAll: "すべての写真公開まであと{{count}}回",
         intimacyAllUnlocked: "すべての写真が公開されました",

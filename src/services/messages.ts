@@ -19,6 +19,7 @@ export async function sendMessage(
   matchId: string,
   text: string,
   emotion?: Emotion,
+  clientMessageId?: string,
 ): Promise<SendMessageResponse> {
   // BE accepts neutral and stores it as null; omit the field when neutral so
   // the request body stays minimal.
@@ -28,8 +29,23 @@ export async function sendMessage(
   //     이 같은 id 로 replace).
   //   * voice clone 없는 발신자 → 201 동기 INSERT Message.
   // 응답 타입은 동일 Message 모양이므로 호출처는 분기 불필요.
-  const body: { text: string; emotion?: Emotion } =
-    emotion && emotion !== 'neutral' ? { text, emotion } : { text };
+  //
+  // idempotent-send sprint: client_message_id (옵셔널 uuid) 를 조건부 동봉.
+  // BE 가 이 값을 messages.id 로 사용해 INSERT 를 멱등화 (같은 id 재전송 시
+  // 중복 row 없이 기존 row 재반환). 미제공 시 BE 가 서버 randomUUID 로 폴백
+  // (옛 FE 하위호환). 재시도는 반드시 같은 id 를 재사용해야 멱등이 발화하므로
+  // id 생성/보관은 호출처(useChat.send)가 낙관 stub 에 귀속시켜 책임진다.
+  //   * 201 신규 INSERT / 200 멱등 재반환 / 202 voice-clone stub → 모두 Message
+  //   * 409 duplicate_message (위조·타인 id) / 422 message_blocked / 403 → throw
+  const body: {
+    text: string;
+    emotion?: Emotion;
+    client_message_id?: string;
+  } = {
+    text,
+    ...(emotion && emotion !== 'neutral' ? { emotion } : {}),
+    ...(clientMessageId ? { client_message_id: clientMessageId } : {}),
+  };
   return api.post<SendMessageResponse>(`/api/matches/${matchId}/messages`, body);
 }
 

@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Animated,
+  Easing,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
@@ -28,6 +35,12 @@ interface ChatBubbleProps {
   // Message row 를 resolve — 호출처에서 즉시 playSharedAudio 트리거. 실패
   // (null) 시 본 컴포넌트는 별도 toast 없이 silent fail (다시 누르면 재시도).
   onRegenerateAudio?: (messageId: string) => Promise<Message | null>;
+  // idempotent-send sprint: 낙관 stub 의 송신 상태 (isMine 전용). undefined 면
+  // 기존 동선. 'sending' = POST 왕복 중(dim+스피너), 'failed' = 네트워크/5xx
+  // 실패(dim+재시도). audio_status='pending'(합성중 hourglass) 과 시각 구분.
+  sendState?: 'sending' | 'failed';
+  // 실패 말풍선 탭 → 같은 client id 로 재전송 (BE 멱등).
+  onRetry?: (messageId: string) => void;
 }
 
 const AVATAR_SIZE = 36;
@@ -41,8 +54,14 @@ export function ChatBubble({
   onAvatarPress,
   onListened,
   onRegenerateAudio,
+  sendState,
+  onRetry,
 }: ChatBubbleProps) {
   const { t, i18n } = useTranslation();
+  // idempotent-send sprint: 낙관 stub 3-상태. isMine 전용이라 수신자 게이팅
+  // (gateInner) 과 겹치지 않는다.
+  const isSending = sendState === 'sending';
+  const isFailed = sendState === 'failed';
   const sharedState = useSharedAudioState();
   // chat-audio-singleton sprint: 본 메시지가 shared singleton player 의 현재
   // source 인지 확인. 채팅 화면 전체에서 native player 인스턴스가 1 개라 두
@@ -205,6 +224,32 @@ export function ChatBubble({
     }),
   });
 
+  // idempotent-send follow-up (전송 즉시 완료): 송신자 본인 메시지는 202 이후
+  // 곧바로 "전송 완료"처럼 보이고(모래시계 제거), 클론 보이스 재생 버튼은 합성이
+  // 끝나면 스르륵 페이드인한다 — "메시지 전송"과 "음성 준비"를 시각적으로 분리해
+  // 두 단계 대기처럼 느껴지던 문제 해소. pending→ready 로 전이할 때만 fade,
+  // 히스토리에서 이미 ready 로 마운트된 메시지는 즉시 노출(값 1). sharedAudioPlayer
+  // 와 무관한 순수 opacity 애니메이션(pulse 와 동일하게 안전 영역).
+  const playFade = useRef(new Animated.Value(1)).current;
+  const sawPendingRef = useRef(false);
+  useEffect(() => {
+    if (!isMine) return;
+    if (message.audio_status === 'pending') {
+      // 아직 재생 버튼은 렌더되지 않지만, ready 로 전이할 때 fade-in 하도록 0 예약.
+      sawPendingRef.current = true;
+      playFade.setValue(0);
+    } else if (message.audio_status === 'ready' && sawPendingRef.current) {
+      sawPendingRef.current = false;
+      playFade.setValue(0);
+      Animated.timing(playFade, {
+        toValue: 1,
+        duration: 320,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [message.audio_status, isMine, playFade]);
+
   const gateInner = isReady ? (
     <Pressable
       onPress={() => {
@@ -262,21 +307,23 @@ export function ChatBubble({
 
       <View style={styles.footer}>
         {message.audio_status === 'ready' && message.audio_url && (
-          <Pressable
-            onPress={handlePlayPress}
-            style={styles.audioBtn}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isPlayingThis ? t('audioPlayer.stop') : t('audioPlayer.play')
-            }
-            hitSlop={6}
-          >
-            <Ionicons
-              name={isPlayingThis ? 'pause-circle' : 'play-circle'}
-              size={24}
-              color={isMine ? 'rgba(255,255,255,0.95)' : colors.primary}
-            />
-          </Pressable>
+          <Animated.View style={{ opacity: playFade }}>
+            <Pressable
+              onPress={handlePlayPress}
+              style={styles.audioSlot}
+              accessibilityRole="button"
+              accessibilityLabel={
+                isPlayingThis ? t('audioPlayer.stop') : t('audioPlayer.play')
+              }
+              hitSlop={6}
+            >
+              <Ionicons
+                name={isPlayingThis ? 'pause-circle' : 'play-circle'}
+                size={24}
+                color={isMine ? 'rgba(255,255,255,0.95)' : colors.primary}
+              />
+            </Pressable>
+          </Animated.View>
         )}
         {/* audio-expiry sprint: sweep 으로 폐기된 메시지 — 재생성 버튼 노출.
             로딩 중에는 hourglass, 평시에는 refresh 아이콘. handlePlayPress 가
@@ -299,10 +346,46 @@ export function ChatBubble({
             />
           </Pressable>
         )}
-        {/* pending stub — 본인 발신 stub 에만 노출 (TTS 완료 전). 상대는 stub
-            을 받지 않으므로 분기 도달 불가지만 isMine 가드로 명시. */}
-        {message.audio_status === 'pending' && isMine && (
-          <View style={styles.audioBtn}>
+        {/* idempotent-send sprint: 'sending' — POST 왕복 중(서버 ack 전, 보통
+            <1초). 아래 합성중(pending) 과 **동일한 모래시계**로 표시해 전송~합성이
+            하나의 연속된 대기로 보이게 한다 (사용자 결정 2026-07-12). */}
+        {isSending && (
+          <View style={styles.audioSlot}>
+            <Ionicons
+              name="hourglass-outline"
+              size={14}
+              color={isMine ? 'rgba(255,255,255,0.75)' : colors.textSecondary}
+            />
+          </View>
+        )}
+        {/* idempotent-send sprint: 'failed' — 네트워크/타임아웃/5xx. 탭하면 같은
+            client id 로 재전송(BE 멱등). muted 톤(붉은 경고 지양, haru 따뜻한 톤)
+            + 재시도 라벨 + 넉넉한 탭 영역(hitSlop). */}
+        {isFailed && (
+          <Pressable
+            onPress={() => onRetry?.(message.id)}
+            style={styles.retryBtn}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={`${t('chat.send.failed')}, ${t('chat.send.retry')}`}
+          >
+            <Ionicons
+              name="refresh"
+              size={14}
+              color={isMine ? 'rgba(255,255,255,0.9)' : colors.textSecondary}
+            />
+            <Text style={[styles.retryText, isMine && styles.retryTextMine]}>
+              {t('chat.send.retry')}
+            </Text>
+          </Pressable>
+        )}
+        {/* 합성중(audio_status='pending', 본인 발신) — 위 전송(sending)과 동일한
+            모래시계로 표시해 전송~합성이 하나의 연속된 대기로 보이게 한다
+            (사용자 결정 2026-07-12). 상대는 stub 을 받지 않아 분기 도달 불가지만
+            isMine 가드로 명시. sending/failed 인 동안엔 위 인디케이터가 대신하므로
+            가드. ready 로 전이하면 위 재생 버튼이 playFade 로 스르륵 등장. */}
+        {!isSending && !isFailed && message.audio_status === 'pending' && isMine && (
+          <View style={styles.audioSlot}>
             <Ionicons
               name="hourglass-outline"
               size={14}
@@ -310,7 +393,6 @@ export function ChatBubble({
             />
           </View>
         )}
-        {/* failed 메시지는 텍스트 전용 — 별도 인디케이터 없이 timestamp 만. */}
 
         <Text style={[styles.time, isMine && styles.mineTime]}>
           {timeLabel}
@@ -354,6 +436,10 @@ export function ChatBubble({
             styles.bubble,
             isMine ? styles.mineBubble : styles.theirsBubble,
             shadows.soft,
+            // idempotent-send sprint: 실패 시에만 dim — 재시도 필요 신호.
+            // 전송중(sending)은 일반 말풍선과 동일 색(dim 안 함, 사용자 결정
+            // 2026-07-12) — 모래시계만으로 진행을 표시하고 색은 그대로 유지.
+            isFailed && styles.bubbleUnsent,
           ]}
         >
           {showGate ? gateInner : inner}
@@ -439,6 +525,38 @@ const styles = StyleSheet.create({
   },
   audioBtn: {
     marginRight: 6,
+  },
+  // idempotent-send follow-up (2026-07-12): 전송/합성 인디케이터 ↔ 재생 버튼이
+  // 같은 고정 슬롯을 차지하도록 24×24 로 고정. 모래시계(14)와 재생 아이콘(24)의
+  // 크기 차이로 footer 가 리플로우되어 말풍선 크기가 바뀌던 문제 해소 — 슬롯이
+  // 처음부터 최종(재생 버튼) 크기라 pending→ready 전이 시 레이아웃 불변, 늦게
+  // 합성돼도 티가 안 남. 아이콘은 슬롯 중앙 정렬.
+  audioSlot: {
+    width: 24,
+    height: 24,
+    marginRight: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // idempotent-send sprint: 전송중/실패 말풍선 dim. 색상 강조 없이 opacity 만.
+  bubbleUnsent: {
+    opacity: 0.6,
+  },
+  // 실패 재시도 어포던스 — 아이콘 + 라벨 한 줄. muted 톤(붉은 경고 지양).
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginRight: 6,
+  },
+  retryText: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    fontFamily: fonts.medium,
+    letterSpacing: 0.2,
+  },
+  retryTextMine: {
+    color: 'rgba(255,255,255,0.9)',
   },
   time: {
     fontSize: 9,

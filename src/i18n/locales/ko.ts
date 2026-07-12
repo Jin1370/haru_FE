@@ -305,6 +305,11 @@ export default {
             regenerating: "음성을 다시 만드는 중..",
             regeneratePlay: "음성을 다시 만들고 재생",
         },
+        send: {
+            failed: "전송 실패",
+            retry: "탭하여 재시도",
+            sending: "전송 중",
+        },
         intimacy: "친밀도",
         intimacyUntilAll: "모든 사진 공개까지 {{count}}회",
         intimacyAllUnlocked: "모든 사진 공개",

@@ -307,6 +307,11 @@ export default {
       regenerating: 'Regenerating voice…',
       regeneratePlay: 'Regenerate and play voice',
     },
+    send: {
+      failed: 'Failed to send',
+      retry: 'Tap to retry',
+      sending: 'Sending',
+    },
     intimacy: 'Intimacy',
     intimacyUntilAll: '{{count}} more for all photos',
     intimacyAllUnlocked: 'All photos unlocked',

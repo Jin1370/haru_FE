@@ -205,6 +205,10 @@ export default function ChatScreen() {
     loadMessages,
     loadOlder,
     send,
+    // idempotent-send sprint: 낙관 stub 의 송신 상태(sending/failed) 맵 + 실패
+    // 말풍선 탭 재시도. ChatBubble 에 sendState[item.id] / onRetry 로 배선.
+    sendState,
+    retry,
     // voice-first-message-gate sprint: 수신자가 편지 카드에서 음성을 끝까지
     // 들으면 ChatBubble 의 transition detection useEffect 가 본 콜백을 1회
     // 발화 → BE PATCH 로 listened_at 영구화 + optimistic 으로 즉시 본문 노출.
@@ -365,12 +369,17 @@ export default function ChatScreen() {
     setSelectedEmotion(DEFAULT_EMOTION);
     setEmotionPickerOpen(false);
     try {
+      // idempotent-send sprint: send 가 clientId 를 내부 생성(Crypto.randomUUID)
+      // 하고 낙관 stub 을 즉시 messages 에 삽입한다. 네트워크/타임아웃/5xx 실패는
+      // send 가 throw 하지 않고 stub 을 화면에 'failed' 로 남기므로 (인라인 재시도
+      // 말풍선) 여기서 모달을 띄우지 않는다 → 모달 스팸 제거. throw 되는 케이스는
+      // 재시도 무의미한 것들뿐 (422 모더레이션 / 403 unmatch·block / 409 위조).
       await send(trimmed, emotionForSend);
     } catch (e: any) {
       // message-moderation-v1 (PR1): BE 422 + code='message_blocked' →
-      // 안전 카피 토스트 + 입력 텍스트 복원 (재편집 가능). 본인 메시지 버퍼에는
-      // 임시 row 가 추가되지 않으므로 화면 잔존 회피. 카테고리/매칭 토큰은
-      // 응답에 없어 우회 학습 차단.
+      // 안전 카피 토스트 + 입력 텍스트 복원 (재편집 가능). send 가 낙관 stub 을
+      // 이미 제거했으므로 화면 잔존 없음. 카테고리/매칭 토큰은 응답에 없어
+      // 우회 학습 차단.
       if (e instanceof ApiRequestError && e.code === 'message_blocked') {
         showAlert({
           variant: 'info',
@@ -381,8 +390,9 @@ export default function ChatScreen() {
         // 감정도 복원 — 사용자가 같은 메시지를 살짝 수정해 재송신할 가능성.
         setSelectedEmotion(emotionForSend);
       } else {
-        // Network / send-side failures surface through the unified alert host
-        // (client-side rule violations are handled inline upstream).
+        // 재시도 무의미한 send-side 실패(403 unmatch·block / 409 위조 등)만
+        // 여기 도달. 네트워크/5xx 는 send 가 stub 을 failed 로 남기고 throw 하지
+        // 않으므로 인라인 말풍선이 대체. (client-side 규칙 위반은 상단에서 인라인.)
         showAlert({ variant: 'error', title: t('common.error'), message: userFacingError(e, t) });
       }
     } finally {
@@ -482,6 +492,10 @@ export default function ChatScreen() {
           partnerId={partnerId}
           partnerPhoto={partnerPhoto}
           showAvatar={showAvatar}
+          // idempotent-send sprint: 이 메시지의 송신 상태 (없으면 undefined
+          // → 기존 동선). 'sending'/'failed' 일 때만 3-상태 시각 발동.
+          sendState={sendState[item.id]}
+          onRetry={retry}
           onListened={markListened}
           onRegenerateAudio={regenerateAudio}
           onAvatarPress={() => {

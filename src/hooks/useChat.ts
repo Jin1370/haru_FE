@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
+import * as Crypto from 'expo-crypto';
 import useSWR from 'swr';
 import * as messageService from '@/services/messages';
 import {
@@ -22,9 +23,20 @@ export interface PhotoUnlockedSnapshot {
   all: boolean;
 }
 
+// idempotent-send sprint: 낙관 stub 의 송신 상태. Message 타입을 오염시키지
+// 않도록 별도 맵으로 관리한다 (server shape 순정 유지).
+//   * 'sending' — POST 왕복 중 (서버 ack 전). ChatBubble 이 dim + 스피너.
+//   * 'failed'  — 네트워크/타임아웃/5xx 실패. dim + 재시도 어포던스. 탭하면
+//     같은 client id 로 재전송 → BE 멱등이라 중복 없이 수렴.
+// 서버 row(200/201/202) 또는 재시도-무의미 4xx 도착 시 해당 키를 삭제한다.
+export type SendStatus = 'sending' | 'failed';
+
 export function useChat(matchId: string) {
   const userId = useAuthStore((s) => s.userId);
   const [messages, setMessages] = useState<Message[]>([]);
+  // idempotent-send sprint: client id → 송신 상태 맵. messages 배열과 분리해
+  // ChatBubble 에 sendState[item.id] 로 전달한다.
+  const [sendState, setSendState] = useState<Record<string, SendStatus>>({});
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,41 +126,110 @@ export function useChat(matchId: string) {
     }
   }, [matchId, messages, hasMore]);
 
-  const send = useCallback(async (text: string, emotion?: Emotion) => {
-    setError(null);
-    try {
-      // chat-audio-async-insert sprint: 응답은 두 경로.
-      //   * voice clone 없는 발신자 → 201 동기 INSERT 된 진짜 Message.
-      //     realtime INSERT 도 같은 id 로 도착하지만 setMessages 의
-      //     dedup-by-id 가 노출 중복을 막는다.
-      //   * voice clone 보유 발신자 → 202 stub Message (audio_status='pending',
-      //     id 는 BE 가 미리 확정한 UUID — TTS 완료 후 realtime INSERT 가
-      //     같은 id 로 도착하면 그 row 가 stub 을 대체하도록 upsert).
-      // 어느 쪽이든 매 메시지 1회 mount 만 보장 → expo-audio 의 mid-session
-      // resource 회수 트리거 회피.
-      const msg = await messageService.sendMessage(matchId, text, emotion);
+  // idempotent-send sprint: 낙관 stub + 멱등 재시도.
+  //   1) clientId(없으면 Crypto.randomUUID) 로 낙관 stub 을 messages 에 즉시
+  //      upsert-by-id 삽입 → 입력 즉시 에코. sendState[clientId]='sending'.
+  //   2) sendMessage(...clientId) 성공 → 응답 row 로 stub 을 upsert-by-id 교체
+  //      + sendState 키 삭제. voice-clone 발신자면 교체 row 도 pending 이라
+  //      기존 hourglass(합성중)로 자연 전이된다.
+  //   3) 실패 분기 (설계 §4.3):
+  //      * 422 message_blocked → stub 제거 + throw (호출처가 토스트+setText 복원)
+  //      * status===0 || >=500 (네트워크/타임아웃/5xx) → sendState='failed'
+  //        (stub 유지, 탭 재시도 가능). throw 하지 않음 — 인라인 실패 말풍선이
+  //        모달을 대체하므로 호출처는 모달 스팸을 내지 않는다.
+  //      * 그 외 4xx (403 unmatch/block, 409 duplicate 위조) → stub 제거 + throw
+  //        (재시도 무의미 → 호출처가 에러 토스트).
+  // realtime reconcile 불변: 낙관 stub 은 isMine 전용이라 수신자 화면 미존재
+  // (voice-first-gate 유지). 서버 row 가 stub 을 교체할 때 sendState 는 이미
+  // 성공/터미널 분기에서 삭제되어 이중 표시가 없다.
+  const send = useCallback(
+    async (
+      text: string,
+      emotion?: Emotion,
+      clientId?: string,
+    ): Promise<Message | null> => {
+      setError(null);
+      const id = clientId ?? Crypto.randomUUID();
+      const storedEmotion = emotion && emotion !== 'neutral' ? emotion : null;
+      // 낙관 stub — 재시도는 같은 id 라 이미 존재하는 stub 을 보존한다
+      // (created_at 등 유지). server shape 를 흉내내되 나머지 필드는 null.
       setMessages((prev) => {
-        const idx = prev.findIndex((m) => m.id === msg.id);
-        if (idx >= 0) {
-          const next = prev.slice();
-          next[idx] = msg;
-          return next;
-        }
-        return [...prev, msg];
+        if (prev.some((m) => m.id === id)) return prev;
+        const stub: Message = {
+          id,
+          match_id: matchId,
+          sender_id: userId ?? '',
+          original_text: text,
+          original_language: '',
+          translated_text: null,
+          translated_language: null,
+          audio_url: null,
+          audio_status: 'pending',
+          emotion: storedEmotion,
+          listened_at: null,
+          audio_purged_at: null,
+          audio_refreshed_at: null,
+          created_at: new Date().toISOString(),
+        };
+        return [...prev, stub];
       });
-      return msg;
-    } catch (e) {
-      // message-moderation-v1 (PR1): 사전 키워드 차단(422 message_blocked)은
-      // 인라인 error 영역을 더럽히지 않고 호출처(chat/[matchId]::handleSend)
-      // 가 토스트로 직접 노출. throw 는 유지해 호출처가 catch 분기에서
-      // ApiRequestError.code 로 매칭한다. 그 외 에러는 기존 동선 유지.
-      if (e instanceof ApiRequestError && e.code === 'message_blocked') {
+      setSendState((prev) => ({ ...prev, [id]: 'sending' }));
+      const clearSendState = () =>
+        setSendState((prev) => {
+          if (!(id in prev)) return prev;
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      try {
+        const msg = await messageService.sendMessage(matchId, text, emotion, id);
+        setMessages((prev) => {
+          const idx = prev.findIndex((m) => m.id === msg.id);
+          if (idx >= 0) {
+            const next = prev.slice();
+            next[idx] = msg;
+            return next;
+          }
+          return [...prev, msg];
+        });
+        clearSendState();
+        return msg;
+      } catch (e) {
+        // message-moderation-v1 (PR1): 422 message_blocked — stub 제거 후 throw.
+        // 호출처(chat/[matchId]::handleSend)가 토스트 + setText 복원.
+        if (e instanceof ApiRequestError && e.code === 'message_blocked') {
+          setMessages((prev) => prev.filter((m) => m.id !== id));
+          clearSendState();
+          throw e;
+        }
+        // 네트워크/타임아웃/5xx — 재시도 가능. stub 유지 + failed 마킹, throw 안 함.
+        if (e instanceof ApiRequestError && (e.status === 0 || e.status >= 500)) {
+          setSendState((prev) => ({ ...prev, [id]: 'failed' }));
+          return null;
+        }
+        // 그 외 4xx (403 unmatch/block, 409 duplicate 위조) — 재시도 무의미.
+        setMessages((prev) => prev.filter((m) => m.id !== id));
+        clearSendState();
+        setError(describeError(e));
         throw e;
       }
-      setError(describeError(e));
-      throw e;
-    }
-  }, [matchId]);
+    },
+    [matchId, userId],
+  );
+
+  // idempotent-send sprint: 실패 말풍선 탭 재시도. stub 을 찾아 같은 client id
+  // 로 send 를 재호출 → BE 멱등이라 (a) 미INSERT면 INSERT (b) 이미 INSERT면
+  // scoped 200 재반환 (c) in-flight면 202 stub 재반환. 어느 응답이든 upsert-by-id
+  // 로 수렴하므로 여러 번 눌러도 row 는 단일. send 내부가 sendState 를
+  // 'failed'→'sending' 으로 되돌린다.
+  const retry = useCallback(
+    (clientId: string) => {
+      const stub = messages.find((m) => m.id === clientId);
+      if (!stub) return;
+      void send(stub.original_text, stub.emotion ?? undefined, clientId);
+    },
+    [messages, send],
+  );
 
   // read-at-removal-list-mask sprint: markRead 콜백 제거. "읽음" 의미가
   // listened_at (음성 청취 완료) 으로 일원화되면서 PATCH /messages/read 라우트와
@@ -350,6 +431,11 @@ export function useChat(matchId: string) {
     loadMessages,
     loadOlder,
     send,
+    // idempotent-send sprint: client id → 송신 상태. ChatBubble 에
+    // sendState[item.id] 로 전달해 3-상태(sending/failed) 시각을 구동한다.
+    sendState,
+    // idempotent-send sprint: 실패 말풍선 탭 시 같은 client id 로 재전송.
+    retry,
     // voice-first-message-gate sprint: ChatBubble 에 prop 으로 전달되어 음성
     // 재생 완료 시점에 발화된다. 송신자 본인 메시지에는 호출되지 않도록 호출처
     // (ChatBubble) 에서 isMine 분기 가드.
