@@ -89,14 +89,14 @@ export default async function LocaleLayout({
             raw <head> 붙여넣기 대신 next/script(afterInteractive)로 로드해
             하이드레이션 안전 + 3 locale 전 페이지 자동 적용. */}
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-MW73GQ2ZRX"
+          src="https://www.googletagmanager.com/gtag/js?id=G-1ZT14S3JGC"
           strategy="afterInteractive"
         />
         <Script id="ga4-init" strategy="afterInteractive">
           {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'G-MW73GQ2ZRX');`}
+gtag('config', 'G-1ZT14S3JGC');`}
         </Script>
         <NextIntlClientProvider messages={messages}>
           <Navbar />

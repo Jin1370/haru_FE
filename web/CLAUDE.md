@@ -104,7 +104,7 @@ haru_FE/web/
 
 ## 분석 / 컴플라이언스
 
-- **GA4(gtag.js) 도입됨** (2026-07-12, 사용자 결정). Measurement ID `G-MW73GQ2ZRX` 를 `app/[locale]/layout.tsx` 의 `<body>` 최상단에 `next/script`(afterInteractive)로 로드. 공개 토큰이라 하드코딩(naver-site-verification 과 동일 근거). 3 locale 전 페이지 자동 적용.
+- **GA4(gtag.js) 도입됨** (2026-07-12, 사용자 결정 / 2026-07-12 Measurement ID `G-MW73GQ2ZRX` → `G-1ZT14S3JGC` 교체). Measurement ID `G-1ZT14S3JGC` 를 `app/[locale]/layout.tsx` 의 `<body>` 최상단에 `next/script`(afterInteractive)로 로드. 공개 토큰이라 하드코딩(naver-site-verification 과 동일 근거). 3 locale 전 페이지 자동 적용.
   - **쿠키 동의 배너 없이 즉시 로드** — 사용자가 "GA4 는 표준이니 일반적 방향으로, 가드레일과 충돌하면 가드레일 완화" 로 명시 결정. 근거: 1차 타겟이 한국·일본(EU ePrivacy 식 쿠키 배너 관행이 약함) + 마케팅 랜딩(앱 본체 아님, 개인 식별 데이터 미수집).
   - **개인정보처리방침 갱신은 후속**: `content/legal/privacy.{ko,ja,en}.md` 에 "Google Analytics(쿠키 `_ga`) 사용 + 트래픽 분석 목적 + Google 제3자 처리" 조항 추가 필요(P1). EU 트래픽이 유의미해지거나 앱 내 분석으로 확장 시 → **Google Consent Mode v2 + 동의 배너** 로 승격(그때 safety-security-reviewer 사인오프).
 - IP 기반 지오 분기는 안 함 (PIPA 민감). 사용자 명시 로케일 선택만 따름.
