@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import ReactDOM from 'react-dom';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
@@ -83,6 +84,20 @@ export default async function LocaleLayout({
   return (
     <html lang={locale}>
       <body className="flex min-h-screen flex-col text-[color:var(--color-text)] antialiased">
+        {/* Google Analytics 4 (gtag.js). Measurement ID 는 공개 토큰이라
+            하드코딩 안전(naver-site-verification 과 동일 근거). App Router 에선
+            raw <head> 붙여넣기 대신 next/script(afterInteractive)로 로드해
+            하이드레이션 안전 + 3 locale 전 페이지 자동 적용. */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-MW73GQ2ZRX"
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-MW73GQ2ZRX');`}
+        </Script>
         <NextIntlClientProvider messages={messages}>
           <Navbar />
           {/* Navbar is position:absolute, so it leaves no flow space.
