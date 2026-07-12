@@ -19,7 +19,10 @@ import CountryFlag from 'react-native-country-flag';
 import { useTranslation } from 'react-i18next';
 import * as SecureStore from 'expo-secure-store';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useKeyboardState } from 'react-native-keyboard-controller';
+import {
+  useReanimatedKeyboardAnimation,
+} from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { ChatBubble } from '@/components/chat/ChatBubble';
 import { AudioPlayer } from '@/components/chat/AudioPlayer';
 import { IntimacyGauge } from '@/components/chat/IntimacyGauge';
@@ -231,14 +234,16 @@ export default function ChatScreen() {
   const [text, setText] = useState('');
   const [composerError, setComposerError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  // react-native-keyboard-controller reports the *visual* keyboard height
-  // (including OEM suggestion / IME menu bars on Android — Samsung One UI
-  // etc.) on both platforms. The previous manual RN Keyboard listener
-  // missed that on Samsung devices, leaving the input dock partially
-  // hidden. Activity-level adjustResize is set once at the root layout
-  // (useResizeMode) so kbHeight here is consistent with viewport behavior.
-  const keyboardOpen = useKeyboardState((s) => s.isVisible);
-  const kbHeight = useKeyboardState((s) => s.height);
+  // Frame-driven keyboard offset. `height` is a Reanimated shared value that
+  // interpolates 0 (closed) -> -visualKeyboardHeight (open) every frame during
+  // the show/hide animation — the SAME visual-height source as useKeyboardState
+  // (OEM IME suggestion / menu bars on Samsung One UI etc. are included), but
+  // continuous instead of a single end-of-animation snapshot. That snapshot is
+  // exactly why the dock used to snap into place only after the keyboard had
+  // fully settled. Negative-when-open is the library's convention (verified vs
+  // node_modules .../hooks/index.d.ts + KeyboardStickyView/index.js, where
+  // translateY = height moves the sticky view UP as the keyboard rises).
+  const { height: kbAnimHeight } = useReanimatedKeyboardAnimation();
   const [newMessagesCount, setNewMessagesCount] = useState(0);
   const [selectedEmotion, setSelectedEmotion] = useState<Emotion>(DEFAULT_EMOTION);
   const [emotionPickerOpen, setEmotionPickerOpen] = useState(false);
@@ -521,19 +526,49 @@ export default function ChatScreen() {
     );
   };
 
-  const bottomSafePad = keyboardOpen ? 8 : 8 + Math.max(insets.bottom, MIN_BOTTOM_SAFE_PAD);
+  // idempotent-send follow-up (2026-07-12): 안전영역(하단 네비바) padding 을
+  // keyboardOpen discrete state 로 계단식 전환하면, 부드럽게 움직이는 dock
+  // translateY 와 타이밍이 어긋나 애니메이션 도중 dock 이 insets.bottom(삼성
+  // 3버튼 네비바 ~90px) 만큼 오버슈트했다가 보정되는 문제가 있었다 — 올라올 때
+  // 과상승(키보드 위로 뜸), 내려갈 때 과하강(네비바 뒤로 내려감). → padding 을
+  // **상수로 고정**하고, dock 이동은 아래 translateY 단일 값(Math.min 클램프로
+  // 안전영역 구간만큼은 안 움직이게)으로만 구동해 계단 자체를 제거. 열림/닫힘
+  // 끝점 위치는 수학적으로 동일(row = kbH + 8 / insets + 8)하고 전환만 부드러워짐.
+  const safeInset = Math.max(insets.bottom, MIN_BOTTOM_SAFE_PAD);
+  const bottomSafePad = 8 + safeInset;
   // The input dock (emotion row + input bar) is absolutely positioned over
   // the list. Reserve exactly its measured height as bottom padding so the
   // last message is never occluded, plus EXTRA_BUBBLE_GAP for breathing
   // room. inputDockHeight is measured by onLayout and falls back to a
   // conservative estimate before the first measurement.
-  // useKeyboardState reports the keyboard's visual top edge accurately on
-  // both platforms (including OEM IME menu bars on Android). A bottom: 0
-  // dock with this offset sits flush above the keyboard everywhere.
-  const dockBottomOffset = keyboardOpen ? kbHeight : 0;
   const dockHeightFallback = 54 + bottomSafePad + (emotionPickerOpen ? EMOTION_PICKER_ROW_HEIGHT : 0);
-  const listBottomPad =
-    (inputDockHeight || dockHeightFallback) + dockBottomOffset + EXTRA_BUBBLE_GAP;
+  // Rest-state (keyboard-closed) reservations. The live keyboard height is
+  // added on top of these via the animated styles below so the three elements
+  // that must move with the keyboard — the dock, the inverted list's visual
+  // bottom spacer, and the "new messages" badge — track it frame-by-frame.
+  const listBottomPadBase = (inputDockHeight || dockHeightFallback) + EXTRA_BUBBLE_GAP;
+  const badgeBottomBase = 54 + bottomSafePad + 8;
+
+  // --- Frame-synced keyboard tracking (kbAnimHeight: 0 closed -> -kbH open) ---
+  // dock 이 실제로 위로 이동하는 거리(항상 ≤ 0, 위로가 음수):
+  //   lift = min(0, kbAnimHeight + safeInset)
+  // 키보드가 안전영역(safeInset) 높이만큼 올라오는 첫 구간에는 dock 이 안 움직이고
+  // (그 구간은 dock 의 상수 안전영역 padding 이 이미 커버), 그 이후부터 부드럽게
+  // 올라간다. → padding 계단 없이 단일 값으로만 움직여 오버슈트 제거. 세 요소
+  // (dock / inverted 리스트 하단 spacer / new-messages badge)가 같은 lift 를 공유해
+  // 프레임 정합. 끝점: 열림 lift = -(kbH - safeInset), 닫힘 lift = 0.
+  const dockAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: Math.min(0, kbAnimHeight.value + safeInset) }],
+  }));
+  // 2) Inverted-list bottom spacer (visual bottom, above the dock): dock 이
+  //    올라간 만큼(-lift) 함께 커져 최신 버블이 상승 중 dock 뒤로 안 숨음.
+  const listSpacerStyle = useAnimatedStyle(() => ({
+    height: listBottomPadBase - Math.min(0, kbAnimHeight.value + safeInset),
+  }));
+  // 3) "New messages" badge floats just above the dock — ride the same lift.
+  const badgeAnimStyle = useAnimatedStyle(() => ({
+    bottom: badgeBottomBase - Math.min(0, kbAnimHeight.value + safeInset),
+  }));
 
   const headerTitle = partnerDeleted
     ? t('common.deletedUser')
@@ -629,7 +664,7 @@ export default function ChatScreen() {
           style={styles.list}
           // Inverted: ListHeaderComponent renders at the visual BOTTOM (above
           // the input dock), ListFooterComponent renders at the visual TOP.
-          ListHeaderComponent={<View style={{ height: listBottomPad }} />}
+          ListHeaderComponent={<Animated.View style={listSpacerStyle} />}
           ListFooterComponent={
             // chat-flatlist-pagination sprint: also surface the spinner while
             // older pages are being fetched. In an inverted list the footer
@@ -642,41 +677,35 @@ export default function ChatScreen() {
         />
 
         {newMessagesCount > 0 && (
-          <Pressable
-            onPress={handleNewMessagesBadgePress}
-            accessibilityRole="button"
-            accessibilityLabel={t('chat.newMessagesBadge', { count: newMessagesCount })}
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.newMessagesBadge,
-              {
-                bottom: dockBottomOffset + 54 + bottomSafePad + 8,
-              },
-              pressed && { transform: [{ scale: 0.97 }] },
-            ]}
-          >
-            <LinearGradient
-              colors={[...gradients.primary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.newMessagesBadgeInner}
+          // Outer Animated.View owns the absolute positioning + keyboard-synced
+          // `bottom`; the inner Pressable keeps the press-scale transform so the
+          // two don't collide on the same `transform`/`bottom` style keys.
+          <Animated.View style={[styles.newMessagesBadge, badgeAnimStyle]}>
+            <Pressable
+              onPress={handleNewMessagesBadgePress}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.newMessagesBadge', { count: newMessagesCount })}
+              hitSlop={8}
+              style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]}
             >
-              <Text style={styles.newMessagesBadgeText}>
-                {t('chat.newMessagesBadge', { count: newMessagesCount })}
-              </Text>
-              <Ionicons name="arrow-down" size={14} color={colors.white} />
-            </LinearGradient>
-          </Pressable>
+              <LinearGradient
+                colors={[...gradients.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.newMessagesBadgeInner}
+              >
+                <Text style={styles.newMessagesBadgeText}>
+                  {t('chat.newMessagesBadge', { count: newMessagesCount })}
+                </Text>
+                <Ionicons name="arrow-down" size={14} color={colors.white} />
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
         )}
 
-        <View
+        <Animated.View
           onLayout={(e) => setInputDockHeight(e.nativeEvent.layout.height)}
-          style={[
-            styles.inputDock,
-            {
-              bottom: dockBottomOffset,
-            },
-          ]}
+          style={[styles.inputDock, dockAnimStyle]}
         >
           {(partnerDeleted || matchUnmatched) ? (
             // Tombstone match — either the partner is gone (mig 012) or the
@@ -797,7 +826,7 @@ export default function ChatScreen() {
               </View>
             </>
           )}
-        </View>
+        </Animated.View>
       </View>
 
       <Modal
