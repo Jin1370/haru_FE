@@ -270,6 +270,8 @@ export default {
         invalidImageFormat: "JPEG, PNG, WebP の画像のみアップロードできます。",
         fileTooLarge: "ファイルが大きすぎます",
         photoSizeLimit: "写真は5MB以下にしてください。",
+        photoReadFailed:
+            "写真を読み込めませんでした。別の写真を選ぶか、iCloudの写真の場合はダウンロードしてからもう一度お試しください。",
         uploadFailed: "アップロード失敗",
         // photo-watercolor-pipeline sprint: gpt-image-2 非同期変換の status overlay カピ。
         // AI 変換ラベルは利用者決定 #1 により非表示 — カピも「イラスト」表現に留めて

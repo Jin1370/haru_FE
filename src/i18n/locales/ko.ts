@@ -271,6 +271,8 @@ export default {
         invalidImageFormat: "JPEG, PNG, WebP 이미지만 업로드할 수 있습니다.",
         fileTooLarge: "파일이 너무 큽니다",
         photoSizeLimit: "사진은 5MB 이하여야 합니다.",
+        photoReadFailed:
+            "사진을 불러오지 못했어요. 다른 사진을 고르거나, iCloud 사진이면 다운로드 후 다시 시도해주세요.",
         uploadFailed: "업로드 실패",
         // photo-watercolor-pipeline sprint: gpt-image-2 비동기 변환 status overlay
         // 카피. AI 변환 라벨은 사용자 결정 #1 에 따라 미노출 — 본 카피들도 "그림"

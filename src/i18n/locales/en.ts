@@ -270,6 +270,8 @@ export default {
     invalidImageFormat: 'Only JPEG, PNG, and WebP images are allowed.',
     fileTooLarge: 'File Too Large',
     photoSizeLimit: 'Photo must be under 5MB.',
+    photoReadFailed:
+      "Couldn't load that photo. Pick a different one, or if it's an iCloud photo, download it first and try again.",
     uploadFailed: 'Upload Failed',
     // photo-watercolor-pipeline sprint: gpt-image-2 async conversion status overlays.
     // AI conversion label intentionally suppressed (user decision #1) — phrasing stays

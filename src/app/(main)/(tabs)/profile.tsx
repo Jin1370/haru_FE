@@ -161,11 +161,21 @@ export default function ProfileScreen() {
   }, [bioSet, allSlotsSettled, loadProfile]);
 
   const pickAndValidate = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 1,
-    });
+    let result: ImagePicker.ImagePickerResult;
+    try {
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+      });
+    } catch {
+      // iOS PHPicker can fail to read the selected asset's representation
+      // (e.g. HEIC/JPEG stored in iCloud but not downloaded locally), throwing
+      // "Failed to read picked image". Surface a retry hint instead of letting
+      // the promise reject unhandled.
+      showAlert({ variant: 'info', title: t('profile.photoReadFailed') });
+      return null;
+    }
 
     if (result.canceled || !result.assets[0]) return null;
 

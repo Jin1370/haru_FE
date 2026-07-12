@@ -102,11 +102,21 @@ export default function SetupStep5() {
 
     const pickAndValidate = async () => {
         setPhotoError(null);
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ["images"],
-            allowsEditing: false,
-            quality: 1,
-        });
+        let result: ImagePicker.ImagePickerResult;
+        try {
+            result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ["images"],
+                allowsEditing: false,
+                quality: 1,
+            });
+        } catch {
+            // iOS PHPicker can fail to read the selected asset's representation
+            // (e.g. HEIC/JPEG stored in iCloud but not downloaded locally),
+            // throwing "Failed to read picked image". Surface a retry hint
+            // instead of letting the promise reject unhandled.
+            setPhotoError(t("profile.photoReadFailed"));
+            return null;
+        }
         if (result.canceled || !result.assets[0]) return null;
         // Crop(3:4)/rotate/flip in our cross-platform editor. Output is a JPEG
         // URI (the native picker's square-on-iOS limitation no longer applies).

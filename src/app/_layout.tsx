@@ -260,6 +260,30 @@ function RootLayout() {
     return () => sub.remove();
   }, []);
 
+  // 딥링크 flush 안전망 — 스플래시 무한 홀드 방지.
+  //
+  // 관측된 버그: 앱을 오래 방치한 뒤 알림을 탭해 콜드 스타트하면, 만료된 토큰
+  // 갱신으로 auto-login(tryAutoLogin) 이 느려져 인증 settle · coldChecked ·
+  // 세그먼트 안착(onTabs) 의 비동기 게이트가 어긋난다. 한 번 어긋나면 아래
+  // flush effect 가 끝내 돌지 못하고, splash hide effect 는 pendingDeepLink 이
+  // 남아있는 한 스플래시를 계속 유지한다 → 사용자는 분홍 스플래시에 갇혀
+  // 강제 종료 후 수동으로 채팅방을 찾아가야 했다.
+  //
+  // 해결: 인증이 확정(canHonor)된 뒤에도 일정 시간 flush 가 안 되면 데드라인을
+  // 올려 (a) flush 를 best-effort 로 강행하고(onTabs 미충족이라도 이동) (b)
+  // 스플래시를 내린다. 정상 흐름은 canHonor 직후 프레임 안에 flush 되어 이
+  // 타이머가 발동하기 전에 취소되므로 영향이 없다. 데드라인 발동 시 뒤늦은
+  // discover 리다이렉트가 chat 을 덮어 사용자가 discover 로 떨어질 수 있으나,
+  // 영구 스플래시 행보다는 복구 가능한 상태라 허용한다.
+  const [deepLinkDeadline, setDeepLinkDeadline] = useState(false);
+  useEffect(() => {
+    if (!pendingDeepLink) return;
+    if (!coldChecked) return;
+    if (!isAuthenticated || !hasProfile) return;
+    const id = setTimeout(() => setDeepLinkDeadline(true), 4000);
+    return () => clearTimeout(id);
+  }, [coldChecked, isAuthenticated, hasProfile, deepLinkTick]);
+
   // pending deep link flush — 네비게이션 트리가 마운트(appReady)되고 인증/프로필
   // 이 확정된 뒤에만 router.push 한다. 이 조건 전에는 (main) 가드가 로그인으로
   // 튕기거나 Stack 자체가 없어서 push 가 유실되기 때문. auto-login 이 늦게
@@ -276,14 +300,23 @@ function RootLayout() {
     if (!pendingDeepLink) return;
     if (!fontsLoaded || isLoading) return;
     if (!isAuthenticated || !hasProfile) return;
+    // onTabs 미충족이어도 데드라인이 지났으면 best-effort 로 강행한다(안전망).
     const onTabs = segments[0] === '(main)' && segments[1] === '(tabs)';
-    if (!onTabs) return;
+    if (!onTabs && !deepLinkDeadline) return;
     const link = pendingDeepLink;
     pendingDeepLink = null;
     navigateToDeepLink(link);
     // chat push 완료 → splash hide effect 가 재평가하도록 tick 을 올린다.
     setDeepLinkTick((t) => t + 1);
-  }, [segments, deepLinkTick, fontsLoaded, isLoading, isAuthenticated, hasProfile]);
+  }, [
+    segments,
+    deepLinkTick,
+    fontsLoaded,
+    isLoading,
+    isAuthenticated,
+    hasProfile,
+    deepLinkDeadline,
+  ]);
 
   // push-notifications sprint follow-up: 인증·프로필 보유 사용자 자동 토큰 재등록.
   // setup step5 에만 권한 트리거를 두면 dev build 적용 이전에 회원가입을 끝낸
@@ -316,10 +349,21 @@ function RootLayout() {
     }
     if (!coldChecked) return;
     const canHonor = isAuthenticated && hasProfile;
-    if (pendingDeepLink && canHonor) return;
+    // 데드라인 전까지만 chat push 를 기다리며 스플래시를 유지한다. 데드라인이
+    // 지나면(flush 가 어긋난 경우) 홀드를 풀어 스플래시를 내린다 — 무한 행 방지.
+    if (pendingDeepLink && canHonor && !deepLinkDeadline) return;
     if (pendingDeepLink && !canHonor) pendingDeepLink = null;
     SplashScreen.hideAsync().catch(() => {});
-  }, [appReady, laidOut, updateBlocked, coldChecked, deepLinkTick, isAuthenticated, hasProfile]);
+  }, [
+    appReady,
+    laidOut,
+    updateBlocked,
+    coldChecked,
+    deepLinkTick,
+    isAuthenticated,
+    hasProfile,
+    deepLinkDeadline,
+  ]);
 
   if (!appReady) return null;
 

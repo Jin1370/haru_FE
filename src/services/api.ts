@@ -4,6 +4,12 @@ import type { TokenRefreshResponse } from '@/types';
 
 const TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
+// optimistic-auth-boot: 콜드 스타트 시 네트워크 검증 없이 곧바로 라우팅하기 위한
+// 경량 마커. userId 는 채팅에서 내/상대 메시지 분류(sender_id === userId)에 필요하고,
+// hasProfile 은 discover vs setup 라우팅에 필요하다. 세션 검증(getMyProfile)은 진입
+// 후 백그라운드로 수행한다. AsyncStorage(네이티브 모듈) 추가를 피하려 SecureStore 에
+// 저장 — JSON 이 수십 바이트라 SecureStore 크기 제한(2KB)에 여유롭다.
+const BOOT_STATE_KEY = 'auth_boot_state';
 const REQUEST_TIMEOUT_MS = 25000;
 const UPLOAD_TIMEOUT_MS = 60000;
 
@@ -128,6 +134,31 @@ export async function saveTokens(accessToken: string, refreshToken: string) {
 export async function clearTokens() {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
   await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+  // 로그아웃/탈퇴/세션 사망 시 부팅 마커도 함께 폐기 — 다음 실행에서 옛 사용자
+  // 라우팅 상태로 낙관적 진입하는 것을 막는다.
+  await SecureStore.deleteItemAsync(BOOT_STATE_KEY);
+}
+
+// optimistic-auth-boot: 콜드 스타트 낙관적 진입용 마커. hasProfile 이 boolean 이
+// 아니면 손상으로 간주해 null(마커 없음)로 취급한다.
+export type AuthBootState = { userId: string | null; hasProfile: boolean };
+
+export async function saveAuthBootState(state: AuthBootState): Promise<void> {
+  await SecureStore.setItemAsync(BOOT_STATE_KEY, JSON.stringify(state));
+}
+
+export async function getAuthBootState(): Promise<AuthBootState | null> {
+  const raw = await SecureStore.getItemAsync(BOOT_STATE_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<AuthBootState>;
+    if (typeof parsed?.hasProfile === 'boolean') {
+      return { userId: parsed.userId ?? null, hasProfile: parsed.hasProfile };
+    }
+  } catch {
+    // 손상된 값 → 마커 없음으로 취급 (블로킹 검증 경로로 폴백).
+  }
+  return null;
 }
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -178,16 +209,27 @@ async function getValidToken(): Promise<string | null> {
 // Those paths call this on a 401 then retry once with the new token. Returning
 // null means the session is truly dead — the caller surfaces the 401 and the
 // next regular request() will fire onSessionExpired → logout.
-export async function refreshSession(): Promise<string | null> {
+// 동시 401 을 하나의 /refresh 로 합친다. 콜드 스타트 채팅 진입 시 메시지 fetch +
+// 상대정보 fetch + 백그라운드 프로필 하이드레이트가 같은 만료 토큰으로 동시에
+// 401 을 받는데, 각자 refreshAccessToken() 을 호출하면 rotating refresh token 으로
+// /refresh 가 여러 번 나가 Supabase 의 재사용 감지가 세션을 무효화(예기치 않은
+// 로그아웃)할 수 있다. in-flight 리프레시를 공유해 정확히 1회만 호출한다.
+async function dedupedRefresh(): Promise<string | null> {
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
   }
   isRefreshing = true;
   refreshPromise = refreshAccessToken();
-  const newToken = await refreshPromise;
-  isRefreshing = false;
-  refreshPromise = null;
-  return newToken;
+  try {
+    return await refreshPromise;
+  } finally {
+    isRefreshing = false;
+    refreshPromise = null;
+  }
+}
+
+export async function refreshSession(): Promise<string | null> {
+  return dedupedRefresh();
 }
 
 class ApiClient {
@@ -229,11 +271,7 @@ class ApiClient {
       path.startsWith('/api/auth/google');
 
     if (res.status === 401 && retry && !isAuthIssueEndpoint) {
-      isRefreshing = true;
-      refreshPromise = refreshAccessToken();
-      const newToken = await refreshPromise;
-      isRefreshing = false;
-      refreshPromise = null;
+      const newToken = await dedupedRefresh();
 
       if (newToken) {
         return this.request<T>(path, options, false, timeoutMs);

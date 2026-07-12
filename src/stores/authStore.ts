@@ -5,6 +5,8 @@ import {
   getAccessToken,
   getRefreshToken,
   resetAccountFrozenState,
+  saveAuthBootState,
+  getAuthBootState,
   ApiRequestError,
 } from '@/services/api';
 import {
@@ -152,20 +154,46 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 
+  // optimistic-auth-boot: 콜드 스타트 시 네트워크 검증을 부팅 임계 경로에서 뺀다.
+  //
+  // 리프레시 토큰은 장수명(수 주+)이라 오래 방치해 액세스 토큰만 만료된 경우가
+  // 대부분이다. 옛 구현은 getMyProfile() 네트워크 왕복으로 세션을 먼저 검증한 뒤
+  // 진입해, 그동안 _layout 이 스플래시를 붙잡아 사용자가 "핑크 화면 몇 초 멈춤 →
+  // 강제종료" 를 겪었다(특히 idle-long).
+  //
+  // 새 흐름: 저장된 부팅 마커(userId + hasProfile)가 있으면 곧바로 진입 상태로
+  // 만들고(네트워크 0), 전체 프로필 하이드레이트 + 세션 검증은 백그라운드로
+  // 미룬다. 액세스 토큰이 만료됐어도 진입 후 첫 API 호출에서 api.ts 의
+  // 401→refresh→retry 가 조용히 갱신하고, 리프레시까지 죽은 드문 경우엔
+  // onSessionExpired → logout 이 로그인으로 강등한다.
   tryAutoLogin: async () => {
     if (get().isAuthenticated) return;
     set({ isLoading: true });
     try {
-      const token = await getAccessToken();
-      const refreshToken = await getRefreshToken();
+      const [token, refreshToken] = await Promise.all([
+        getAccessToken(),
+        getRefreshToken(),
+      ]);
       if (!token && !refreshToken) {
-        set({ isLoading: false });
+        // 세션 없음 → 로그인. SecureStore 읽기는 로컬이라 즉시.
         return;
       }
-      // Validate the session by fetching the profile directly so we can
-      // distinguish "auth is dead" from "auth works but no profile yet".
-      // loadProfile() swallows errors for its other callers, so we can't
-      // reuse it here.
+      const boot = await getAuthBootState();
+      if (boot) {
+        // 낙관적 진입 — 라우팅 상태(hasProfile)와 userId 를 로컬 마커에서 복원해
+        // 채팅이 메시지를 즉시 올바르게 분류할 수 있게 한다. 프로필 하이드레이트/
+        // 세션 검증은 백그라운드(loadProfile). 실패는 loadProfile 내부에서
+        // 흡수하고, 회복 불가 401 은 api.ts 의 onSessionExpired 가 처리한다.
+        set({
+          isAuthenticated: true,
+          hasProfile: boot.hasProfile,
+          userId: boot.userId,
+        });
+        get().loadProfile().catch(() => undefined);
+        return;
+      }
+      // 마커 없음(이 기능 배포 후 첫 실행 또는 프로필 상태 미상) → 라우팅 정확성을
+      // 위해 옛 방식대로 블로킹 검증. 이후엔 마커가 저장돼 다음 실행부터 즉시 진입.
       try {
         const profile = await getMyProfile();
         set({
@@ -174,14 +202,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           userId: profile.id,
           isAuthenticated: true,
         });
+        saveAuthBootState({ userId: profile.id, hasProfile: true }).catch(
+          () => undefined,
+        );
       } catch (e) {
         // 404: auth is valid, profile just doesn't exist yet → route to setup.
         if (e instanceof ApiRequestError && e.status === 404) {
-          set({
-            profile: null,
-            hasProfile: false,
-            isAuthenticated: true,
-          });
+          set({ profile: null, hasProfile: false, isAuthenticated: true });
+          saveAuthBootState({ userId: null, hasProfile: false }).catch(
+            () => undefined,
+          );
         } else {
           // 401 (user deleted / token invalid) or network error → session
           // cannot be recovered. Wipe tokens and drop to login.
@@ -204,10 +234,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const profile = await getMyProfile();
       set({ profile, hasProfile: true, userId: profile.id });
+      // 다음 콜드 스타트 낙관적 진입을 위해 라우팅 상태를 로컬에 캐시.
+      saveAuthBootState({ userId: profile.id, hasProfile: true }).catch(
+        () => undefined,
+      );
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 404) {
         // Auth still works, just no profile row → signup wizard path.
         set({ profile: null, hasProfile: false });
+        saveAuthBootState({ userId: null, hasProfile: false }).catch(
+          () => undefined,
+        );
         return;
       }
       // Anything else (401 from a deleted user, network errors) leaves the
@@ -217,6 +254,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   setProfile: (profile: Profile) => {
-    set({ profile, hasProfile: true });
+    set({ profile, hasProfile: true, userId: profile.id });
+    saveAuthBootState({ userId: profile.id, hasProfile: true }).catch(
+      () => undefined,
+    );
   },
 }));
