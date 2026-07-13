@@ -63,14 +63,18 @@ export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
     // 실제로 도달하기 어려운 분기. "비어 있는 카드" 회피용 폴백.
     lastMessageText = t('matches.startConversation');
   } else {
-    // 상대 발신 + ready. 청취 완료 → 원문, 미청취 → 카운트 표시 분기가 처리.
-    lastMessageText = isListened ? (lastMessage.original_text ?? '') : '';
+    // 상대 발신 + ready. 청취 완료 → 원문, 미청취 → "새 메시지" 마스크.
+    // 본문은 청취 전까지 노출하지 않는다 ("음성을 들어야 안다" funnel). 미청취
+    // 개수는 우측 배지가 별도로 표시하므로 여기선 중립 마스크만 채운다.
+    lastMessageText = isListened
+      ? (lastMessage.original_text ?? '')
+      : t('matches.preview.newMessage');
   }
 
-  // hasUnread 면 lastMessage 자리를 "N개의 새 메시지" 텍스트로 덮어쓴다.
-  // 숫자만 핑크(`colors.primary`) 강조. 99 초과는 "99+" 로 절단. tombstone 매치는
-  // unread 자체를 표시 안 함 (기존 정책).
-  const showUnreadCount = hasUnread && !isTombstone;
+  // 미청취 상대 메시지 개수는 미리보기 텍스트와 분리해 우측 핑크 배지로 표시한다
+  // (카톡/라인 관례 — 미리보기 = 마지막 대화, 배지 = 안 읽음 개수). 99 초과는
+  // "99+" 로 절단. tombstone 매치는 unread 자체를 표시 안 함 (기존 정책).
+  const showUnreadBadge = hasUnread && !isTombstone;
   const unreadCountDisplay = item.unread_count > 99 ? '99+' : String(item.unread_count);
 
   return (
@@ -103,33 +107,32 @@ export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
               style={styles.mutedIcon}
             />
           )}
-        </View>
-        <View style={styles.messageRow}>
-          {/* lastMessage 자리. unread 가 있으면 "N개의 새 메시지" 형식으로
-              덮어쓰며 숫자만 핑크 강조. 그 외엔 일반 미리보기 텍스트. */}
-          {showUnreadCount ? (
-            <Text
-              style={[styles.lastMessage, styles.lastMessageUnread]}
-              numberOfLines={1}
-            >
-              <Text style={styles.unreadCount}>{unreadCountDisplay}</Text>
-              {t('matches.preview.newMessagesSuffix')}
-            </Text>
-          ) : (
-            <Text
-              style={[
-                styles.lastMessage,
-                isTombstone && styles.lastMessageTombstone,
-              ]}
-              numberOfLines={1}
-            >
-              {lastMessageText}
-            </Text>
-          )}
+          {/* 시간은 이름 행 우측에 둔다 (카톡/라인 관례). 미리보기 행 우측은
+              안 읽음 배지 자리로 비워둔다. */}
           {item.last_message && (
             <Text style={styles.time}>
               {formatRelativeTime(item.last_message.created_at, t, i18n.language)}
             </Text>
+          )}
+        </View>
+        <View style={styles.messageRow}>
+          {/* 미리보기 텍스트 = 마지막 메시지 (본인 발신 → 원문, 상대 미청취 →
+              "새 메시지" 마스크, 상대 청취 → 원문). unread 가 있으면 톤을 강조. */}
+          <Text
+            style={[
+              styles.lastMessage,
+              showUnreadBadge && styles.lastMessageUnread,
+              isTombstone && styles.lastMessageTombstone,
+            ]}
+            numberOfLines={1}
+          >
+            {lastMessageText}
+          </Text>
+          {/* 안 읽음(미청취) 개수 배지 — 미리보기 텍스트와 분리된 우측 신호. */}
+          {showUnreadBadge && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCountDisplay}</Text>
+            </View>
           )}
         </View>
       </View>
@@ -208,10 +211,31 @@ const styles = StyleSheet.create({
     // 두어 구분.
     color: colors.textLight,
   },
-  // unread 카운트 숫자만 핑크 강조. 부모 Text 의 fontSize/lineHeight 를 상속해
-  // baseline 이 어긋나지 않는다. semibold 로 살짝 굵게 — 가독성 보강.
-  unreadCount: {
-    color: colors.primary,
-    fontFamily: fonts.semibold,
+  // 안 읽음 개수 배지 — 미리보기 행 우측 끝의 핑크 원형 pill. minWidth 로 한
+  // 자리 숫자는 원형, 두 자리 이상은 좌우 패딩으로 자연 확장. 높이 20 은 행
+  // minHeight 22 안에 들어와 read/unread 행 높이가 흔들리지 않는다.
+  badge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 11,
+    lineHeight: 14,
+    // 앱 전역은 Galmuri11(픽셀 폰트)이지만, 그 숫자 글리프는 advance 셀 안에서
+    // 좌측에 그려져 원 안에서 왼쪽으로 치우친다 (textAlign 으로도 폰트 내부
+    // side-bearing 은 못 고침). 배지 숫자에만 예외로 Pretendard(비픽셀,
+    // _layout 에서 loadAsync 됨)를 써서 원 정중앙에 오게 한다. 작은 숫자라
+    // 픽셀 톤 이질감은 거의 없고 11px 가독성은 오히려 낫다.
+    fontFamily: 'Pretendard-SemiBold',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 });

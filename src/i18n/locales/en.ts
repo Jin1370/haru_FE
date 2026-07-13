@@ -196,8 +196,9 @@ export default {
     },
     preview: {
       // read-at-removal-list-mask sprint: masked preview for unheard partner messages.
-      // Numeric count is prepended by FE — leading space keeps "{n} new messages" formatting.
-      newMessagesSuffix: ' new messages',
+      // The unread count is shown separately by the right-side badge, so the
+      // preview slot only carries a neutral mask.
+      newMessage: 'New message',
     },
     report: {
       title: 'Report',

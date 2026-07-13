@@ -196,8 +196,8 @@ export default {
         },
         preview: {
             // read-at-removal-list-mask sprint: 相手の未試聴メッセージのマスキング。
-            // 数値は FE が前置するため、本 suffix は数字以降の部分のみ。
-            newMessagesSuffix: "件の新着メッセージ",
+            // 未試聴の件数は右側のバッジが別途表示するため、プレビューは中立マスクのみ。
+            newMessage: "新しいメッセージ",
         },
         report: {
             title: "通報する",

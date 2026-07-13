@@ -197,8 +197,8 @@ export default {
         preview: {
             // read-at-removal-list-mask sprint: 상대가 보낸 미청취 메시지 마스킹.
             // "음성을 들어야 안다" funnel 일관성 — 채팅 목록 카드에서도 본문 노출 차단.
-            // 카운트 수치는 FE 가 앞에 prepend 하므로 본 suffix 는 숫자 다음 부분만.
-            newMessagesSuffix: "개의 새 메시지",
+            // 미청취 개수는 우측 배지가 별도 표시하므로 미리보기 슬롯엔 중립 마스크만.
+            newMessage: "새 메시지",
         },
         report: {
             title: "신고하기",
