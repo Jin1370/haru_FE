@@ -65,7 +65,7 @@ export interface Profile {
   // 로 보장. BE 가 mig 028 미적용 윈도우에서 응답하지 않을 수 있어 optional.
   photo_statuses?: PhotoStatus[];
   // 프리미엄 entitlement (mig 033). NULL/과거 = 무료, 미래 = 프리미엄.
-  // 런칭 쿠폰 + 향후 구독 공유. 판정은 utils/premium.isPremium.
+  // 런칭 쿠폰 + 향후 구독 공유. 판정 헬퍼는 유료화 sprint 에서 도입 예정.
   premium_until?: string | null;
   is_active: boolean;
   created_at: string;
@@ -313,11 +313,6 @@ export interface Message {
   created_at: string;
 }
 
-export interface SendMessageRequest {
-  text: string;
-  emotion?: Emotion;
-}
-
 // chat-audio-async-insert sprint: send 응답에서 match_after 제거.
 //
 // BE 가 더 이상 mid-session UPDATE 패턴을 쓰지 않음 — POST 응답 시점에 INSERT
@@ -347,21 +342,6 @@ export type SendMessageResponse = Message;
 // chat-audio-async-insert sprint: retry 엔드포인트 제거. 실패 메시지는
 // audio_url=null, audio_status='failed' 로 INSERT 되어 텍스트는 전달되며,
 // 사용자는 동일 텍스트로 새 메시지를 보내 재시도한다.
-
-// === Block ===
-export interface BlockRequest {
-  blocked_id: string;
-}
-
-export interface BlockListItem {
-  blocked_id: string;
-  created_at: string;
-  profile: {
-    id: string;
-    display_name: string;
-    photos: string[];
-  };
-}
 
 // === Report ===
 export type ReportReason =
@@ -399,9 +379,4 @@ export interface PreferenceUpdateRequest {
   preferred_genders?: ('male' | 'female' | 'other')[];
   preferred_languages?: string[];
   preferred_nationalities?: string[];
-}
-
-// === Error ===
-export interface ApiError {
-  error: string;
 }

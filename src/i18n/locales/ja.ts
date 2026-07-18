@@ -13,7 +13,6 @@ export default {
         cancel: "キャンセル",
         confirm: "確認",
         delete: "削除",
-        edit: "編集",
         save: "保存",
         next: "次へ",
         done: "完了",
@@ -22,9 +21,7 @@ export default {
         networkTimeout: "応答に時間がかかっています。もう一度お試しください。",
         serverError: "一時的な問題が発生しました。しばらくしてからもう一度お試しください。",
         tryAgainLater: "問題が発生しました。もう一度お試しください。",
-        loading: "読み込み中...",
         logout: "ログアウト",
-        skip: "スキップ",
         back: "戻る",
         options: "オプション",
         ageSuffix: "{{age}}歳",
@@ -49,7 +46,6 @@ export default {
         step2SkipWarning: "声を登録しないと、相手を探せる範囲が制限されます。",
         step3Title: "ボイスひとこと",
         step3Subtitle: "選んだひとことが登録された声で自動生成されます。",
-        step3VoiceLockedAutoSkip: "声がまだ登録されていないので、ボイスひとことはスキップします。",
         step4Title: "マッチング設定",
         step4Subtitle: "どんな相手に出会いたいか教えてください。後で変更できます。",
         step5Title: "プロフィール写真",
@@ -57,12 +53,6 @@ export default {
         step5AtLeastOne: "写真を1枚以上登録すると次へ進めます。",
         step5MorePhotosBoost: "写真をたくさん登録するほどマッチ率が上がります。",
         step5ConvertingLocked: "写真をイラストに変換中です。プロフィール登録を完了してください。",
-        bioRequired: "ボイスひとことを選んでください",
-        voiceRequired: "先に声の登録を完了してください",
-        displayNameRequired: "ニックネームを入力してください",
-        birthDateRequired: "生年月日を YYYY-MM-DD の形式で入力してください",
-        register: "プロフィール登録",
-        skipAndRegister: "スキップして登録",
         registerFailed: "プロフィール登録に失敗しました。もう一度お試しください。",
         startHaru: "HARUを始める",
         skipAndStart: "スキップして始める",
@@ -81,7 +71,6 @@ export default {
         continueWithGoogle: "Googleで続行",
         loginFailed: "ログインに失敗しました",
         signupFailed: "新規登録に失敗しました",
-        enterEmailAndPassword: "メールアドレスとパスワードを入力してください",
         googleNotInExpoGo: "Googleログインは dev-client または製品ビルドでのみ利用できます。メールログインをご利用ください。",
         appleNoToken: "Apple認証トークンを取得できませんでした。もう一度お試しください。",
     },
@@ -132,8 +121,6 @@ export default {
     },
 
     discover: {
-        match: "マッチ！",
-        matchedWith: "{{name}}さんとマッチしました！",
         itsAMatch: "マッチ成立！",
         matchSubtitle: "今すぐ会話を始めてみましょう。",
         sendMessage: "メッセージを送る",
@@ -142,7 +129,6 @@ export default {
         checkBackLater: "また後で新しい人をのぞいてみてください",
         dailyLimitTitle: "今日のいいねを使い切りました",
         dailyLimitText: "日付が変わるとまた押せるようになります",
-        playBio: "自己紹介を聞く",
         lockedVoiceTitle: "先に声を登録してください",
         lockedBioTitle: "ボイスひとことを登録してください",
         lockedPhotoTitle: "プロフィール写真を登録してください",
@@ -223,7 +209,6 @@ export default {
 
     profile: {
         loadingProfile: "プロフィールを読み込み中...",
-        synthesizingBio: "自己紹介の音声を生成中...",
         infoLabels: {
             age: "年齢",
             gender: "性別",
@@ -244,21 +229,15 @@ export default {
         },
         editProfile: "プロフィール編集",
         voiceSettings: "自分の声を登録",
-        interestsSettings: "興味の設定",
         matchingPreferences: "マッチング設定",
         editBio: "ボイスひとことを登録",
         bioEmpty: "ボイスひとことを選んでみましょう",
-        editProfileSubtitle: "基本情報と声を管理できます。",
-        editInterestsSubtitle: "より相性の良い相手を見つけるための興味を選んでください。",
         editBioSubtitle: "選んだひとことが登録された声で自動生成されます。",
-        voiceSectionTitle: "声の登録",
         deletePhoto: "写真を削除",
         removePhotoConfirm: "この写真を削除しますか？",
         addPhoto: "プロフィール写真を追加",
         photoActionsTitle: "プロフィール写真",
-        changePhoto: "写真を変更",
         setAsMain: "メイン写真にする",
-        cropPhoto: "切り抜き",
         editPhoto: "変更",
         reorderingPhotos: "写真を更新中...",
         maxPhotosReached: "写真は最大5枚まで登録できます。",
@@ -266,9 +245,6 @@ export default {
         lastPhotoLockedBody: "先に他の写真を追加してください。",
         logoutTitle: "ログアウト",
         logoutConfirm: "本当にログアウトしますか？",
-        invalidFormat: "不正な形式",
-        invalidImageFormat: "JPEG, PNG, WebP の画像のみアップロードできます。",
-        fileTooLarge: "ファイルが大きすぎます",
         photoSizeLimit: "写真は5MB以下にしてください。",
         photoReadFailed:
             "写真を読み込めませんでした。別の写真を選ぶか、iCloudの写真の場合はダウンロードしてからもう一度お試しください。",
@@ -297,7 +273,6 @@ export default {
         typeMessage: "メッセージを入力…",
         partnerDeletedNotice: "相手が退会したため、これ以上メッセージを送信できません。",
         matchEndedNotice: "マッチが終了したため、これ以上メッセージを送信できません。",
-        playbackError: "再生エラー",
         messagePreparing: "メッセージ準備中…",
         tapToListen: "タップして再生",
         playing: "再生中…",
@@ -308,12 +283,10 @@ export default {
         send: {
             failed: "送信できませんでした",
             retry: "タップして再送信",
-            sending: "送信中",
         },
         intimacy: "親密度",
         intimacyUntilAll: "すべての写真公開まであと{{count}}回",
         intimacyAllUnlocked: "すべての写真が公開されました",
-        swipeForMore: "横にスワイプしてもっと見る",
         newMessagesBadge: "新着メッセージ {{count}}件",
         emotion: {
             neutral: "ふつう",
@@ -360,8 +333,6 @@ export default {
     },
 
     setupProfile: {
-        createProfile: "プロフィールを作成",
-        editProfile: "プロフィール編集",
         displayName: "ニックネーム",
         displayNamePlaceholder: "ニックネームを入力してください",
         birthDate: "生年月日",
@@ -379,12 +350,8 @@ export default {
         selectLanguageRequired: "言語を選んでください",
         addLanguage: "言語を追加",
         removeLanguage: "削除",
-        bio: "ボイスひとこと",
-        bioPlaceholder: "気に入ったひとことを選んでください",
-        bioLockedPlaceholder: "ボイスクローン登録後に選べます",
         bioLockedHint: "ボイスクローンを登録するとボイスひとことが自動生成されます。先に「自分の声を登録」で声を登録してください。",
         bioPicker: {
-            subtitle: "あなたの声で届ける最初のひとことを選んでみましょう。",
             customPlaceholder: "言いたい言葉を直接入力してみてください",
             category: {
                 taste: "好み",
@@ -398,7 +365,6 @@ export default {
         },
         interests: "興味 ({{count}}/10)",
         interestsHint: "最大10個まで選べます",
-        addInterest: "興味を追加",
     },
 
     nationalities: {
@@ -522,17 +488,8 @@ export default {
     },
 
     setupVoice: {
-        title: "ボイスクローン",
-        subtitle: "音声サンプルを録音して AI ボイスクローンを作成しましょう",
-        noVoiceClone: "まだボイスクローンがありません",
-        recordingInProgress: "録音中...",
-        previewRecording: "録音を確認してみてください",
         processing: "音声を処理中です...",
-        ready: "ボイスクローンの準備ができました！",
         cloneReady: "ボイスクローン登録完了",
-        failed: "ボイスクローンの作成に失敗しました。もう一度お試しください。",
-        startRecording: "録音開始",
-        stopRecording: "録音停止",
         recordingGuide:
             "• 最低録音時間は10秒ですが、長く録音するほど実際の声に近く生成されます。\n• 優しい声で、ゆっくり、柔らかく読んでください。",
         // 音声登録ステップの離脱緩和 — voice-sample-removal sprint と整合（録音の
@@ -546,7 +503,6 @@ export default {
         processingHint: "少々お待ちください...",
         regenerateVoiceClone: "ボイスクローン再生成",
         regenerateConfirm: "新しい録音で既存のボイスクローンが上書きされます。続行しますか？",
-        skipForNow: "あとでやる",
         permissionRequired: "権限が必要です",
         microphonePermissionRequired: "マイクの権限が必要です",
         fileTooLarge: "ファイルが大きすぎます",
@@ -568,9 +524,6 @@ export default {
     },
 
     preferences: {
-        title: "マッチング設定",
-        minAge: "最小年齢",
-        maxAge: "最大年齢",
         ageRange: "希望年齢",
         ageSuffix: "歳",
         preferredGenders: "希望性別",
@@ -579,8 +532,6 @@ export default {
         sameLanguageBlockedHint: "言葉の壁を越える出会いを大切にしているので、同じ言語の相手は自動的に除外されます",
         preferredNationalities: "希望国籍",
         leaveEmptyAllNationalities: "選んだ国籍の相手が優先的に表示されます",
-        invalidAgeRange: "最小年齢は最大年齢以下にしてください。",
-        ageOutOfBounds: "年齢は{{min}}〜{{max}}歳の範囲で入力してください。",
     },
 
     settings: {

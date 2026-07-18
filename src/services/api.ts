@@ -115,8 +115,6 @@ export function registerOnAccountFrozen(cb: () => void) {
 export function resetAccountFrozenState() {
   accountFrozenFired = false;
 }
-// 테스트 격리용 — 기존 이름 호환 유지.
-export const __resetAccountFrozenDebounce = resetAccountFrozenState;
 
 export async function getAccessToken(): Promise<string | null> {
   return SecureStore.getItemAsync(TOKEN_KEY);

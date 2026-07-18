@@ -57,8 +57,3 @@ export const useAlertStore = create<AlertState>((set) => ({
 // Components can also use the store hook directly.
 export const showAlert = (spec: Omit<AlertSpec, 'id'>): string =>
   useAlertStore.getState().show(spec);
-
-// Dismiss a specific alert by id (or the front of the queue when omitted).
-// Pairs with showAlert()'s returned id for optimistic-then-reconcile flows.
-export const dismissAlert = (id?: string): void =>
-  useAlertStore.getState().dismiss(id);

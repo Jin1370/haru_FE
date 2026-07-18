@@ -13,7 +13,6 @@ export default {
     cancel: 'Cancel',
     confirm: 'OK',
     delete: 'Delete',
-    edit: 'Edit',
     save: 'Save',
     next: 'Next',
     done: 'Done',
@@ -22,9 +21,7 @@ export default {
     networkTimeout: 'The request is taking too long. Please try again.',
     serverError: 'Something went wrong on our end. Please try again later.',
     tryAgainLater: 'Something went wrong. Please try again.',
-    loading: 'Loading...',
     logout: 'Logout',
-    skip: 'Skip',
     back: 'Back',
     options: 'Options',
     ageSuffix: '{{age}} y/o',
@@ -49,7 +46,6 @@ export default {
     step2SkipWarning: "Without registering your voice, you can't discover potential matches.",
     step3Title: 'Voice intro',
     step3Subtitle: 'Your chosen line is auto-generated with your registered voice.',
-    step3VoiceLockedAutoSkip: "We'll skip the voice intro for now since your voice isn't registered yet.",
     step4Title: 'Matching Preferences',
     step4Subtitle: 'Tell us who you want to meet. You can change this later.',
     step5Title: 'Profile Photos',
@@ -57,12 +53,6 @@ export default {
     step5AtLeastOne: 'Please add at least one photo to continue.',
     step5MorePhotosBoost: 'More photos = more matches.',
     step5ConvertingLocked: 'Your photos are being converted to illustrations. Please finish setting up your profile.',
-    bioRequired: 'Please pick a voice intro',
-    voiceRequired: 'Please register your voice first',
-    displayNameRequired: 'Please enter your nickname',
-    birthDateRequired: 'Birth date must be YYYY-MM-DD',
-    register: 'Register Profile',
-    skipAndRegister: 'Skip & Register',
     registerFailed: 'Profile registration failed. Please try again.',
     startHaru: 'Start HARU',
     skipAndStart: 'Skip & Start',
@@ -81,7 +71,6 @@ export default {
     continueWithGoogle: 'Continue with Google',
     loginFailed: 'Login Failed',
     signupFailed: 'Signup Failed',
-    enterEmailAndPassword: 'Please enter email and password',
     googleNotInExpoGo: 'Google sign-in only works in a dev-client or production build. Please use email login instead.',
     appleNoToken: 'Could not get an identity token from Apple. Please try again.',
   },
@@ -132,8 +121,6 @@ export default {
   },
 
   discover: {
-    match: 'Match!',
-    matchedWith: 'You matched with {{name}}!',
     itsAMatch: "It's a Match!",
     matchSubtitle: 'Start the conversation right now.',
     sendMessage: 'Send Message',
@@ -142,7 +129,6 @@ export default {
     checkBackLater: 'Check back later for new people',
     dailyLimitTitle: "You're out of likes for today",
     dailyLimitText: 'Your likes refresh after midnight',
-    playBio: 'Play bio',
     lockedVoiceTitle: 'Register your voice first',
     lockedBioTitle: 'Set your voice intro first',
     lockedPhotoTitle: 'Add a profile photo first',
@@ -224,7 +210,6 @@ export default {
 
   profile: {
     loadingProfile: 'Loading profile...',
-    synthesizingBio: 'Synthesizing your bio...',
     infoLabels: {
       age: 'Age',
       gender: 'Gender',
@@ -245,21 +230,15 @@ export default {
     },
     editProfile: 'Edit Profile',
     voiceSettings: 'Register My Voice',
-    interestsSettings: 'Interests',
     matchingPreferences: 'Matching Preferences',
     editBio: 'Set Voice intro',
     bioEmpty: 'Pick a voice intro',
-    editProfileSubtitle: 'Manage your basic info and voice.',
-    editInterestsSubtitle: 'Pick interests so we can match you better.',
     editBioSubtitle: 'Your chosen line is auto-generated with your registered voice.',
-    voiceSectionTitle: 'Voice',
     deletePhoto: 'Delete Photo',
     removePhotoConfirm: 'Remove this photo?',
     addPhoto: 'Add Profile Photo',
     photoActionsTitle: 'Profile Photo',
-    changePhoto: 'Change Photo',
     setAsMain: 'Set as Main Photo',
-    cropPhoto: 'Crop',
     editPhoto: 'Edit',
     reorderingPhotos: 'Updating photos...',
     maxPhotosReached: 'You can upload up to 5 photos.',
@@ -267,9 +246,6 @@ export default {
     lastPhotoLockedBody: 'Add another photo first.',
     logoutTitle: 'Logout',
     logoutConfirm: 'Are you sure you want to log out?',
-    invalidFormat: 'Invalid Format',
-    invalidImageFormat: 'Only JPEG, PNG, and WebP images are allowed.',
-    fileTooLarge: 'File Too Large',
     photoSizeLimit: 'Photo must be under 5MB.',
     photoReadFailed:
       "Couldn't load that photo. Pick a different one, or if it's an iCloud photo, download it first and try again.",
@@ -300,7 +276,6 @@ export default {
     typeMessage: 'Type a message...',
     partnerDeletedNotice: 'This person has left the app — you can no longer send messages.',
     matchEndedNotice: 'This match has ended — you can no longer send messages.',
-    playbackError: 'Playback Error',
     messagePreparing: 'Preparing message…',
     tapToListen: 'Tap to listen',
     playing: 'Playing…',
@@ -311,12 +286,10 @@ export default {
     send: {
       failed: 'Failed to send',
       retry: 'Tap to retry',
-      sending: 'Sending',
     },
     intimacy: 'Intimacy',
     intimacyUntilAll: '{{count}} more for all photos',
     intimacyAllUnlocked: 'All photos unlocked',
-    swipeForMore: 'Swipe for more',
     newMessagesBadge: '{{count}} new messages',
     emotion: {
       neutral: 'Neutral',
@@ -363,8 +336,6 @@ export default {
   },
 
   setupProfile: {
-    createProfile: 'Create Profile',
-    editProfile: 'Edit Profile',
     displayName: 'Nickname',
     displayNamePlaceholder: 'Your nickname',
     birthDate: 'Birth Date',
@@ -382,12 +353,8 @@ export default {
     selectLanguageRequired: 'Please select a language',
     addLanguage: 'Add language',
     removeLanguage: 'Remove',
-    bio: 'Voice intro',
-    bioPlaceholder: 'Pick the line you like',
-    bioLockedPlaceholder: 'Register your voice clone first to pick a line',
     bioLockedHint: "Your voice intro is generated automatically once your voice clone is registered. Please register your voice in 'Register My Voice' first.",
     bioPicker: {
-      subtitle: 'Pick the first line your voice will speak.',
       customPlaceholder: 'Type your own message',
       category: {
         taste: 'Taste',
@@ -401,7 +368,6 @@ export default {
     },
     interests: 'Interests ({{count}}/10)',
     interestsHint: 'Choose up to 10',
-    addInterest: 'Add interest',
   },
 
   nationalities: {
@@ -525,17 +491,8 @@ export default {
   },
 
   setupVoice: {
-    title: 'Voice Clone',
-    subtitle: 'Record a voice sample to create your AI voice clone',
-    noVoiceClone: 'No voice clone yet',
-    recordingInProgress: 'Recording...',
-    previewRecording: 'Preview your recording',
     processing: 'Processing your voice...',
-    ready: 'Voice clone is ready!',
     cloneReady: 'Voice clone ready',
-    failed: 'Voice clone failed. Try again.',
-    startRecording: 'Start Recording',
-    stopRecording: 'Stop Recording',
     recordingGuide:
       '• Minimum recording length is 10 seconds — the longer you record, the closer the result sounds to your real voice.\n• Please read in a warm voice, slowly and softly.',
     // Reduces drop-off at the voice step — aligned with the voice-sample-removal
@@ -550,7 +507,6 @@ export default {
     processingHint: 'This may take a moment...',
     regenerateVoiceClone: 'Regenerate voice clone',
     regenerateConfirm: 'A new recording will overwrite your existing voice clone. Continue?',
-    skipForNow: 'Skip for now',
     permissionRequired: 'Permission',
     microphonePermissionRequired: 'Microphone permission is required',
     fileTooLarge: 'File Too Large',
@@ -570,9 +526,6 @@ export default {
   },
 
   preferences: {
-    title: 'Matching Preferences',
-    minAge: 'Min Age',
-    maxAge: 'Max Age',
     ageRange: 'Age Range',
     ageSuffix: ' y/o',
     preferredGenders: 'Preferred Genders',
@@ -581,8 +534,6 @@ export default {
     sameLanguageBlockedHint: 'Crossing language barriers is the point — users sharing your language are excluded',
     preferredNationalities: 'Preferred Nationalities',
     leaveEmptyAllNationalities: 'Selected nationalities get shown first',
-    invalidAgeRange: 'Minimum age must be less than or equal to maximum age.',
-    ageOutOfBounds: 'Age must be between {{min}} and {{max}}.',
   },
 
   settings: {

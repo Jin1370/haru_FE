@@ -367,10 +367,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  chipDisabled: { opacity: 0.4 },
   chipText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.medium },
   chipActiveText: { color: colors.white },
-  chipDisabledText: { color: colors.textLight },
   hintBlock: {
     fontSize: 12,
     color: colors.textSecondary,
@@ -378,16 +376,6 @@ const styles = StyleSheet.create({
     marginTop: -4,
     marginBottom: 10,
     lineHeight: 18,
-  },
-  interestSection: {
-    marginBottom: 8,
-  },
-  interestSectionTitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    marginBottom: 8,
-    letterSpacing: 0.3,
   },
   footer: {
     position: 'absolute',

@@ -1,5 +1,4 @@
 import type { Message } from '@/types';
-import { UNLOCK_MAIN_PHOTO_AT, UNLOCK_ALL_PHOTOS_AT } from '@/constants/photoAccess';
 
 // Re-export from the canonical location so existing call sites (IntimacyGauge,
 // Chat screen) continue to work without import-path churn. Single source of
@@ -34,12 +33,4 @@ export function countRoundTrips(messages: Message[]): number {
     }
   }
   return count;
-}
-
-export type PhotoRevealStage = 'blurred' | 'main' | 'all';
-
-export function photoRevealStage(roundTrips: number): PhotoRevealStage {
-  if (roundTrips >= UNLOCK_ALL_PHOTOS_AT) return 'all';
-  if (roundTrips >= UNLOCK_MAIN_PHOTO_AT) return 'main';
-  return 'blurred';
 }

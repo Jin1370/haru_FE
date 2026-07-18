@@ -400,20 +400,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  chipDisabled: { opacity: 0.4 },
   chipText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.medium },
   chipActiveText: { color: colors.white },
-  chipDisabledText: { color: colors.textLight },
-  interestSection: {
-    marginBottom: 8,
-  },
-  interestSectionTitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    marginBottom: 8,
-    letterSpacing: 0.3,
-  },
   nationalityNoticeRow: {
     width: '100%',
     flexDirection: 'row',

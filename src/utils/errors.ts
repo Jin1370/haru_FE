@@ -21,14 +21,6 @@ export function describeError(e: unknown, fallback = 'Unexpected error'): string
 }
 
 /**
- * Narrow helper for `catch` blocks that only care about status codes.
- * Returns 0 for non-ApiRequestError values so callers can early-out.
- */
-export function errorStatus(e: unknown): number {
-  return e instanceof ApiRequestError ? e.status : 0;
-}
-
-/**
  * Localized, display-safe error message for user-facing alerts/modals.
  *
  * Unlike `describeError` (which returns the RAW message — for logs/inline

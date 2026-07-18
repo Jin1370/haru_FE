@@ -13,7 +13,6 @@ export default {
         cancel: "취소",
         confirm: "확인",
         delete: "삭제",
-        edit: "수정",
         save: "저장",
         next: "다음",
         done: "완료",
@@ -22,9 +21,7 @@ export default {
         networkTimeout: "응답이 지연되고 있어요. 다시 시도해주세요.",
         serverError: "일시적인 문제가 발생했어요. 잠시 후 다시 시도해주세요.",
         tryAgainLater: "문제가 발생했어요. 다시 시도해주세요.",
-        loading: "불러오는 중...",
         logout: "로그아웃",
-        skip: "건너뛰기",
         back: "뒤로",
         options: "옵션",
         ageSuffix: "{{age}}세",
@@ -49,7 +46,6 @@ export default {
         step2SkipWarning: "내 목소리를 등록하지 않으면 매칭 상대 탐색이 제한돼요.",
         step3Title: "보이스 한마디",
         step3Subtitle: "고른 한마디가 등록된 목소리로 자동 생성돼요.",
-        step3VoiceLockedAutoSkip: "음성이 아직 등록되지 않아 보이스 한마디는 건너뛸게요.",
         step4Title: "매칭 선호 설정",
         step4Subtitle: "어떤 사람을 만나고 싶은지 알려주세요. 나중에 바꿀 수 있어요.",
         step5Title: "프로필 사진",
@@ -57,12 +53,6 @@ export default {
         step5AtLeastOne: "사진을 한 장 이상 등록해야 진행할 수 있어요.",
         step5MorePhotosBoost: "사진을 많이 올릴 수록 매칭 확률이 높아져요.",
         step5ConvertingLocked: "사진을 그림으로 변환 중입니다. 프로필 등록을 마쳐주세요.",
-        bioRequired: "보이스 한마디를 선택해주세요",
-        voiceRequired: "음성 등록을 먼저 완료해주세요",
-        displayNameRequired: "닉네임을 입력해주세요",
-        birthDateRequired: "생년월일을 YYYY-MM-DD 형식으로 입력해주세요",
-        register: "프로필 등록",
-        skipAndRegister: "건너뛰고 등록",
         registerFailed: "프로필 등록에 실패했어요. 다시 시도해주세요.",
         startHaru: "HARU 시작하기",
         skipAndStart: "건너뛰고 시작하기",
@@ -81,7 +71,6 @@ export default {
         continueWithGoogle: "Google로 계속하기",
         loginFailed: "로그인 실패",
         signupFailed: "회원가입 실패",
-        enterEmailAndPassword: "이메일과 비밀번호를 입력해주세요",
         googleNotInExpoGo: "Google 로그인은 dev-client 또는 정식 빌드에서만 동작해요. 이메일 로그인을 사용해주세요.",
         appleNoToken: "Apple 인증 토큰을 받지 못했어요. 다시 시도해주세요.",
     },
@@ -132,8 +121,6 @@ export default {
     },
 
     discover: {
-        match: "매치!",
-        matchedWith: "{{name}}님과 매치되었습니다!",
         itsAMatch: "매치 성사!",
         matchSubtitle: "지금 바로 대화를 시작해보세요.",
         sendMessage: "대화 시작하기",
@@ -142,7 +129,6 @@ export default {
         checkBackLater: "나중에 새로운 사람을 확인해보세요",
         dailyLimitTitle: "오늘 좋아요를 다 썼어요",
         dailyLimitText: "자정이 지나면 다시 채워져요",
-        playBio: "자기소개 듣기",
         lockedVoiceTitle: "목소리를 먼저 등록해주세요",
         lockedBioTitle: "보이스 한마디를 등록해주세요",
         lockedPhotoTitle: "프로필 사진을 등록해주세요",
@@ -224,7 +210,6 @@ export default {
 
     profile: {
         loadingProfile: "프로필 불러오는 중...",
-        synthesizingBio: "자기소개 음성 생성 중...",
         infoLabels: {
             age: "나이",
             gender: "성별",
@@ -245,21 +230,15 @@ export default {
         },
         editProfile: "프로필 수정",
         voiceSettings: "내 목소리 등록",
-        interestsSettings: "관심사 설정",
         matchingPreferences: "매칭 선호 설정",
         editBio: "보이스 한마디 등록",
         bioEmpty: "보이스 한마디를 골라보세요",
-        editProfileSubtitle: "기본 정보와 목소리를 관리할 수 있어요.",
-        editInterestsSubtitle: "더 잘 맞는 상대를 찾기 위한 관심사를 골라주세요.",
         editBioSubtitle: "고른 한마디가 등록된 목소리로 자동 생성돼요.",
-        voiceSectionTitle: "음성 등록",
         deletePhoto: "사진 삭제",
         removePhotoConfirm: "이 사진을 삭제하시겠습니까?",
         addPhoto: "프로필 사진 추가",
         photoActionsTitle: "프로필 사진",
-        changePhoto: "사진 변경",
         setAsMain: "메인 프로필로 등록",
-        cropPhoto: "자르기",
         editPhoto: "변경",
         reorderingPhotos: "사진 업데이트 중...",
         maxPhotosReached: "사진은 최대 5장까지 등록할 수 있어요.",
@@ -267,9 +246,6 @@ export default {
         lastPhotoLockedBody: "다른 사진을 먼저 추가해주세요.",
         logoutTitle: "로그아웃",
         logoutConfirm: "정말 로그아웃 하시겠습니까?",
-        invalidFormat: "잘못된 형식",
-        invalidImageFormat: "JPEG, PNG, WebP 이미지만 업로드할 수 있습니다.",
-        fileTooLarge: "파일이 너무 큽니다",
         photoSizeLimit: "사진은 5MB 이하여야 합니다.",
         photoReadFailed:
             "사진을 불러오지 못했어요. 다른 사진을 고르거나, iCloud 사진이면 다운로드 후 다시 시도해주세요.",
@@ -297,7 +273,6 @@ export default {
         typeMessage: "메시지를 입력하세요...",
         partnerDeletedNotice: "상대방이 탈퇴해 더 이상 메시지를 보낼 수 없어요.",
         matchEndedNotice: "매치가 종료되어 더 이상 메시지를 보낼 수 없어요.",
-        playbackError: "재생 오류",
         messagePreparing: "메시지 준비 중..",
         tapToListen: "탭해서 듣기",
         playing: "재생 중..",
@@ -308,12 +283,10 @@ export default {
         send: {
             failed: "전송 실패",
             retry: "탭하여 재시도",
-            sending: "전송 중",
         },
         intimacy: "친밀도",
         intimacyUntilAll: "모든 사진 공개까지 {{count}}회",
         intimacyAllUnlocked: "모든 사진 공개",
-        swipeForMore: "옆으로 넘겨 더 보기",
         newMessagesBadge: "새 메시지 {{count}}개",
         emotion: {
             neutral: "기본",
@@ -360,8 +333,6 @@ export default {
     },
 
     setupProfile: {
-        createProfile: "프로필 만들기",
-        editProfile: "프로필 수정",
         displayName: "닉네임",
         displayNamePlaceholder: "닉네임을 입력하세요",
         birthDate: "생년월일",
@@ -379,12 +350,8 @@ export default {
         selectLanguageRequired: "언어를 선택해주세요",
         addLanguage: "언어 추가",
         removeLanguage: "삭제",
-        bio: "보이스 한마디",
-        bioPlaceholder: "마음에 드는 한마디를 골라주세요",
-        bioLockedPlaceholder: "보이스 클론 등록 후 고를 수 있어요",
         bioLockedHint: "보이스 클론이 등록되어야 보이스 한마디가 자동으로 생성돼요. 먼저 '내 목소리 등록'에서 목소리를 등록해주세요.",
         bioPicker: {
-            subtitle: "내 목소리로 들려줄 첫 한마디를 골라보세요.",
             customPlaceholder: "하고 싶은 말을 직접 입력해보세요",
             category: {
                 taste: "취향",
@@ -398,7 +365,6 @@ export default {
         },
         interests: "관심사 ({{count}}/10)",
         interestsHint: "최대 10개까지 선택할 수 있어요",
-        addInterest: "관심사 추가",
     },
 
     nationalities: {
@@ -522,17 +488,8 @@ export default {
     },
 
     setupVoice: {
-        title: "보이스 클론",
-        subtitle: "음성 샘플을 녹음하여 AI 보이스 클론을 만드세요",
-        noVoiceClone: "아직 보이스 클론이 없습니다",
-        recordingInProgress: "녹음 중...",
-        previewRecording: "녹음을 확인해보세요",
         processing: "음성을 처리 중입니다...",
-        ready: "보이스 클론이 준비되었습니다!",
         cloneReady: "보이스 클론 등록 완료",
-        failed: "보이스 클론 생성에 실패했습니다. 다시 시도해주세요.",
-        startRecording: "녹음 시작",
-        stopRecording: "녹음 중지",
         recordingGuide:
             "• 최소 녹음 시간은 10초이나, 길게 녹음할 수록 실제 목소리와 유사하게 생성됩니다.\n• 다정한 목소리로 천천히, 부드럽게 읽어주세요.",
         // 음성 등록 단계 이탈 완화 — voice-sample-removal sprint 정합(녹음 원본은
@@ -546,7 +503,6 @@ export default {
         processingHint: "잠시만 기다려주세요...",
         regenerateVoiceClone: "보이스 클론 재생성",
         regenerateConfirm: "새 녹음으로 기존 보이스 클론을 덮어쓰게 됩니다. 진행하시겠어요?",
-        skipForNow: "나중에 하기",
         permissionRequired: "권한 필요",
         microphonePermissionRequired: "마이크 권한이 필요합니다",
         fileTooLarge: "파일이 너무 큽니다",
@@ -568,9 +524,6 @@ export default {
     },
 
     preferences: {
-        title: "매칭 선호 설정",
-        minAge: "최소 나이",
-        maxAge: "최대 나이",
         ageRange: "선호 나이",
         ageSuffix: "세",
         preferredGenders: "선호 성별",
@@ -579,8 +532,6 @@ export default {
         sameLanguageBlockedHint: "언어 장벽을 넘는 만남이 핵심이라, 같은 언어를 쓰는 상대는 자동 제외돼요",
         preferredNationalities: "선호 국적",
         leaveEmptyAllNationalities: "선택한 국적의 상대가 우선 노출돼요",
-        invalidAgeRange: "최소 나이는 최대 나이보다 작거나 같아야 합니다.",
-        ageOutOfBounds: "나이는 {{min}}–{{max}}세 사이여야 합니다.",
     },
 
     settings: {

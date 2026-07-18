@@ -751,12 +751,4 @@ const styles = StyleSheet.create({
     sheetBtnDestructive: {
         color: colors.primary,
     },
-    sheetCancel: {
-        paddingVertical: 18,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    sheetBtnCancelText: {
-        fontFamily: fonts.bold,
-    },
 });

@@ -1,5 +1,5 @@
 import { ApiRequestError } from '@/services/api';
-import { describeError, errorStatus } from './errors';
+import { describeError } from './errors';
 
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(),
@@ -11,7 +11,6 @@ describe('describeError', () => {
   it('prefers ApiRequestError.errorMessage', () => {
     const e = new ApiRequestError(400, 'Email already in use');
     expect(describeError(e)).toBe('Email already in use');
-    expect(errorStatus(e)).toBe(400);
   });
 
   it('falls back to fallback when ApiRequestError has no message', () => {
@@ -31,10 +30,5 @@ describe('describeError', () => {
     expect(describeError(undefined, 'F1')).toBe('F1');
     expect(describeError(42, 'F2')).toBe('F2');
     expect(describeError({ any: 'shape' }, 'F3')).toBe('F3');
-  });
-
-  it('errorStatus returns 0 for non-API errors', () => {
-    expect(errorStatus(new Error('plain'))).toBe(0);
-    expect(errorStatus(undefined)).toBe(0);
   });
 });
