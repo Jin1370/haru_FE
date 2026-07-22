@@ -204,7 +204,6 @@ export type UserPreferences = {
   min_age: number;
   max_age: number;
   preferred_genders: ('male' | 'female' | 'other')[];
-  preferred_languages: string[];
   preferred_nationalities: string[];
 };
 

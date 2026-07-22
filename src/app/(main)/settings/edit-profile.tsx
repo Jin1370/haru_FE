@@ -16,16 +16,18 @@ import { FormField } from '@/components/ui/FormField';
 import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { RequiredLabel } from '@/components/ui/RequiredLabel';
-import { LanguagePicker } from '@/components/ui/LanguagePicker';
 import { useProfile } from '@/hooks/useProfile';
 import { showAlert } from '@/stores/alertStore';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
-import { SUPPORTED_NATIONALITIES, type NationalityCode } from '@/constants/nationalities';
+import {
+  SUPPORTED_NATIONALITIES,
+  languageForNationality,
+  type NationalityCode,
+} from '@/constants/nationalities';
 import { MAX_INTERESTS } from '@/constants/interests';
 import { InterestSelector } from '@/components/profile/InterestSelector';
 import { useInterestResolver } from '@/hooks/useInterestLabel';
-import { isLanguageCode, type LanguageCode } from '@/constants/languages';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { validateDisplayName, validateBirthDate, DISPLAY_NAME_MAX } from '@/utils/validators';
 import { userFacingError } from '@/utils/errors';
@@ -53,15 +55,11 @@ export default function EditProfileScreen() {
     birth_date: string;
     gender: 'male' | 'female' | 'other';
     nationality: string;
-    language: LanguageCode | null;
   }>({
     display_name: profile?.display_name ?? '',
     birth_date: profile?.birth_date ?? '',
     gender: profile?.gender ?? 'male',
     nationality: profile?.nationality ?? '',
-    language: profile && isLanguageCode(profile.language)
-      ? (profile.language as LanguageCode)
-      : null,
   });
   const [nationalityOpen, setNationalityOpen] = useState(false);
   const [interests, setInterests] = useState<string[]>(profile?.interests ?? []);
@@ -71,10 +69,9 @@ export default function EditProfileScreen() {
     display_name?: string;
     birth_date?: string;
     nationality?: string;
-    language?: string;
   }>({});
 
-  const clearError = (field: 'display_name' | 'birth_date' | 'nationality' | 'language') =>
+  const clearError = (field: 'display_name' | 'birth_date' | 'nationality') =>
     setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e));
 
   useEffect(() => {
@@ -84,9 +81,6 @@ export default function EditProfileScreen() {
         birth_date: profile.birth_date,
         gender: profile.gender,
         nationality: profile.nationality,
-        language: isLanguageCode(profile.language)
-          ? (profile.language as LanguageCode)
-          : null,
       });
       setInterests(profile.interests);
     }
@@ -134,11 +128,9 @@ export default function EditProfileScreen() {
     if (birthErr) next.birth_date = t(birthErr.key, birthErr.vars);
 
     if (!form.nationality) next.nationality = t('setupProfile.selectNationalityRequired');
-    if (!form.language) next.language = t('setupProfile.selectLanguageRequired');
 
     setErrors(next);
     if (Object.keys(next).length > 0) return;
-    if (!form.language) return; // type narrow: LanguageCode | null → LanguageCode
 
     try {
       await upsertProfile({
@@ -146,7 +138,8 @@ export default function EditProfileScreen() {
         birth_date: form.birth_date,
         gender: form.gender,
         nationality: form.nationality,
-        language: form.language,
+        // Language is derived from nationality — no user-facing picker.
+        language: languageForNationality(form.nationality),
         voice_intro: profile?.voice_intro ?? null,
         interests,
       });
@@ -271,20 +264,6 @@ export default function EditProfileScreen() {
             </View>
           )}
           <ErrorText>{errors.nationality ?? null}</ErrorText>
-        </View>
-
-        <View>
-          <RequiredLabel text={t('setupProfile.language')} gap />
-          <LanguagePicker
-            mode="single"
-            value={form.language}
-            onChange={(next) => {
-              Keyboard.dismiss();
-              setForm((f) => ({ ...f, language: next }));
-              clearError('language');
-            }}
-          />
-          <ErrorText>{errors.language ?? null}</ErrorText>
         </View>
 
         <Text style={[styles.label, styles.sectionGap]}>

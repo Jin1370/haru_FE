@@ -365,10 +365,8 @@ export interface UserPreference {
   min_age: number;
   max_age: number;
   preferred_genders: ('male' | 'female' | 'other')[];
-  // Whitelisted language codes. Empty = no language preference. Mig 009
-  // dropped the level dimension so this is now a flat string array.
-  preferred_languages: string[];
   // ISO-3166-1 alpha-2 country codes. Empty = no nationality preference.
+  // (Language preference removed — mig 042 — language derives from nationality.)
   preferred_nationalities: string[];
   updated_at?: string;
 }
@@ -377,6 +375,5 @@ export interface PreferenceUpdateRequest {
   min_age?: number;
   max_age?: number;
   preferred_genders?: ('male' | 'female' | 'other')[];
-  preferred_languages?: string[];
   preferred_nationalities?: string[];
 }

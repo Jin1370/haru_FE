@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -12,13 +12,10 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { AgeRangeSlider } from '@/components/ui/AgeRangeSlider';
-import { useSignupDraftStore } from '@/stores/signupDraftStore';
 import { showAlert } from '@/stores/alertStore';
-import { useProfile } from '@/hooks/useProfile';
 import { usePreferences } from '@/hooks/usePreferences';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
-import { isLanguageCode, SUPPORTED_LANGUAGES, type LanguageCode } from '@/constants/languages';
 import { SUPPORTED_NATIONALITIES } from '@/constants/nationalities';
 import { MIN_AGE, MAX_AGE } from '@/utils/preferences';
 import { userFacingError } from '@/utils/errors';
@@ -29,15 +26,7 @@ const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
 export default function SetupStep4() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const draft = useSignupDraftStore();
-  const { profile } = useProfile();
   const { updatePreferences, loading: prefSaving } = usePreferences();
-  // BE blocks same-primary-language matches (the app's core differentiator —
-  // voice translation only kicks in across language pairs). Hide the user's
-  // own primary from the picker so they can't add a language that has no
-  // effect on filtering. Mirrors settings/preferences.tsx exactly.
-  const ownPrimaryLanguage =
-    profile?.language ?? draft.language ?? null;
 
   const [ageRange, setAgeRange] = useState<{ min: number; max: number }>({
     min: MIN_AGE,
@@ -46,15 +35,7 @@ export default function SetupStep4() {
   const [genders, setGenders] = useState<('male' | 'female' | 'other')[]>([
     ...GENDER_OPTIONS,
   ]);
-  const [languages, setLanguages] = useState<LanguageCode[]>([]);
   const [nationalities, setNationalities] = useState<string[]>([]);
-
-  // Re-sync when ownPrimaryLanguage resolves async (profile arriving after mount).
-  useEffect(() => {
-    setLanguages((prev) =>
-      prev.filter((c) => isLanguageCode(c) && c !== ownPrimaryLanguage),
-    );
-  }, [ownPrimaryLanguage]);
 
   const toggleGender = (g: 'male' | 'female' | 'other') => {
     setGenders((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
@@ -62,12 +43,6 @@ export default function SetupStep4() {
 
   const toggleNationality = (code: string) => {
     setNationalities((prev) =>
-      prev.includes(code) ? prev.filter((x) => x !== code) : [...prev, code],
-    );
-  };
-
-  const toggleLanguage = (code: LanguageCode) => {
-    setLanguages((prev) =>
       prev.includes(code) ? prev.filter((x) => x !== code) : [...prev, code],
     );
   };
@@ -84,7 +59,6 @@ export default function SetupStep4() {
       min_age: ageRange.min,
       max_age: ageRange.max,
       preferred_genders: genders,
-      preferred_languages: languages,
       preferred_nationalities: nationalities,
     };
     // Wizard position 3: profile row already exists (INSERTed at position 2),
@@ -157,30 +131,6 @@ export default function SetupStep4() {
           })}
         </View>
 
-        <Text style={[styles.label, styles.sectionGap]}>{t('preferences.preferredLanguages')}</Text>
-        <View style={styles.hintList}>
-          <Text style={styles.hintLine}>{`• ${t('preferences.leaveEmptyAllLanguages')}`}</Text>
-          <Text style={styles.hintLine}>{`• ${t('preferences.sameLanguageBlockedHint')}`}</Text>
-        </View>
-        <View style={styles.chipRow}>
-          {SUPPORTED_LANGUAGES.filter((l) => l.code !== ownPrimaryLanguage).map(
-            ({ code, labelKey }) => {
-              const selected = languages.includes(code as LanguageCode);
-              return (
-                <Pressable
-                  key={code}
-                  style={[styles.chip, selected && styles.chipActive]}
-                  onPress={() => toggleLanguage(code as LanguageCode)}
-                >
-                  <Text style={[styles.chipText, selected && styles.chipActiveText]}>
-                    {t(labelKey)}
-                  </Text>
-                </Pressable>
-              );
-            },
-          )}
-        </View>
-
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
@@ -224,17 +174,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     marginTop: -4,
     marginBottom: 10,
-    lineHeight: 18,
-  },
-  hintList: {
-    marginTop: -4,
-    marginBottom: 10,
-    gap: 6,
-  },
-  hintLine: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontFamily: fonts.regular,
     lineHeight: 18,
   },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },

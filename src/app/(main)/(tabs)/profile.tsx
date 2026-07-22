@@ -767,17 +767,10 @@ export default function ProfileScreen() {
             </View>
           </View>
         ) : null}
-        {/* Single primary language (mig 009 simplification). Hide the row
-            entirely when language is missing — pre-step1 profiles will fill
-            it in on save. */}
-        {profile.language ? (
-          <View style={styles.infoRow}>
-            <Text style={infoLabelStyle}>{t('profile.infoLabels.language')}</Text>
-            <Text style={styles.infoValue} numberOfLines={1}>
-              {t(`languages.${profile.language}`, { defaultValue: profile.language })}
-            </Text>
-          </View>
-        ) : null}
+        {/* Primary language is derived from nationality and no longer
+            user-settable — not shown as a separate row (redundant with the
+            nationality row above). Still stored on the profile for the
+            translation/voice pipeline. */}
         {profile.interests.length > 0 ? (
           <View style={styles.infoRow}>
             <Text style={infoLabelStyle}>{t('profile.infoLabels.interests')}</Text>

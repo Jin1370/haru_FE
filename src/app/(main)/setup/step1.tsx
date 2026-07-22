@@ -17,18 +17,20 @@ import { FormField } from '@/components/ui/FormField';
 import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { RequiredLabel } from '@/components/ui/RequiredLabel';
-import { LanguagePicker } from '@/components/ui/LanguagePicker';
 import { useAuthStore } from '@/stores/authStore';
 import { useSignupDraftStore, type Gender } from '@/stores/signupDraftStore';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
-import { SUPPORTED_NATIONALITIES, type NationalityCode } from '@/constants/nationalities';
+import {
+  SUPPORTED_NATIONALITIES,
+  languageForNationality,
+  type NationalityCode,
+} from '@/constants/nationalities';
 import { MAX_INTERESTS } from '@/constants/interests';
 import { InterestSelector } from '@/components/profile/InterestSelector';
 import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { validateDisplayName, validateBirthDate, DISPLAY_NAME_MAX } from '@/utils/validators';
-import type { LanguageCode } from '@/constants/languages';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
 
@@ -78,7 +80,6 @@ export default function SetupStep1() {
     birth_date: draft.birth_date,
     gender: draft.gender as Gender,
     nationality: draft.nationality,
-    language: draft.language,
   });
   const [nationalityOpen, setNationalityOpen] = useState(false);
   const [interests, setInterests] = useState<string[]>(draft.interests);
@@ -88,17 +89,10 @@ export default function SetupStep1() {
     display_name?: string;
     birth_date?: string;
     nationality?: string;
-    language?: string;
   }>({});
 
-  const clearError = (field: 'display_name' | 'birth_date' | 'nationality' | 'language') =>
+  const clearError = (field: 'display_name' | 'birth_date' | 'nationality') =>
     setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e));
-
-  const setLanguage = (next: LanguageCode | null) => {
-    Keyboard.dismiss();
-    setForm((f) => ({ ...f, language: next }));
-    clearError('language');
-  };
 
   // Storage moved from "current-locale label" to canonical id so the
   // displayed label survives both language toggles and re-loads from BE.
@@ -146,18 +140,17 @@ export default function SetupStep1() {
     if (birthErr) next.birth_date = t(birthErr.key, birthErr.vars);
 
     if (!form.nationality) next.nationality = t('setupProfile.selectNationalityRequired');
-    if (!form.language) next.language = t('setupProfile.selectLanguageRequired');
 
     setErrors(next);
     if (Object.keys(next).length > 0) return;
-    if (!form.language) return; // type narrow: LanguageCode | null → LanguageCode
 
     draft.setStep1({
       display_name: form.display_name.trim(),
       birth_date: form.birth_date,
       gender: form.gender,
       nationality: form.nationality,
-      language: form.language,
+      // Language is derived from nationality — no user-facing picker.
+      language: languageForNationality(form.nationality),
     });
     draft.setInterests(interests);
     // No BE write here — wizard order is now basics → photos → prefs → voice
@@ -293,16 +286,6 @@ export default function SetupStep1() {
           </View>
         )}
         <ErrorText>{errors.nationality ?? null}</ErrorText>
-      </View>
-
-      <View>
-        <RequiredLabel text={t('setupProfile.language')} gap />
-        <LanguagePicker
-          mode="single"
-          value={form.language}
-          onChange={setLanguage}
-        />
-        <ErrorText>{errors.language ?? null}</ErrorText>
       </View>
 
       {/* Interests — optional. Markup mirrors settings/edit-profile.tsx so

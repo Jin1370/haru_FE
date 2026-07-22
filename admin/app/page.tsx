@@ -2045,7 +2045,6 @@ function PreferencesSection({
   const [minAge, setMinAge] = useState(prefs.min_age);
   const [maxAge, setMaxAge] = useState(prefs.max_age);
   const [genders, setGenders] = useState<('male' | 'female' | 'other')[]>(prefs.preferred_genders);
-  const [languages, setLanguages] = useState<string[]>(prefs.preferred_languages);
   const [nationalities, setNationalities] = useState<string[]>(prefs.preferred_nationalities);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -2066,7 +2065,6 @@ function PreferencesSection({
         min_age: minAge,
         max_age: maxAge,
         preferred_genders: genders,
-        preferred_languages: languages,
         preferred_nationalities: nationalities,
       };
       const updated = await updatePreferences(account.user_id, payload);
@@ -2112,14 +2110,6 @@ function PreferencesSection({
             options={GENDERS_ADMIN as readonly string[]}
             selected={genders}
             onToggle={(v) => setGenders(toggle(genders, v as 'male' | 'female' | 'other'))}
-          />
-        </div>
-        <div className="col-span-2">
-          <FieldLabel>preferred_languages (빈 = 제약 없음)</FieldLabel>
-          <ChipGroup
-            options={LANGUAGE_CODES_ADMIN as readonly string[]}
-            selected={languages}
-            onToggle={(v) => setLanguages(toggle(languages, v))}
           />
         </div>
         <div className="col-span-2">
