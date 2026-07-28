@@ -2,7 +2,6 @@ import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
   Pressable,
   BackHandler,
@@ -12,7 +11,7 @@ import { router, useNavigation, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useKeyboardState } from 'react-native-keyboard-controller';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { FormField } from '@/components/ui/FormField';
 import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
@@ -46,12 +45,6 @@ export default function SetupStep1() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const draft = useSignupDraftStore();
-  // Lift the absolute footer above the keyboard and extend ScrollView
-  // paddingBottom by kbHeight so the focused FormField scrolls into view
-  // on iOS (Android's adjustResize already shrinks the viewport, but the
-  // KeyboardProvider feeds the same kbHeight on both platforms — using it
-  // uniformly keeps the layout math identical everywhere).
-  const kbHeight = useKeyboardState((s) => s.height);
 
   // Wizard entry: swipe-back / hardware-back = logout. Focus-gated so the
   // listeners only fire while step1 is the visible screen — otherwise step1
@@ -83,6 +76,7 @@ export default function SetupStep1() {
   });
   const [nationalityOpen, setNationalityOpen] = useState(false);
   const [interests, setInterests] = useState<string[]>(draft.interests);
+  const [referralCode, setReferralCode] = useState(draft.referralCode);
   // Inline validation errors, keyed by field. Populated on Next, surfaced as
   // small red text under each field, and cleared per-field as the user edits.
   const [errors, setErrors] = useState<{
@@ -151,6 +145,9 @@ export default function SetupStep1() {
       nationality: form.nationality,
       // Language is derived from nationality — no user-facing picker.
       language: languageForNationality(form.nationality),
+      // 영숫자 외 제거 + 대문자 정규화는 여기서만 (타이핑 중 value 변환은 조합
+      // 버퍼와 desync 돼 중복 입력을 유발하므로 하지 않는다).
+      referralCode: referralCode.replace(/[^A-Za-z0-9]/g, '').toUpperCase(),
     });
     draft.setInterests(interests);
     // No BE write here — wizard order is now basics → photos → prefs → voice
@@ -173,12 +170,16 @@ export default function SetupStep1() {
         title={t('signupWizard.step1Title')}
         subtitle={t('signupWizard.step1Subtitle')}
       />
-      <ScrollView
+      {/* KeyboardAwareScrollView auto-scrolls the focused TextInput above the
+          keyboard (mirrors edit-bio.tsx) — so the last field (referral code)
+          isn't hidden behind the keyboard. bottomOffset = breathing room. */}
+      <KeyboardAwareScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: 24 + insets.bottom + 88 + kbHeight },
+          { paddingBottom: 24 + insets.bottom + 88 },
         ]}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={20}
       >
       <View>
         <RequiredLabel text={t('setupProfile.displayName')} />
@@ -300,12 +301,28 @@ export default function SetupStep1() {
         onToggle={toggleInterest}
       />
 
-      </ScrollView>
+      {/* Referral code — optional. Partner (한일교류회 등) 유입 추적용. */}
+      <Text style={[styles.label, styles.sectionGap]}>
+        {t('setupProfile.referralCode')}
+      </Text>
+      <Text style={styles.hintBlock}>{t('setupProfile.referralCodeHint')}</Text>
+      {/* 잘 동작하는 display_name 필드와 완전히 동일한 순수 controlled 입력.
+          타이핑 중 대문자화(value 변환 or textTransform 스타일)는 이 Android
+          키보드의 조합 로직과 충돌해 이전 글자가 중복 입력된다(sejin→SESEJSEJISEJIN).
+          입력한 그대로 표시하고, 영숫자 필터 + 대문자 정규화는 저장 시점에만 한다. */}
+      <FormField
+        value={referralCode}
+        onChangeText={setReferralCode}
+        placeholder={t('setupProfile.referralCodePlaceholder')}
+        maxLength={40}
+        inputStyle={styles.inputCompact}
+      />
+
+      </KeyboardAwareScrollView>
 
       {/* Footer stays pinned at bottom: 0 — the Next button intentionally sits
-          behind the keyboard while typing. The ScrollView paddingBottom above
-          already includes kbHeight so the focused FormField can be scrolled
-          above the keyboard line. */}
+          behind the keyboard while typing. KeyboardAwareScrollView scrolls the
+          focused FormField above the keyboard line. */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         <Button title={t('common.next')} onPress={handleNext} />
       </View>

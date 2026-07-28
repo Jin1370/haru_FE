@@ -13,6 +13,9 @@ interface SignupDraftState {
   // Single primary language code (mig 009 simplification). Required at submit
   // time but starts null while step1 is being filled in.
   language: LanguageCode | null;
+  // Optional partner referral code (한일교류회 등). Collected at step1, sent
+  // once on the first profile INSERT — BE records it only on creation.
+  referralCode: string;
   bio: string;
   // Catalog id of the picked preset phrase, or null when the user chose
   // custom-typed text. Forwarded to BE via `voice_intro_phrase_id` so the
@@ -35,6 +38,7 @@ interface SignupDraftState {
     gender: Gender;
     nationality: string;
     language: LanguageCode;
+    referralCode: string;
   }) => void;
   setBio: (bio: string) => void;
   // Separate setter (rather than expanding setBio's signature) so existing
@@ -54,6 +58,7 @@ const initial = {
   gender: 'male' as Gender,
   nationality: '',
   language: null as LanguageCode | null,
+  referralCode: '',
   bio: '',
   bioPhraseId: null as string | null,
   interests: [] as string[],
@@ -87,6 +92,8 @@ export const useSignupDraftStore = create<SignupDraftState>((set, get) => ({
       language: s.language,
       ...buildVoiceIntroPayload(s.bio, s.bioPhraseId),
       interests: s.interests,
+      // 코드 미입력이면 키 자체를 생략 — BE 는 부재를 미입력으로 처리.
+      ...(s.referralCode.trim() ? { referral_code: s.referralCode.trim() } : {}),
       // LAUNCH_CHECKLIST #5 — 최초 프로필 생성 시 동의 플래그 동봉. BE 가 동의
       // 시각·버전을 stamp. 동의 모달(step1)을 통과해야 여기까지 도달하므로 항상 true.
       terms_consent: s.consentAccepted,

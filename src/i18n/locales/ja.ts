@@ -344,6 +344,9 @@ export default {
         nationalityPlaceholder: "国籍を選んでください",
         selectNationalityRequired: "国籍を選んでください",
         nationalityLimitedNotice: "探している国がありませんか？まもなく対応国が増えます。",
+        referralCode: "紹介コード（任意）",
+        referralCodeHint: "集まりやイベントでコードを受け取った方は入力してください。",
+        referralCodePlaceholder: "AAAAA00",
         bioLockedHint: "ボイスクローンを登録するとボイスひとことが自動生成されます。先に「自分の声を登録」で声を登録してください。",
         bioPicker: {
             customPlaceholder: "言いたい言葉を直接入力してみてください",

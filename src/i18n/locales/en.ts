@@ -347,6 +347,9 @@ export default {
     nationalityPlaceholder: 'Select nationality',
     selectNationalityRequired: 'Please select a nationality',
     nationalityLimitedNotice: "Don't see your country? We'll be there soon.",
+    referralCode: "Referral code (optional)",
+    referralCodeHint: "Got a code from a meetup or event? Enter it here.",
+    referralCodePlaceholder: "AAAAA00",
     bioLockedHint: "Your voice intro is generated automatically once your voice clone is registered. Please register your voice in 'Register My Voice' first.",
     bioPicker: {
       customPlaceholder: 'Type your own message',

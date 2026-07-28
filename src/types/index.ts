@@ -95,6 +95,8 @@ export interface ProfileUpsertRequest {
   // 시에만 전송되며 BE 가 동의 시각·버전을 기록한다 (PIPA §23 음성 생체정보 별도 동의).
   terms_consent?: boolean;
   voice_consent?: boolean;
+  // 파트너 추천 코드 (선택). 최초 프로필 생성 시에만 BE 가 기록한다.
+  referral_code?: string;
 }
 
 // photo-watercolor-pipeline sprint (mig 028): 사진 업로드 라우트가 동기 응답에서

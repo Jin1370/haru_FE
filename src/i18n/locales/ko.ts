@@ -344,6 +344,9 @@ export default {
         nationalityPlaceholder: "국적을 선택하세요",
         selectNationalityRequired: "국적을 선택해주세요",
         nationalityLimitedNotice: "찾는 국가가 없나요? 곧 더 많은 국가에서 만날 수 있어요.",
+        referralCode: "추천 코드 (선택)",
+        referralCodeHint: "모임·행사에서 코드를 받으셨다면 입력해주세요.",
+        referralCodePlaceholder: "AAAAA00",
         bioLockedHint: "보이스 클론이 등록되어야 보이스 한마디가 자동으로 생성돼요. 먼저 '내 목소리 등록'에서 목소리를 등록해주세요.",
         bioPicker: {
             customPlaceholder: "하고 싶은 말을 직접 입력해보세요",
