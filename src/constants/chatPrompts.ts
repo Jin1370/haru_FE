@@ -1,15 +1,15 @@
 export interface ChatPromptStep {
-  id: 'step1' | 'step2' | 'step3' | 'step4' | 'step5';
+  id: 'profile' | 'voice' | 'intro' | 'preferences' | 'photos';
   titleKey: string;
   bodyKey: string;
 }
 
 export const CHAT_PROMPT_STEPS: readonly ChatPromptStep[] = [
-  { id: 'step1', titleKey: 'chat.prompts.step1.title', bodyKey: 'chat.prompts.step1.body' },
-  { id: 'step2', titleKey: 'chat.prompts.step2.title', bodyKey: 'chat.prompts.step2.body' },
-  { id: 'step3', titleKey: 'chat.prompts.step3.title', bodyKey: 'chat.prompts.step3.body' },
-  { id: 'step4', titleKey: 'chat.prompts.step4.title', bodyKey: 'chat.prompts.step4.body' },
-  { id: 'step5', titleKey: 'chat.prompts.step5.title', bodyKey: 'chat.prompts.step5.body' },
+  { id: 'profile', titleKey: 'chat.prompts.profile.title', bodyKey: 'chat.prompts.profile.body' },
+  { id: 'voice', titleKey: 'chat.prompts.voice.title', bodyKey: 'chat.prompts.voice.body' },
+  { id: 'intro', titleKey: 'chat.prompts.intro.title', bodyKey: 'chat.prompts.intro.body' },
+  { id: 'preferences', titleKey: 'chat.prompts.preferences.title', bodyKey: 'chat.prompts.preferences.body' },
+  { id: 'photos', titleKey: 'chat.prompts.photos.title', bodyKey: 'chat.prompts.photos.body' },
 ] as const;
 
 // Tracks per-match "have I auto-shown the prompts modal once" state.

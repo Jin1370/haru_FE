@@ -9,8 +9,8 @@ export default function Index() {
   }
 
   // Profile INSERT only happens at the new wizard position 2 (photos step,
-  // file step5.tsx). Reloading anywhere before that → no row in BE → start
-  // the wizard from scratch (consent → step1 → ...). Reloading anywhere after →
+  // file photos.tsx). Reloading anywhere before that → no row in BE → start
+  // the wizard from scratch (consent → profile → ...). Reloading anywhere after →
   // row exists → enter the app; voice clone / voice intro are skippable.
   if (!hasProfile) {
     return <Redirect href="/(main)/setup/consent" />;

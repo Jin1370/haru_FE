@@ -33,12 +33,15 @@ export default function MainLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
+      {/* 가입 마법사 — 실제 진행 순서대로 나열. 예전엔 파일명이 step1~step5 라
+          숫자와 실제 순서가 어긋났다(사진 화면이 step5 인데 두 번째로 진행됨).
+          단계 번호는 각 화면의 WizardHeader step 이 담당한다. */}
       <Stack.Screen name="setup/consent" />
-      <Stack.Screen name="setup/step1" />
-      <Stack.Screen name="setup/step2" />
-      <Stack.Screen name="setup/step3" />
-      <Stack.Screen name="setup/step4" />
-      <Stack.Screen name="setup/step5" />
+      <Stack.Screen name="setup/profile" />
+      <Stack.Screen name="setup/photos" />
+      <Stack.Screen name="setup/preferences" />
+      <Stack.Screen name="setup/voice" />
+      <Stack.Screen name="setup/intro" />
       <Stack.Screen name="settings/index" />
       <Stack.Screen name="settings/edit-profile" />
       <Stack.Screen name="settings/edit-bio" />

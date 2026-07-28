@@ -6,7 +6,7 @@ import { WizardHeader } from '@/components/setup/WizardHeader';
 import { VoiceCloneCard } from '@/components/voice/VoiceCloneCard';
 import { colors } from '@/constants/colors';
 
-// 녹음/업로드/재생성 흐름은 setup/step2.tsx 와 완전히 같은 컴포넌트를 쓴다.
+// 녹음/업로드/재생성 흐름은 setup/voice.tsx 와 완전히 같은 컴포넌트를 쓴다.
 // 이 화면 고유한 것은 헤더와 "재생성 (N회 남음)" 잔여 카운트 노출뿐.
 export default function VoiceSettingsScreen() {
   const { t } = useTranslation();

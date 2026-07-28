@@ -40,7 +40,7 @@ const COL_COUNT = 2;
 const THUMBS_PER_COL = 2;
 // Strong blur for the Mode B lock backdrop — much heavier than the profile
 // tab's blurRadius={4} so the converting originals are never legible.
-export default function SetupStep5() {
+export default function SetupPhotos() {
     const { t } = useTranslation();
     const insets = useSafeAreaInsets();
     const { width: SCREEN_WIDTH } = useWindowDimensions();
@@ -69,17 +69,17 @@ export default function SetupStep5() {
 
     // Dual-mode gate. On the very first pass through the wizard the BE profile
     // row has no photos yet → Mode A (purely local batch upload on "next").
-    // After "next" the photos are uploaded; if the user backs out of step4 and
+    // After "next" the photos are uploaded; if the user backs out of preferences and
     // returns here, photo_statuses is populated → Mode B. Mode B is now a pure
     // LOCK screen: the user can neither view, edit, nor add photos — only
     // advance. This kills both the old "back → next again → duplicate upload +
     // duplicate convert" bug AND the "user pokes at converting slots" surface.
     const hasUploadedPhotos = (profile?.photo_statuses?.length ?? 0) > 0;
 
-    // Mode B refetch: step4 → back returns here. Pull latest photo_statuses so
+    // Mode B refetch: preferences → back returns here. Pull latest photo_statuses so
     // the mode gate flips on re-entry.
     // Refetch profile on focus so the Mode A/B gate (photo_statuses presence)
-    // is fresh when returning here from step4. One GET per focus — no polling.
+    // is fresh when returning here from preferences. One GET per focus — no polling.
     // The lock screen doesn't reflect per-photo conversion status, so there's
     // nothing to poll for.
     useFocusEffect(
@@ -190,7 +190,7 @@ export default function SetupStep5() {
         // Mode B: photos are already uploaded + converting. Just advance — no
         // re-upload, so existing converting photos are never re-converted.
         if (hasUploadedPhotos) {
-            router.push("/(main)/setup/step4");
+            router.push("/(main)/setup/preferences");
             return;
         }
         if (photoUris.length === 0) {
@@ -205,10 +205,10 @@ export default function SetupStep5() {
         // 돌린다. 단, 프로필 upsert(빠른 단일 요청)만은 이동 전에 await 한다.
         //
         // Wizard position 2: 여기서 BE 프로필 row 가 생성된다(이후 reload 시 곧장
-        // discover 로 라우팅 — app/index.tsx). 이 row 는 바로 다음 화면 step4 가
+        // discover 로 라우팅 — app/index.tsx). 이 row 는 바로 다음 화면 preferences 가
         // 저장하는 선호도(PUT /api/preferences → user_preferences.user_id →
         // profiles.id)의 FK 부모다. 예전엔 router.push 후 백그라운드에서 upsert 해
-        // 사용자가 step4 에서 빠르게 "다음"을 누르면(혹은 upsert 실패 시) profiles
+        // 사용자가 preferences 에서 빠르게 "다음"을 누르면(혹은 upsert 실패 시) profiles
         // 행이 아직 없어 FK 위반(23503, user_preferences_user_id_fkey)이 났다.
         // 프로필 생성을 이동 전에 완료해 이 레이스를 제거한다.
         const uris = [...photoUris];
@@ -225,7 +225,7 @@ export default function SetupStep5() {
             return;
         }
 
-        router.push("/(main)/setup/step4");
+        router.push("/(main)/setup/preferences");
 
         // 사진 업로드는 순차 유지 — BE POST /photos 가 position 을 비원자적으로
         // 배정해 병렬이면 UNIQUE(user_id, position) 충돌(23505)이 난다.
@@ -275,7 +275,7 @@ export default function SetupStep5() {
                 }
             } finally {
                 // 버튼을 다시 활성화하기 전에 프로필을 await 로 갱신한다. 사용자가
-                // step4 에서 빠르게 step5 로 돌아온 경우, submitting 이 false 로
+                // preferences 에서 빠르게 photos 로 돌아온 경우, submitting 이 false 로
                 // 풀리는 시점엔 photo_statuses 가 이미 채워져 Mode B(잠금)로
                 // 전환돼 있어야 "다음" 재탭이 재업로드(이미지 생성 중복)로 이어지지
                 // 않는다. loadProfile 이 실패해도 버튼은 풀어줘야 하므로 catch 흡수.
@@ -303,8 +303,8 @@ export default function SetupStep5() {
         <View style={styles.container}>
             <WizardHeader
                 step={2}
-                title={t("signupWizard.step5Title")}
-                subtitle={t("signupWizard.step5Subtitle")}
+                title={t("signupWizard.photosTitle")}
+                subtitle={t("signupWizard.photosSubtitle")}
                 onBack={() => router.back()}
             />
             <ScrollView
@@ -330,7 +330,7 @@ export default function SetupStep5() {
                                 color={colors.primary}
                             />
                             <Text style={styles.lockText}>
-                                {t("signupWizard.step5ConvertingLocked")}
+                                {t("signupWizard.photosConvertingLocked")}
                             </Text>
                         </View>
                     </View>
@@ -449,7 +449,7 @@ export default function SetupStep5() {
                     </View>
                 )}
 
-                <ErrorText testID="setup-step5-photo-error">
+                <ErrorText testID="setup-photos-photo-error">
                     {photoError}
                 </ErrorText>
 
@@ -462,7 +462,7 @@ export default function SetupStep5() {
                             color={colors.primaryDark}
                         />
                         <Text style={styles.warnText}>
-                            {t("signupWizard.step5AtLeastOne")}
+                            {t("signupWizard.photosAtLeastOne")}
                         </Text>
                     </View>
                 )}
@@ -480,7 +480,7 @@ export default function SetupStep5() {
                                 color={colors.primaryDark}
                             />
                             <Text style={styles.warnText}>
-                                {t("signupWizard.step5MorePhotosBoost")}
+                                {t("signupWizard.photosMoreBoost")}
                             </Text>
                         </View>
                     )}

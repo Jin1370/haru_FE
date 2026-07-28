@@ -16,7 +16,7 @@ import { validateVoiceIntro } from '@/utils/validators';
 import { buildVoiceIntroPayload } from '@/utils/voiceIntroPayload';
 import { userFacingError } from '@/utils/errors';
 
-export default function SetupStep3() {
+export default function SetupIntro() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const draft = useSignupDraftStore();
@@ -121,7 +121,7 @@ export default function SetupStep3() {
   const hasBioInput = bio.trim().length > 0;
 
   // Pre-redirect render: keep blank to avoid a one-frame flash of the locked
-  // copy when we already know we're about to bounce to step4.
+  // copy when we already know we're about to bounce to preferences.
   if (profile && !voiceReady) {
     return <View style={styles.container} />;
   }
@@ -130,8 +130,8 @@ export default function SetupStep3() {
     <View style={styles.container}>
       <WizardHeader
         step={5}
-        title={t('signupWizard.step3Title')}
-        subtitle={t('signupWizard.step3Subtitle')}
+        title={t('signupWizard.introTitle')}
+        subtitle={t('signupWizard.introSubtitle')}
         onBack={() => router.back()}
       />
       {/* KeyboardAwareScrollView auto-scrolls the focused TextInput above the

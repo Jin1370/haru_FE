@@ -45,7 +45,7 @@ export function useProfile() {
     setError(null);
     try {
       // 프로필 탭 사진 추가/교체도 일시적 네트워크 실패("Connection reset"·타임아웃·
-      // 5xx)는 자동 재시도한다(step5 백그라운드 업로드와 동일 헬퍼). 모더레이션
+      // 5xx)는 자동 재시도한다(photos 백그라운드 업로드와 동일 헬퍼). 모더레이션
       // 거부(422) 등 영구 실패는 즉시 throw 되어 호출처가 alert 분기.
       const res = await profileService.uploadPhotoWithRetry(uri);
       await loadProfile();

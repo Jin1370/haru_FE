@@ -13,11 +13,12 @@ import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { AgeRangeSlider } from '@/components/ui/AgeRangeSlider';
 import { usePreferences } from '@/hooks/usePreferences';
+import { useAuthStore } from '@/stores/authStore';
 import { useDiscoverStore } from '@/stores/discoverStore';
 import { showAlert } from '@/stores/alertStore';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
-import { SUPPORTED_NATIONALITIES } from '@/constants/nationalities';
+import { selectableNationalities } from '@/constants/nationalities';
 import { MIN_AGE, MAX_AGE } from '@/utils/preferences';
 import { userFacingError } from '@/utils/errors';
 
@@ -34,6 +35,9 @@ export default function PreferencesScreen() {
   });
   const [genders, setGenders] = useState<('male' | 'female' | 'other')[]>([...GENDER_OPTIONS]);
   const [nationalities, setNationalities] = useState<string[]>([]);
+  // 본인 국적은 선택지에서 제외 (외국인끼리 매칭 정책 — selectableNationalities 주석 참고).
+  const ownNationality = useAuthStore((s) => s.profile?.nationality);
+  const nationalityOptions = selectableNationalities(ownNationality);
 
   useEffect(() => {
     loadPreferences();
@@ -72,7 +76,8 @@ export default function PreferencesScreen() {
         min_age: ageRange.min,
         max_age: ageRange.max,
         preferred_genders: genders,
-        preferred_nationalities: nationalities,
+        // 정책 변경 전에 저장된 값에 본인 국적이 남아 있을 수 있어 저장 시 한 번 더 거른다.
+        preferred_nationalities: nationalities.filter((c) => c !== ownNationality),
       });
       // Tell the discover screen to drop its cached candidates and re-fetch
       // with the freshly-saved filters next time the user is on the tab.
@@ -130,7 +135,7 @@ export default function PreferencesScreen() {
       </Text>
       <Text style={styles.hintBlock}>{t('preferences.leaveEmptyAllNationalities')}</Text>
       <View style={styles.chipRow}>
-        {SUPPORTED_NATIONALITIES.map(({ code, labelKey }) => {
+        {nationalityOptions.map(({ code, labelKey }) => {
           const selected = nationalities.includes(code);
           return (
             <Pressable

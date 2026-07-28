@@ -11,9 +11,9 @@ interface SignupDraftState {
   gender: Gender;
   nationality: string;
   // Single primary language code (mig 009 simplification). Required at submit
-  // time but starts null while step1 is being filled in.
+  // time but starts null while profile is being filled in.
   language: LanguageCode | null;
-  // Optional partner referral code (한일교류회 등). Collected at step1, sent
+  // Optional partner referral code (한일교류회 등). Collected at profile, sent
   // once on the first profile INSERT — BE records it only on creation.
   referralCode: string;
   bio: string;
@@ -24,10 +24,10 @@ interface SignupDraftState {
   bioPhraseId: string | null;
   interests: string[];
   // Local URIs for photos picked at the photos step, uploaded after the BE
-  // INSERT happens (handleNext in step5.tsx).
+  // INSERT happens (handleNext in photos.tsx).
   photoUris: string[];
   hasStep1: boolean;
-  // LAUNCH_CHECKLIST #5 — 가입 동의 모달(step1) 완료 여부. true 면 약관/개인정보·
+  // LAUNCH_CHECKLIST #5 — 가입 동의 모달(profile) 완료 여부. true 면 약관/개인정보·
   // 국외이전/음성 생체정보 동의를 모두 받은 상태. buildProfilePayload 가 이 값을
   // terms_consent/voice_consent 로 실어 보내 BE 가 동의 시각·버전을 기록한다.
   consentAccepted: boolean;
@@ -42,7 +42,7 @@ interface SignupDraftState {
   }) => void;
   setBio: (bio: string) => void;
   // Separate setter (rather than expanding setBio's signature) so existing
-  // setBio call sites keep their two-arg-free shape; step3 calls both setters
+  // setBio call sites keep their two-arg-free shape; intro calls both setters
   // in lockstep on each handleBioChange.
   setBioPhraseId: (phraseId: string | null) => void;
   setInterests: (interests: string[]) => void;
@@ -95,7 +95,7 @@ export const useSignupDraftStore = create<SignupDraftState>((set, get) => ({
       // 코드 미입력이면 키 자체를 생략 — BE 는 부재를 미입력으로 처리.
       ...(s.referralCode.trim() ? { referral_code: s.referralCode.trim() } : {}),
       // LAUNCH_CHECKLIST #5 — 최초 프로필 생성 시 동의 플래그 동봉. BE 가 동의
-      // 시각·버전을 stamp. 동의 모달(step1)을 통과해야 여기까지 도달하므로 항상 true.
+      // 시각·버전을 stamp. 동의 모달(profile)을 통과해야 여기까지 도달하므로 항상 true.
       terms_consent: s.consentAccepted,
       voice_consent: s.consentAccepted,
     };

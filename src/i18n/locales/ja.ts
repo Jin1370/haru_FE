@@ -39,20 +39,20 @@ export default {
 
     signupWizard: {
         progress: "{{current}} / {{total}}",
-        step1Title: "プロフィール登録",
-        step1Subtitle: "プロフィールに表示される基本情報を入力してください。",
-        step2Title: "自分の声を登録",
-        step2Subtitle: "ボイスチャットに使う声を登録します。",
-        step2SkipWarning: "声を登録しないと、相手を探せる範囲が制限されます。",
-        step3Title: "ボイスひとこと",
-        step3Subtitle: "選んだひとことが登録された声で自動生成されます。",
-        step4Title: "マッチング設定",
-        step4Subtitle: "どんな相手に出会いたいか教えてください。後で変更できます。",
-        step5Title: "プロフィール写真",
-        step5Subtitle: "マッチングに使う写真を登録してください。次のステップに進む間に写真がイラストへ自動変換されます。",
-        step5AtLeastOne: "写真を1枚以上登録すると次へ進めます。",
-        step5MorePhotosBoost: "写真をたくさん登録するほどマッチ率が上がります。",
-        step5ConvertingLocked: "写真をイラストに変換中です。プロフィール登録を完了してください。",
+        profileTitle: "プロフィール登録",
+        profileSubtitle: "プロフィールに表示される基本情報を入力してください。",
+        voiceTitle: "自分の声を登録",
+        voiceSubtitle: "ボイスチャットに使う声を登録します。",
+        voiceSkipWarning: "声を登録しないと、相手を探せる範囲が制限されます。",
+        introTitle: "ボイスひとこと",
+        introSubtitle: "選んだひとことが登録された声で自動生成されます。",
+        preferencesTitle: "マッチング設定",
+        preferencesSubtitle: "どんな相手に出会いたいか教えてください。後で変更できます。",
+        photosTitle: "プロフィール写真",
+        photosSubtitle: "マッチングに使う写真を登録してください。次のステップに進む間に写真がイラストへ自動変換されます。",
+        photosAtLeastOne: "写真を1枚以上登録すると次へ進めます。",
+        photosMoreBoost: "写真をたくさん登録するほどマッチ率が上がります。",
+        photosConvertingLocked: "写真をイラストに変換中です。プロフィール登録を完了してください。",
         registerFailed: "プロフィール登録に失敗しました。もう一度お試しください。",
         startHaru: "HARUを始める",
         skipAndStart: "スキップして始める",
@@ -308,23 +308,23 @@ export default {
         prompts: {
             expandA11y: "会話ガイドを見る",
             pageA11y: "{{current}}/{{total}} ガイド",
-            step1: {
+            profile: {
                 title: "プロフィールを開いて、興味を見てみましょう。",
                 body: "会話を始めるには十分です。",
             },
-            step2: {
+            voice: {
                 title: "今週末はどんなモードですか？",
                 body: "おうちでエネルギー充電 vs 外でアクティブ充電",
             },
-            step3: {
+            intro: {
                 title: "最近、無限リピートしてる曲ありますか？",
                 body: "耳が冴えわたるプレイリストを交換しよう",
             },
-            step4: {
+            preferences: {
                 title: "重く考えないで、MBTIって何ですか？",
                 body: "似ていて落ち着くか、違っていて刺激的か、気になります",
             },
-            step5: {
+            photos: {
                 title: "今年叶えたい『たった一つ』は？",
                 body: "心に秘めたワクワクする計画をシェア",
             },

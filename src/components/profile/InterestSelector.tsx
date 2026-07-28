@@ -8,7 +8,7 @@ import { fonts } from '@/constants/fonts';
 
 // 관심사 선택을 항목별 아코디언으로 표시한다. 태그가 100개 가까이라 전부 펼쳐
 // 두면 부담스러워, 섹션 헤더만 보여주고 탭하면 해당 섹션 태그만 아래로 펼친다.
-// 회원가입(step1)과 프로필 수정(edit-profile)이 공유 — 선택 상태/토글 로직은
+// 회원가입(profile)과 프로필 수정(edit-profile)이 공유 — 선택 상태/토글 로직은
 // 부모가 소유하고(저장 위치가 draft store vs form 으로 다름) 이 컴포넌트는 표시
 // + 펼침 상태만 담당한다.
 interface InterestSelectorProps {

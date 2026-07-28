@@ -8,9 +8,9 @@ import { registerToken, unregisterToken } from '@/services/notifications';
 // 화면에서 시스템 설정으로 다시 허용할 수 있다.
 //
 // 호출 위치:
-//   * setup step5 의 handleNext (회원가입 흐름 마지막)
+//   * setup photos 의 handleNext (회원가입 흐름 마지막)
 //   * (선택) 앱 시작 시 자동 로그인 분기 — 기존 사용자 재허용/재발급 처리.
-//     본 sprint 1차 범위에서는 step5 만 적용. 후속 카드에서 자동 보강.
+//     본 sprint 1차 범위에서는 photos 만 적용. 후속 카드에서 자동 보강.
 export async function requestAndRegisterPushToken(): Promise<{
   granted: boolean;
   token?: string;

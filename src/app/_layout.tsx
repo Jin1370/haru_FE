@@ -321,12 +321,12 @@ function RootLayout() {
   ]);
 
   // push-notifications sprint follow-up: 인증·프로필 보유 사용자 자동 토큰 재등록.
-  // setup step5 에만 권한 트리거를 두면 dev build 적용 이전에 회원가입을 끝낸
+  // setup photos 에만 권한 트리거를 두면 dev build 적용 이전에 회원가입을 끝낸
   // 기존 사용자가 영영 device_tokens 행을 생성하지 못한다 (silent skip → 푸시
   // 미수신). 매 로그인/auto-login 시점에 호출하면:
   //   * 권한이 이미 grant 상태면 OS 모달 없이 토큰만 refresh + BE upsert (idempotent)
   //   * 미허용·denied 상태면 OS 가 모달 표시 (denied 였으면 모달도 미표시 — OS 정책)
-  // hasProfile=true 게이트로 setup 진행 중 사용자에는 영향 없음 (그쪽은 step5 가 담당).
+  // hasProfile=true 게이트로 setup 진행 중 사용자에는 영향 없음 (그쪽은 photos 가 담당).
   useEffect(() => {
     if (isAuthenticated && hasProfile) {
       requestAndRegisterPushToken().catch(() => undefined);

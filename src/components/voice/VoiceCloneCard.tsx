@@ -13,7 +13,7 @@ import { colors, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { userFacingError } from '@/utils/errors';
 
-// 보이스 클론 녹음/등록 카드 — 가입 마법사(setup/step2)와 설정(settings/voice)이
+// 보이스 클론 녹음/등록 카드 — 가입 마법사(setup/voice)와 설정(settings/voice)이
 // 공유한다. 두 화면은 예전에 이 250여 줄(RecordRing·녹음 플로우·업로드 검증·
 // 재생성 확인·스크립트 아코디언·스타일)을 통째로 복사해 갖고 있었고, 한쪽만
 // 고쳐지는 drift 가 실제로 있었다(재녹음 한도 안내는 설정에만 존재).

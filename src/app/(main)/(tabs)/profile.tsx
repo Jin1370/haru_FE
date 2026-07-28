@@ -92,13 +92,13 @@ export default function ProfileScreen() {
   const [photoBust, setPhotoBust] = useState(0);
   const bustUri = (uri: string) => (photoBust > 0 ? `${uri}${uri.includes('?') ? '&' : '?'}cb=${photoBust}` : uri);
   // photo-original-blur-preview: 변환 중(inflight) 슬롯 배경에 깔 흐린 원본 URI 는
-  // 공유 store 에서 읽는다. 회원가입 step5 배치 업로드도 같은 store 에 기록하므로,
+  // 공유 store 에서 읽는다. 회원가입 photos 배치 업로드도 같은 store 에 기록하므로,
   // 가입 직후 프로필 탭에 진입해도 같은 세션 동안 흐린 미리보기가 보인다(옛 컴포넌트
-  // state 방식은 step5 의 로컬 URI 가 전달 안 돼 가입 직후 blur 가 안 떴다).
+  // state 방식은 photos 의 로컬 URI 가 전달 안 돼 가입 직후 blur 가 안 떴다).
   const photoPreviews = usePhotoPreviewStore((s) => s.previews);
   const setPhotoPreview = usePhotoPreviewStore((s) => s.setPreview);
 
-  // 회원가입 step5 백그라운드 업로드에서 재시도까지 소진하고 최종 실패한 사진의
+  // 회원가입 photos 백그라운드 업로드에서 재시도까지 소진하고 최종 실패한 사진의
   // 로컬 URI 들. 비어있지 않으면 그리드 아래 회복 배너로 "다시 시도" 동선을 연다.
   const pendingPhotoUris = usePendingPhotoUploadsStore((s) => s.uris);
   const removePendingPhotoUpload = usePendingPhotoUploadsStore((s) => s.remove);

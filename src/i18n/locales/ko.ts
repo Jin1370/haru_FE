@@ -39,20 +39,20 @@ export default {
 
     signupWizard: {
         progress: "{{current}} / {{total}}",
-        step1Title: "프로필 등록",
-        step1Subtitle: "프로필에 표시될 기본 정보를 입력해주세요.",
-        step2Title: "내 목소리 등록",
-        step2Subtitle: "음성 채팅에 사용할 목소리를 등록해요.",
-        step2SkipWarning: "내 목소리를 등록하지 않으면 매칭 상대 탐색이 제한돼요.",
-        step3Title: "보이스 한마디",
-        step3Subtitle: "고른 한마디가 등록된 목소리로 자동 생성돼요.",
-        step4Title: "매칭 선호 설정",
-        step4Subtitle: "어떤 사람을 만나고 싶은지 알려주세요. 나중에 바꿀 수 있어요.",
-        step5Title: "프로필 사진",
-        step5Subtitle: "매칭에 사용할 사진을 등록해주세요. 다음 단계를 진행하시는 동안 사진이 그림으로 자동 변환돼요.",
-        step5AtLeastOne: "사진을 한 장 이상 등록해야 진행할 수 있어요.",
-        step5MorePhotosBoost: "사진을 많이 올릴 수록 매칭 확률이 높아져요.",
-        step5ConvertingLocked: "사진을 그림으로 변환 중입니다. 프로필 등록을 마쳐주세요.",
+        profileTitle: "프로필 등록",
+        profileSubtitle: "프로필에 표시될 기본 정보를 입력해주세요.",
+        voiceTitle: "내 목소리 등록",
+        voiceSubtitle: "음성 채팅에 사용할 목소리를 등록해요.",
+        voiceSkipWarning: "내 목소리를 등록하지 않으면 매칭 상대 탐색이 제한돼요.",
+        introTitle: "보이스 한마디",
+        introSubtitle: "고른 한마디가 등록된 목소리로 자동 생성돼요.",
+        preferencesTitle: "매칭 선호 설정",
+        preferencesSubtitle: "어떤 사람을 만나고 싶은지 알려주세요. 나중에 바꿀 수 있어요.",
+        photosTitle: "프로필 사진",
+        photosSubtitle: "매칭에 사용할 사진을 등록해주세요. 다음 단계를 진행하시는 동안 사진이 그림으로 자동 변환돼요.",
+        photosAtLeastOne: "사진을 한 장 이상 등록해야 진행할 수 있어요.",
+        photosMoreBoost: "사진을 많이 올릴 수록 매칭 확률이 높아져요.",
+        photosConvertingLocked: "사진을 그림으로 변환 중입니다. 프로필 등록을 마쳐주세요.",
         registerFailed: "프로필 등록에 실패했어요. 다시 시도해주세요.",
         startHaru: "HARU 시작하기",
         skipAndStart: "건너뛰고 시작하기",
@@ -308,23 +308,23 @@ export default {
         prompts: {
             expandA11y: "대화 가이드 보기",
             pageA11y: "{{current}}/{{total}} 가이드",
-            step1: {
+            profile: {
                 title: "프로필을 열어 관심사를 살펴보세요.",
                 body: "대화의 시작점으론 충분해요.",
             },
-            step2: {
+            voice: {
                 title: "이번 주말엔 어떤 모드인가요?",
                 body: "집에서 에너지 충전 vs 밖에서 활력 충전",
             },
-            step3: {
+            intro: {
                 title: "요즘 무한 반복 중인 노래 있어요?",
                 body: "귀가 번쩍 뜨일 플레이리스트 교환하기",
             },
-            step4: {
+            preferences: {
                 title: "과몰입 방지! 혹시 MBTI가 뭐예요?",
                 body: "닮아서 편할지, 달라서 짜릿할지 궁금해요",
             },
-            step5: {
+            photos: {
                 title: "올해 꼭 해내고 싶은 '단 하나'는?",
                 body: "마음속에 간직해 둔 설레는 계획 공유하기",
             },

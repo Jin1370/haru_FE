@@ -33,7 +33,7 @@ export const BIO_PHRASES: readonly BioPhrase[] = [
     id: 'daily-1',
     tag: 'daily',
     text: {
-      ko: '오늘은 어떤 하루였나요? 같이 수다 떨어요.',
+      ko: '오늘은 어떤 하루였나요?\n같이 수다 떨어요.',
       en: "How was your day today? Let's chat about it.",
       ja: '今日はどんな一日でしたか？\nおしゃべりしましょう。',
     },
@@ -42,7 +42,7 @@ export const BIO_PHRASES: readonly BioPhrase[] = [
     id: 'listen-1',
     tag: 'listen',
     text: {
-      ko: '고민 듣는 거 좋아해요. 뭐든지 상담해주세요.',
+      ko: '고민 듣는 거 좋아해요.\n뭐든지 상담해주세요.',
       en: "I'm a good listener — bring me whatever's on your mind.",
       ja: '悩みを聞くのが好きです。\n何でも相談してくださいね。',
     },
@@ -51,7 +51,7 @@ export const BIO_PHRASES: readonly BioPhrase[] = [
     id: 'talk-1',
     tag: 'talk',
     text: {
-      ko: '말 시작하면 멈추지 않는 타입이에요. 심심할 때 말 걸어주세요.',
+      ko: '말 시작하면 멈추지 않는 타입이에요.\n심심할 때 말 걸어주세요.',
       en: "Once I get talking, I don't stop. Say hi whenever you're bored.",
       ja: '話し出すと止まらないタイプなんです。\n暇なときは声かけてください。',
     },
@@ -78,7 +78,7 @@ export const BIO_PHRASES: readonly BioPhrase[] = [
     id: 'music-1',
     tag: 'music',
     text: {
-      ko: '음악 취향 공유할 사람 찾아요. 요즘 뭐 들으세요?',
+      ko: '음악 취향 공유할 사람 찾아요.\n요즘 뭐 들으세요?',
       en: 'Looking for someone to swap playlists with. What are you listening to lately?',
       ja: '音楽の趣味を共有できる人を探してます。\n最近何聴いてますか？',
     },

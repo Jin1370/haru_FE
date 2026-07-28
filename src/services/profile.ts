@@ -106,7 +106,7 @@ function isRetryableUploadError(e: unknown): boolean {
   return true;
 }
 
-// 사진 업로드를 일시적 실패에 대해 지수 백오프로 재시도한다. 회원가입 step5 의
+// 사진 업로드를 일시적 실패에 대해 지수 백오프로 재시도한다. 회원가입 photos 의
 // 백그라운드 배치 업로드 + 프로필 탭 회복 재시도가 공유한다. 모더레이션 거부 등
 // 영구 실패는 첫 시도에서 곧장 throw 되어 호출처가 분기 처리한다.
 export async function uploadPhotoWithRetry(

@@ -11,20 +11,20 @@ import { fonts } from '@/constants/fonts';
 
 // 녹음/업로드/재생성 흐름은 settings/voice.tsx 와 완전히 같은 컴포넌트
 // (VoiceCloneCard) 를 쓴다. 이 화면 고유한 것은 마법사 헤더와 다음/건너뛰기뿐.
-export default function SetupStep2() {
+export default function SetupVoice() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
-  // Skip leaves voice_clone_status as-is (BE side); step3 will detect
-  // !voiceReady and self-skip, dropping the user straight onto step4.
-  const goNext = () => router.push('/(main)/setup/step3');
+  // Skip leaves voice_clone_status as-is (BE side); intro will detect
+  // !voiceReady and self-skip, dropping the user straight onto preferences.
+  const goNext = () => router.push('/(main)/setup/intro');
 
   return (
     <View style={styles.container}>
       <WizardHeader
         step={4}
-        title={t('signupWizard.step2Title')}
-        subtitle={t('signupWizard.step2Subtitle')}
+        title={t('signupWizard.voiceTitle')}
+        subtitle={t('signupWizard.voiceSubtitle')}
         onBack={() => router.back()}
       />
       <ScrollView
@@ -41,7 +41,7 @@ export default function SetupStep2() {
                     size={16}
                     color={colors.primaryDark}
                   />
-                  <Text style={styles.skipWarnText}>{t('signupWizard.step2SkipWarning')}</Text>
+                  <Text style={styles.skipWarnText}>{t('signupWizard.voiceSkipWarning')}</Text>
                 </View>
               )}
               <View style={styles.actions}>

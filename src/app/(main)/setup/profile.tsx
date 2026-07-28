@@ -40,16 +40,16 @@ const formatBirthDate = (input: string): string => {
   return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
 };
 
-export default function SetupStep1() {
+export default function SetupProfile() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const draft = useSignupDraftStore();
 
   // Wizard entry: swipe-back / hardware-back = logout. Focus-gated so the
-  // listeners only fire while step1 is the visible screen — otherwise step1
-  // remains mounted in the stack after pushing step2~5 and would intercept
-  // back presses from later screens (including the post-wizard tabs).
+  // listeners only fire while this screen is visible — otherwise it stays
+  // mounted in the stack after pushing the later wizard steps and would
+  // intercept back presses from them (including the post-wizard tabs).
   useFocusEffect(
     useCallback(() => {
       const onHardwareBack = () => {
@@ -153,8 +153,8 @@ export default function SetupStep1() {
     // No BE write here — wizard order is now basics → photos → prefs → voice
     // clone → voice intro, and the photos step performs the INSERT once both
     // mandatory blocks (basics + ≥1 photo) are filled. Reloading anywhere
-    // before that returns the user to step1 because no profile row exists.
-    router.push('/(main)/setup/step5');
+    // before that returns the user to profile because no profile row exists.
+    router.push('/(main)/setup/photos');
   };
 
   const genderLabel = (g: typeof GENDER_OPTIONS[number]) => {
@@ -167,8 +167,8 @@ export default function SetupStep1() {
     <View style={styles.container}>
       <WizardHeader
         step={1}
-        title={t('signupWizard.step1Title')}
-        subtitle={t('signupWizard.step1Subtitle')}
+        title={t('signupWizard.profileTitle')}
+        subtitle={t('signupWizard.profileSubtitle')}
       />
       {/* KeyboardAwareScrollView auto-scrolls the focused TextInput above the
           keyboard (mirrors edit-bio.tsx) — so the last field (referral code)

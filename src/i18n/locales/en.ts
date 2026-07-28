@@ -39,20 +39,20 @@ export default {
 
   signupWizard: {
     progress: '{{current}} / {{total}}',
-    step1Title: 'Profile Setup',
-    step1Subtitle: 'Enter the basics that will appear on your profile.',
-    step2Title: 'Register My Voice',
-    step2Subtitle: 'Register the voice that will be used in voice chats.',
-    step2SkipWarning: "Without registering your voice, you can't discover potential matches.",
-    step3Title: 'Voice intro',
-    step3Subtitle: 'Your chosen line is auto-generated with your registered voice.',
-    step4Title: 'Matching Preferences',
-    step4Subtitle: 'Tell us who you want to meet. You can change this later.',
-    step5Title: 'Profile Photos',
-    step5Subtitle: 'Add photos to use for matching. Your photos are converted to illustrations while you go through the next steps.',
-    step5AtLeastOne: 'Please add at least one photo to continue.',
-    step5MorePhotosBoost: 'More photos = more matches.',
-    step5ConvertingLocked: 'Your photos are being converted to illustrations. Please finish setting up your profile.',
+    profileTitle: 'Profile Setup',
+    profileSubtitle: 'Enter the basics that will appear on your profile.',
+    voiceTitle: 'Register My Voice',
+    voiceSubtitle: 'Register the voice that will be used in voice chats.',
+    voiceSkipWarning: "Without registering your voice, you can't discover potential matches.",
+    introTitle: 'Voice intro',
+    introSubtitle: 'Your chosen line is auto-generated with your registered voice.',
+    preferencesTitle: 'Matching Preferences',
+    preferencesSubtitle: 'Tell us who you want to meet. You can change this later.',
+    photosTitle: 'Profile Photos',
+    photosSubtitle: 'Add photos to use for matching. Your photos are converted to illustrations while you go through the next steps.',
+    photosAtLeastOne: 'Please add at least one photo to continue.',
+    photosMoreBoost: 'More photos = more matches.',
+    photosConvertingLocked: 'Your photos are being converted to illustrations. Please finish setting up your profile.',
     registerFailed: 'Profile registration failed. Please try again.',
     startHaru: 'Start HARU',
     skipAndStart: 'Skip & Start',
@@ -311,23 +311,23 @@ export default {
     prompts: {
       expandA11y: 'View conversation guide',
       pageA11y: 'Guide {{current}} of {{total}}',
-      step1: {
+      profile: {
         title: 'Open their profile and check their interests.',
         body: 'Enough to start a conversation.',
       },
-      step2: {
+      voice: {
         title: "What's your weekend mode?",
         body: 'Charging at home vs powering up outside',
       },
-      step3: {
+      intro: {
         title: 'Got a song on infinite repeat lately?',
         body: "Swap playlists that'll wake your ears up",
       },
-      step4: {
+      preferences: {
         title: "Just for fun — what's your MBTI?",
         body: "Curious if we'll click by being alike, or spark by being different",
       },
-      step5: {
+      photos: {
         title: 'The one thing you want to do this year?',
         body: "Share the exciting plan you've been holding close",
       },

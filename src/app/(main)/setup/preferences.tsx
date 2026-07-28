@@ -16,14 +16,16 @@ import { showAlert } from '@/stores/alertStore';
 import { usePreferences } from '@/hooks/usePreferences';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
-import { SUPPORTED_NATIONALITIES } from '@/constants/nationalities';
+import { selectableNationalities } from '@/constants/nationalities';
+import { useSignupDraftStore } from '@/stores/signupDraftStore';
+import { useAuthStore } from '@/stores/authStore';
 import { MIN_AGE, MAX_AGE } from '@/utils/preferences';
 import { userFacingError } from '@/utils/errors';
 import type { PreferenceUpdateRequest } from '@/types';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
 
-export default function SetupStep4() {
+export default function SetupPreferences() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { updatePreferences, loading: prefSaving } = usePreferences();
@@ -36,6 +38,14 @@ export default function SetupStep4() {
     ...GENDER_OPTIONS,
   ]);
   const [nationalities, setNationalities] = useState<string[]>([]);
+  // 본인 국적은 선택지에서 제외 (외국인끼리 매칭 정책).
+  // 마법사 순서는 profile → photos(사진) → preferences(여기) 라서 이 화면에 올 때는 이미
+  // photos 의 upsertProfile 로 프로필 row + authStore.profile 이 채워져 있다.
+  // draft 는 하이드레이트가 늦는 경우를 대비한 폴백 (profile 이 채워둔 값).
+  const draftNationality = useSignupDraftStore((s) => s.nationality);
+  const profileNationality = useAuthStore((s) => s.profile?.nationality);
+  const ownNationality = profileNationality || draftNationality;
+  const nationalityOptions = selectableNationalities(ownNationality);
 
   const toggleGender = (g: 'male' | 'female' | 'other') => {
     setGenders((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
@@ -59,7 +69,7 @@ export default function SetupStep4() {
       min_age: ageRange.min,
       max_age: ageRange.max,
       preferred_genders: genders,
-      preferred_nationalities: nationalities,
+      preferred_nationalities: nationalities.filter((c) => c !== ownNationality),
     };
     // Wizard position 3: profile row already exists (INSERTed at position 2),
     // so write preferences straight to BE. Reloading at any point past this
@@ -71,15 +81,15 @@ export default function SetupStep4() {
       showAlert({ variant: 'error', title: t('common.error'), message: userFacingError(e, t) });
       return;
     }
-    router.push('/(main)/setup/step2');
+    router.push('/(main)/setup/voice');
   };
 
   return (
     <View style={styles.container}>
       <WizardHeader
         step={3}
-        title={t('signupWizard.step4Title')}
-        subtitle={t('signupWizard.step4Subtitle')}
+        title={t('signupWizard.preferencesTitle')}
+        subtitle={t('signupWizard.preferencesSubtitle')}
         onBack={() => router.back()}
       />
       <ScrollView
@@ -115,7 +125,7 @@ export default function SetupStep4() {
         </Text>
         <Text style={styles.hintBlock}>{t('preferences.leaveEmptyAllNationalities')}</Text>
         <View style={styles.chipRow}>
-          {SUPPORTED_NATIONALITIES.map(({ code, labelKey }) => {
+          {nationalityOptions.map(({ code, labelKey }) => {
             const selected = nationalities.includes(code);
             return (
               <Pressable
