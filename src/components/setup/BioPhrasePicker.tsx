@@ -36,17 +36,18 @@ interface BioPhrasePickerProps {
 }
 
 const CUSTOM_MAX = 500;
-const CUSTOM_TINT = '#C8ADBA';
+const CUSTOM_TINT = '#B9BCC2'; // 연회색
 // 주제 태그 색상. 키는 BIO_PHRASES 의 `tag` (= i18n 키). 미등록 태그는 CUSTOM_TINT
 // 로 폴백하므로 문구를 추가할 때 색을 깜빡해도 렌더는 깨지지 않는다.
+// 목록 순서대로 나열 (BIO_PHRASES 와 동일 순서).
 const TAG_TINTS: Record<string, string> = {
-  daily: '#B8C8DD',
-  listen: '#E8A88C',
-  greeting: '#F6B5C8',
-  talk: '#F4A261',
-  friend: '#B8A1C8',
-  food: '#E27AA0',
-  music: '#78C99A',
+  greeting: '#F6B5C8', // 라이트핑크
+  daily: '#B8C8DD', // 블루그레이
+  listen: '#E9B949', // 골든 옐로우
+  talk: '#A6C97C', // 연두색
+  friend: '#8FC4E8', // 하늘색
+  food: '#7B94C4', // 파스텔 남색
+  music: '#A98BD0', // 파스텔 보라
 };
 // 직접 입력 카드와 프리셋 카드가 같은 높이로 시작하도록 공유하는 본문 최소 높이.
 // 두 카드 모두 위에 태그 칩 행이 붙으므로 이 값만 맞으면 총 높이가 같다.
@@ -152,6 +153,42 @@ export function BioPhrasePicker({
 
   return (
     <View style={styles.container}>
+      {BIO_PHRASES.map((phrase) => {
+        const selected = selectedId === phrase.id;
+        const localizedText = getBioPhraseText(phrase, language);
+        return (
+          <Pressable
+            key={phrase.id}
+            disabled={disabled}
+            onPress={() => handleSelectPreset(phrase.id, localizedText)}
+            style={[
+              styles.card,
+              selected && styles.cardSelected,
+              disabled && styles.cardDisabled,
+            ]}
+          >
+            <View
+              style={[
+                styles.tag,
+                { backgroundColor: TAG_TINTS[phrase.tag] ?? CUSTOM_TINT },
+              ]}
+            >
+              <Text style={styles.tagText}>
+                {t(`setupProfile.bioPicker.tags.${phrase.tag}`)}
+              </Text>
+            </View>
+            <Text
+              style={[styles.phraseText, selected && styles.phraseTextSelected]}
+            >
+              {localizedText}
+            </Text>
+          </Pressable>
+        );
+      })}
+
+      {/* 직접 입력은 목록 맨 아래 — 프리셋을 먼저 훑고 마음에 드는 게 없을 때
+          쓰는 마지막 선택지라 순서상 뒤에 둔다. 키보드가 올라와도
+          KeyboardAwareScrollView 가 포커스된 입력을 자동으로 띄운다. */}
       <Pressable
         disabled={disabled}
         onPress={handleSelectCustom}
@@ -196,39 +233,6 @@ export function BioPhrasePicker({
         />
         <ErrorText testID="bio-phrase-picker-error">{error ?? null}</ErrorText>
       </Pressable>
-
-      {BIO_PHRASES.map((phrase) => {
-        const selected = selectedId === phrase.id;
-        const localizedText = getBioPhraseText(phrase, language);
-        return (
-          <Pressable
-            key={phrase.id}
-            disabled={disabled}
-            onPress={() => handleSelectPreset(phrase.id, localizedText)}
-            style={[
-              styles.card,
-              selected && styles.cardSelected,
-              disabled && styles.cardDisabled,
-            ]}
-          >
-            <View
-              style={[
-                styles.tag,
-                { backgroundColor: TAG_TINTS[phrase.tag] ?? CUSTOM_TINT },
-              ]}
-            >
-              <Text style={styles.tagText}>
-                {t(`setupProfile.bioPicker.tags.${phrase.tag}`)}
-              </Text>
-            </View>
-            <Text
-              style={[styles.phraseText, selected && styles.phraseTextSelected]}
-            >
-              {localizedText}
-            </Text>
-          </Pressable>
-        );
-      })}
 
       {disabled && lockedHint ? (
         <View style={styles.lockHintBox}>
