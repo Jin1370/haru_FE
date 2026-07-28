@@ -1,15 +1,29 @@
 import { api } from './api';
+import { photoAccessStore } from '@/stores/photoAccess';
+import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
 import type { DiscoverCandidate, SwipeRequest, SwipeResponse, DiscoverQuota } from '@/types';
 
+// 카드 응답이 오면 photo_access 레지스트리를 채운다 — 디스커버/받은 좋아요 두
+// 훅이 각자 복사해 갖고 있던 ingest 를 응답 지점 한 곳으로 모았다. undefined →
+// DEFAULT(잠금).
+function ingest(candidates: DiscoverCandidate[]): DiscoverCandidate[] {
+  photoAccessStore.ingest(
+    candidates
+      .filter((c) => Boolean(c.id))
+      .map((c) => ({ userId: c.id, access: c.photo_access ?? DEFAULT_PHOTO_ACCESS })),
+  );
+  return candidates;
+}
+
 export async function getDiscoverCandidates(limit = 10): Promise<DiscoverCandidate[]> {
-  return api.get<DiscoverCandidate[]>(`/api/discover?limit=${limit}`);
+  return ingest(await api.get<DiscoverCandidate[]>(`/api/discover?limit=${limit}`));
 }
 
 // 받은 좋아요 — 나를 like 한 사용자 중 내가 아직 응답 안 했고 차단 양방향 아닌 후보.
 // 응답 shape 은 디스커버 카드와 동일 → SwipeCard 컴포넌트 재사용.
 // 정렬은 like 한 시각 내림차순 (BE).
 export async function getReceivedLikes(): Promise<DiscoverCandidate[]> {
-  return api.get<DiscoverCandidate[]>('/api/discover/likes-received');
+  return ingest(await api.get<DiscoverCandidate[]>('/api/discover/likes-received'));
 }
 
 export async function swipe(data: SwipeRequest): Promise<SwipeResponse> {

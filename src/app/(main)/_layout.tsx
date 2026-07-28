@@ -7,6 +7,10 @@ export default function MainLayout() {
   const { isAuthenticated } = useAuthStore();
   const photos = useAuthStore((s) => s.profile?.photos);
 
+  // 다른 탭(채팅 목록 / 받은 좋아요) 데이터 프리로드는 여기서 하지 않는다 —
+  // 첫 화면인 디스커버의 첫 후보/이미지와 대역폭을 다투기 때문. 디스커버가 첫
+  // 응답을 받은 뒤 useDiscover 가 lib/swr 의 preloadTabData 를 부른다.
+
   // 로그인 직후 내 프로필 사진을 prefetch 한다. 목적 두 가지:
   //  (1) Supabase storage 호스트로의 TLS 연결을 미리 warm — 탐색 첫 카드가
   //      그 연결을 재사용해 콜드 핸드셰이크(~1~2초)를 건너뛴다. 탐색 후보

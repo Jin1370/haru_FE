@@ -11,12 +11,14 @@ import {
 } from '@/services/realtime';
 import { photoAccessStore } from '@/stores/photoAccess';
 import { useAuthStore } from '@/stores/authStore';
-import { matchesKey } from '@/lib/swr';
+import { matchesKey, matchesFetcher, MATCHES_PAGE_SIZE } from '@/lib/swr';
 import { computeBackoffDelay } from '@/utils/backoff';
 import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
 import type { Message, MatchListItem } from '@/types';
 
-const PAGE_SIZE = 20;
+// 페이지 크기는 lib/swr 의 프리로드 fetcher 와 공유 — 값이 갈라지면 부팅
+// 프리로드가 채운 캐시를 화면 훅이 다른 키로 다시 받아온다.
+const PAGE_SIZE = MATCHES_PAGE_SIZE;
 
 // Push each match's photo_access into the registry so any screen (Matches tab,
 // Chat screen, profile detail) can render consistent blur state without the
@@ -115,11 +117,7 @@ export function useMatches() {
     mutate,
     isValidating,
     error: swrError,
-  } = useSWR<MatchListItem[]>(
-    swrKey,
-    () => matchService.getMatches(PAGE_SIZE),
-    { onSuccess: ingestMatches },
-  );
+  } = useSWR<MatchListItem[]>(swrKey, matchesFetcher, { onSuccess: ingestMatches });
 
   const [extraPages, setExtraPages] = useState<MatchListItem[]>([]);
   const [hasMore, setHasMore] = useState(true);

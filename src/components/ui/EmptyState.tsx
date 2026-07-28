@@ -12,6 +12,8 @@ interface EmptyStateProps {
   ctaLabel?: string;
   onCtaPress?: () => void;
   style?: ViewStyle;
+  /** CTA 아래에 붙는 보조 액션 (예: "넘긴 사람 다시 보기"). */
+  children?: React.ReactNode;
 }
 
 export function EmptyState({
@@ -21,6 +23,7 @@ export function EmptyState({
   ctaLabel,
   onCtaPress,
   style,
+  children,
 }: EmptyStateProps) {
   const showCta = Boolean(ctaLabel && onCtaPress);
   return (
@@ -45,6 +48,7 @@ export function EmptyState({
           textStyle={styles.ctaText}
         />
       ) : null}
+      {children}
     </View>
   );
 }

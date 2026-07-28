@@ -23,6 +23,7 @@ import {
   useReanimatedKeyboardAnimation,
 } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import useSWR from 'swr';
 import { ChatBubble } from '@/components/chat/ChatBubble';
 import { AudioPlayer } from '@/components/chat/AudioPlayer';
 import { IntimacyGauge } from '@/components/chat/IntimacyGauge';
@@ -40,6 +41,8 @@ import {
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
 import { ProfilePhotoGallery } from '@/components/ui/ProfilePhotoGallery';
 import { useChat } from '@/hooks/useChat';
+import { useAuthStore } from '@/stores/authStore';
+import { matchesKey } from '@/lib/swr';
 import { setActiveChatMatchId } from '@/lib/activeChat';
 import { showAlert } from '@/stores/alertStore';
 import { ApiRequestError } from '@/services/api';
@@ -54,7 +57,7 @@ import { fromRoundTrips } from '@/constants/photoAccess';
 import { photoAccessStore } from '@/stores/photoAccess';
 import { usePhotoAccess } from '@/hooks/usePhotoAccess';
 import type { PhotoAccess } from '@/types/photoAccess';
-import type { Emotion, Message } from '@/types';
+import type { Emotion, MatchListItem, Message } from '@/types';
 
 // Minimum padding under the chat input bar so the send button never sits
 // directly on top of the Android gesture bar when useSafeAreaInsets() reports
@@ -145,6 +148,24 @@ export default function ChatScreen() {
     return () => setActiveChatMatchId(null);
   }, [matchId]);
 
+  // 매치 리스트 SWR 캐시(매치 탭 / 부팅 프리로드가 채움) 스냅샷. 아래 파트너
+  // 조회 effect 가 matchId 변경 때만 돌도록 ref 로 읽는다(캐시 갱신마다 재실행 X).
+  const myUserId = useAuthStore((s) => s.userId);
+  // fetcher null + revalidate off — 캐시만 읽고 네트워크는 건드리지 않는다
+  // (useChat 이 matchAfter 를 시드할 때 쓰는 것과 같은 패턴).
+  const { data: matchesCache } = useSWR<MatchListItem[]>(
+    myUserId ? matchesKey(myUserId) : null,
+    null,
+    {
+      revalidateOnFocus: false,
+      revalidateOnMount: false,
+      revalidateIfStale: false,
+      revalidateOnReconnect: false,
+    },
+  );
+  const matchesCacheRef = useRef(matchesCache);
+  matchesCacheRef.current = matchesCache;
+
   useEffect(() => {
     // BE /api/matches returns only basic MatchPartner fields. We pull the partner
     // from that list for photo/name/nationality/language (no single-match endpoint),
@@ -156,7 +177,16 @@ export default function ChatScreen() {
     let cancelled = false;
     (async () => {
       try {
-        const list = await matchService.getMatches(50);
+        // 매치 리스트는 대개 SWR 캐시(매치 탭/부팅 프리로드)에 이미 있다 —
+        // 있으면 네트워크 왕복 없이 그대로 쓰고, 없을 때만 받아온다. 상세는
+        // 리스트에 의존하지 않으므로 병렬로 띄운다(예전엔 직렬 2왕복).
+        const cached = matchesCacheRef.current;
+        const [list, detail] = await Promise.all([
+          cached?.some((m) => m.match_id === matchId)
+            ? Promise.resolve(cached)
+            : matchService.getMatches(50),
+          matchService.getPartnerDetail(matchId).catch(() => null),
+        ]);
         if (cancelled) return;
         const found = list.find((m) => m.match_id === matchId);
         const partner = found?.partner;
@@ -182,8 +212,7 @@ export default function ChatScreen() {
         setPartnerId(partner.id);
         setPartnerPhotos(partner.photos ?? []);
         setPartnerNationality(partner.nationality ?? null);
-        const detail = await matchService.getPartnerDetail(matchId);
-        if (cancelled || !detail) return;
+        if (!detail) return;
         setPartnerInterests(detail.interests);
         setPartnerBioAudio(detail.voice_intro_audio_url);
         setPartnerBirthDate(detail.birth_date || null);

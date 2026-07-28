@@ -1,14 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSWRConfig } from 'swr';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
+import useSWR, { useSWRConfig } from 'swr';
 import * as discoverService from '@/services/discover';
 import { ApiRequestError } from '@/services/api';
-import { photoAccessStore } from '@/stores/photoAccess';
 import { swipedSession } from '@/stores/swipedSession';
 import { useAuthStore } from '@/stores/authStore';
 import { useCatStore } from '@/stores/catStore';
-import { matchesKey } from '@/lib/swr';
-import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
-import { DAILY_LIKE_LIMIT } from '@/utils/discoverDaily';
+import { matchesKey, likesKey, likesFetcher } from '@/lib/swr';
+import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 import type { DiscoverCandidate, SwipeResponse } from '@/types';
 
 // 받은 좋아요 화면의 카드/스와이프 상태.
@@ -19,100 +17,36 @@ import type { DiscoverCandidate, SwipeResponse } from '@/types';
 //   3. 스와이프는 동일 엔드포인트 (POST /api/discover/swipe) 공유. 단 받은 좋아요의
 //      like 는 항상 reciprocal(=매치 완성) 이라 하루 좋아요 예산을 소모하지 않는다(면제).
 //   4. 'like' 응답 시 즉시 match — 상대가 이미 like 한 상태이므로 reciprocal 항상 성립
-//   5. 세션 스와이프 집합(swipedSession)을 디스커버 탭과 공유 — 한 탭에서 스와이프하면
-//      다른 탭이 즉시 같은 카드를 덱에서 제거(refetch 불필요)
-function ingestCandidates(candidates: DiscoverCandidate[]) {
-  const entries = candidates
-    .filter((c) => Boolean(c.id))
-    .map((c) => ({ userId: c.id, access: c.photo_access ?? DEFAULT_PHOTO_ACCESS }));
-  photoAccessStore.ingest(entries);
-}
-
+//   5. 세션 스와이프 집합(swipedSession) + 일일 예산(useDiscoverQuota)을 디스커버 탭과
+//      공유 — 한 탭에서 스와이프하면 다른 탭이 즉시 같은 카드를 덱에서 제거(refetch 불필요)
+//
+// 카드 목록은 SWR 캐시에 둔다. 탭을 처음 열 때 부팅 프리로드(main/_layout)가 이미
+// 채워둔 캐시를 즉시 그리고, focus refetch 는 그 뒤에서 조용히 갱신한다(스피너 없음).
 export function useReceivedLikes() {
   const userId = useAuthStore((s) => s.userId);
   const { mutate: globalMutate } = useSWRConfig();
-  const [candidates, setCandidates] = useState<DiscoverCandidate[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // 디스커버 quota 와 공유. 받은 좋아요 카드 빈 화면 vs 한도 소진 빈 화면을 구분하기
-  // 위해 mount 시 같이 가져온다.
-  const [dailyCount, setDailyCount] = useState(0);
-  // 오늘 보낸 좋아요 예산 한도. 디스커버 quota 와 공유(BE 단일 진실원=quota.limit).
-  const [dailyLimit, setDailyLimit] = useState(DAILY_LIKE_LIMIT);
-  const [dailyCountReady, setDailyCountReady] = useState(false);
-  // handleSwipe identity 안정 + 429 stale 방어용 refs (디스커버 훅과 동일 패턴).
-  const dailyLimitRef = useRef(DAILY_LIKE_LIMIT);
-  const likeLimitHitRef = useRef(false);
-  useEffect(() => {
-    dailyLimitRef.current = dailyLimit;
-  }, [dailyLimit]);
-  // "넘긴 사람 다시 보기" env 게이트(quota 응답의 pass_reset_enabled) + 진행 상태.
-  // 디스커버와 동일 — 기본 false 라 quota 동기화 전엔 버튼 미노출(안전).
-  const [passResetEnabled, setPassResetEnabled] = useState(false);
-  // 넘긴(pass) 사람이 실제로 있는지(quota.has_passes). 버튼은 passResetEnabled &&
-  // hasPasses 일 때만 — 넘긴 적 없는 사용자에게 버튼이 뜨는 어색함을 제거.
-  const [hasPasses, setHasPasses] = useState(false);
-  const [resetting, setResetting] = useState(false);
-
-  // quota + pass-reset 플래그 동기화. 디스커버 훅의 syncQuota 와 동일 — 받은 좋아요도
-  // pass 행을 지우면 swipes 행 수가 줄어 quota count 가 회복되므로 reset 후 재호출.
-  const syncQuota = useCallback(async () => {
-    try {
-      const q = await discoverService.getDiscoverQuota();
-      setDailyCount(q.count);
-      if (typeof q.limit === 'number') setDailyLimit(q.limit);
-      setPassResetEnabled(q.pass_reset_enabled === true);
-      setHasPasses(q.has_passes === true);
-    } catch {
-      setDailyCount(0);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-    // 계정 전환 시 옛 계정의 스와이프 집합을 비운다(같은 owner 면 no-op).
-    swipedSession.ensureOwner(userId);
-    let cancelled = false;
-    setDailyCountReady(false);
-    syncQuota().finally(() => {
-      if (!cancelled) setDailyCountReady(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, syncQuota]);
-
-  // 크로스탭 동기화: 디스커버 탭에서 스와이프(또는 신고)하면 swipedSession 에 추가되며
-  // 알림이 온다 → 받은 좋아요 덱에서도 같은 카드를 즉시 제거(refetch 불필요).
-  useEffect(
-    () =>
-      swipedSession.subscribe(() => {
-        setCandidates((prev) => prev.filter((c) => !swipedSession.has(c.id)));
-      }),
-    [],
+  const quota = useDiscoverQuota();
+  const { data, mutate, isLoading, error } = useSWR<DiscoverCandidate[]>(
+    userId ? likesKey(userId) : null,
+    likesFetcher,
   );
+  const likeLimitHitRef = useRef(false);
 
-  const dailyLimitReached = dailyCount >= dailyLimit;
+  // 세션 중 스와이프된 카드(다른 탭에서 스와이프한 경우 포함)는 BE 가 아직 커밋 전이라
+  // 다시 반환될 수 있다 — 렌더 시점에 걷어낸다(캐시를 파괴적으로 고치지 않으므로
+  // 재검증 응답이 늦게 도착해도 필터가 항상 유효). 집합 변화 시 재렌더만 시킨다.
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => swipedSession.subscribe(rerender), []);
+  const candidates = (data ?? []).filter((c) => !swipedSession.has(c.id));
 
   // 호출 시점은 화면이 결정 — 받은 좋아요 화면은 useFocusEffect 로 탭 focus 마다 호출.
   // 받은 좋아요는 비동기 알림으로 도착하기 때문에 stale 가능성 높음 — focus refetch +
   // pull-to-refresh 조합으로 사용자 인지 가능한 한도 내에서 fresh 유지.
   const loadCandidates = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await discoverService.getReceivedLikes();
-      ingestCandidates(data);
-      // 세션 중 스와이프된 카드(다른 탭에서 스와이프한 경우 포함)는 BE 가 아직 커밋
-      // 전이라 다시 반환할 수 있으므로 swipedSession 으로 필터 — 디스커버와 동일 권위.
-      setCandidates(data.filter((c) => !swipedSession.has(c.id)));
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await mutate();
+  }, [mutate]);
 
+  const { markLimitReached, markHasPasses } = quota;
   const handleSwipe = useCallback(
     async (
       swipedId: string,
@@ -121,11 +55,10 @@ export function useReceivedLikes() {
       try {
         const res = await discoverService.swipe({ swiped_id: swipedId, direction });
         // 방금 pass 행이 생겼으면 "다시 보기" 버튼 노출 조건을 즉시 충족.
-        if (direction === 'pass') setHasPasses(true);
+        if (direction === 'pass') markHasPasses();
         // 공유 세션 집합에 등록 → 디스커버 탭이 같은 카드를 즉시 덱에서 제거(구독 알림).
-        // setCandidates 필터로 본 탭에서도 제거된다.
+        // 본 탭은 렌더 필터가 같은 집합을 보므로 함께 사라진다.
         swipedSession.add(swipedId);
-        setCandidates((prev) => prev.filter((c) => c.id !== swipedId));
         // 받은 좋아요의 like 는 항상 reciprocal(=매치 완성) 이라 예산을 소모하지
         // 않는다(면제). 따라서 낙관적 +1 을 하지 않는다 — like 도 pass 도 카운트 불변.
         // (드문 엣지: 로드~스와이프 사이 상대가 unlike → BE 는 예산 count 하나 FE
@@ -139,18 +72,16 @@ export function useReceivedLikes() {
       } catch (e: any) {
         // 서버 하드 캡(429) 도달 — 받은 좋아요 like 는 면제라 사실상 안 나지만,
         // 디스커버에서 예산을 소진한 뒤 stale 카운트로 넘어와 스와이프한 멀티기기
-        // 케이스의 방어선. 화면을 잠그지 않고(전체 교체 제거됨) 예산 소진을 반영해
-        // 이후 like 제스처가 게이트에 걸리게 하고, one-shot 신호로 모달을 띄운다.
-        const status = e instanceof ApiRequestError ? e.status : 0;
-        if (status === 429) {
-          setDailyCount(dailyLimitRef.current);
+        // 케이스의 방어선. 화면을 잠그지 않고 예산 소진을 반영해 이후 like 제스처가
+        // 게이트에 걸리게 하고, one-shot 신호로 모달을 띄운다.
+        if (e instanceof ApiRequestError && e.status === 429) {
+          markLimitReached();
           likeLimitHitRef.current = true;
         }
-        setError(e.message);
         return null;
       }
     },
-    [userId, globalMutate],
+    [userId, globalMutate, markLimitReached, markHasPasses],
   );
 
   // 화면 onSwipe 가 handleSwipe 직후 동기 호출해 429(예산 소진) 신호를 소비한다.
@@ -161,50 +92,33 @@ export function useReceivedLikes() {
   }, []);
 
   // 신고 등 비-스와이프 사유로 현재 카드를 덱에서 즉시 제거. swipedSession 에 등록해
-  // 디스커버 탭도 즉시 제거 + 본 탭 refetch 시 재노출 방지.
+  // 디스커버 탭도 즉시 제거 + 본 탭 refetch 시 재노출 방지(렌더 필터가 걸러냄).
   const removeCandidate = useCallback((id: string) => {
     swipedSession.add(id);
-    setCandidates((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
-  // "넘긴 사람 다시 보기" — 디스커버와 동일 엔드포인트(DELETE /api/discover/passes)로
-  // viewer 의 pass 행을 일괄 삭제. 받은 좋아요에서 넘겼던(=pass 한) liker 도 BE 의
-  // "내가 스와이프한 사람" 제외에서 풀려 다시 노출된다. 공유 swipedSession 을 비워야
-  // FE 권위 필터에도 안 걸린다. clear → loadCandidates → syncQuota 순서.
-  const handleResetPasses = useCallback(async (): Promise<number | null> => {
-    if (resetting) return null;
-    setResetting(true);
-    try {
-      const { reset_count } = await discoverService.resetPasses();
-      swipedSession.clear();
-      await loadCandidates();
-      await syncQuota();
-      return reset_count;
-    } catch (e: any) {
-      const status = e instanceof ApiRequestError ? e.status : 0;
-      if (status !== 403) setError(e.message);
-      return null;
-    } finally {
-      setResetting(false);
-    }
-  }, [resetting, loadCandidates, syncQuota]);
+  const { resetPasses } = quota;
+  const handleResetPasses = useCallback(
+    () => resetPasses(loadCandidates).catch(() => null),
+    [resetPasses, loadCandidates],
+  );
 
   return {
     candidates,
-    loading,
-    error,
+    // 캐시가 이미 있으면 로딩 스피너를 띄우지 않는다(첫 로드에만 true).
+    loading: isLoading,
+    error: error ? (error as Error).message : null,
     loadCandidates,
-    syncQuota,
+    syncQuota: quota.syncQuota,
     handleSwipe,
     consumeLikeLimitHit,
     removeCandidate,
-    dailyCount,
-    dailyLimit,
-    dailyCountReady,
-    dailyLimitReached,
-    passResetEnabled,
-    hasPasses,
-    resetting,
+    dailyCount: quota.dailyCount,
+    dailyLimit: quota.dailyLimit,
+    dailyLimitReached: quota.dailyLimitReached,
+    passResetEnabled: quota.passResetEnabled,
+    hasPasses: quota.hasPasses,
+    resetting: quota.resetting,
     handleResetPasses,
   };
 }

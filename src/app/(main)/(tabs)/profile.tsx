@@ -390,6 +390,29 @@ export default function ProfileScreen() {
     }
   };
 
+  // 사진 슬롯 오버레이 핸들러 — 조기 반환보다 반드시 위에서 선언 (훅 순서 고정).
+  const handleRejectedTap = useCallback(() => {
+    showAlert({
+      variant: 'error',
+      title: t('moderation.blocked.title'),
+      message: t('profile.photoBlocked'),
+    });
+  }, [t]);
+  const handleRetryTap = useCallback(
+    async (photoId: string) => {
+      try {
+        await retryPhotoConversion(photoId);
+      } catch (e: any) {
+        showAlert({
+          variant: 'error',
+          title: t('profile.uploadFailed'),
+          message: userFacingError(e, t, t('profile.photoConversionFailed')),
+        });
+      }
+    },
+    [retryPhotoConversion, t],
+  );
+
   if (!profile) {
     return (
       <PhotoBackground variant="app">
@@ -461,27 +484,9 @@ export default function ProfileScreen() {
   //     sweep 이 BE 측에서 진행되지만 사용자가 즉시 트리거할 수 있는 affordance.
   //   - rejected : 모더레이션 거부. 빨간 X 아이콘 + 토스트로 재업로드 유도. retry
   //     불가 — 같은 사진은 영구 차단되므로 사용자가 슬롯을 삭제·다른 사진 업로드.
-  const handleRejectedTap = useCallback(() => {
-    showAlert({
-      variant: 'error',
-      title: t('moderation.blocked.title'),
-      message: t('profile.photoBlocked'),
-    });
-  }, [t]);
-  const handleRetryTap = useCallback(
-    async (photoId: string) => {
-      try {
-        await retryPhotoConversion(photoId);
-      } catch (e: any) {
-        showAlert({
-          variant: 'error',
-          title: t('profile.uploadFailed'),
-          message: userFacingError(e, t, t('profile.photoConversionFailed')),
-        });
-      }
-    },
-    [retryPhotoConversion, t],
-  );
+  //   (두 핸들러는 아래 `if (!profile)` 조기 반환 위에서 선언한다 — 훅은 조건부로
+  //    호출될 수 없다. 프로필 하이드레이트 전후로 훅 개수가 달라지면 React 가
+  //    "Rendered more hooks than during the previous render" 로 크래시한다.)
 
   // photo-original-blur-preview: 변환 중(pending/processing/failed) 슬롯 배경에
   // 깔리는 흐린 원본 미리보기. originalPreviewUrl 이 있을 때만 렌더.

@@ -114,6 +114,19 @@ export function showLikeGate(state: DiscoverGateState, t: (key: string) => strin
 // 흐르고 pass(넘기기)는 무제한이라 화면 전체를 잠그지 않는다 — like 시도 시점에만
 // 이 모달을 띄운다. 키(discover.dailyLimitTitle/Text)는 이미 존재(카피 갱신은
 // voice-i18n-engineer 담당).
+// 매치 성사 알럿 — 디스커버 탭과 받은 좋아요 탭이 같은 카피/동선을 쓴다.
+export function showMatchAlert(t: (key: string) => string, matchId: string) {
+  showAlert({
+    variant: 'confirm',
+    title: t('discover.itsAMatch'),
+    message: t('discover.matchSubtitle'),
+    cancelText: t('discover.keepDiscovering'),
+    confirmText: t('discover.sendMessage'),
+    stackedActions: true,
+    onConfirm: () => router.push(`/(main)/chat/${matchId}`),
+  });
+}
+
 export function showLikeLimit(t: (key: string) => string) {
   showAlert({
     variant: 'info',

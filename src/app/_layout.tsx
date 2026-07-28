@@ -20,7 +20,7 @@ import { UpdateRequiredScreen } from '@/components/UpdateRequiredScreen';
 import { useForceUpdate } from '@/hooks/useForceUpdate';
 import { showAlert } from '@/stores/alertStore';
 import { SWRConfigProvider } from '@/lib/swr';
-import { PRETENDARD_ASSETS, fonts } from '@/constants/fonts';
+import { APP_FONT_ASSETS, DEFERRED_FONT_ASSETS, fonts } from '@/constants/fonts';
 import * as Sentry from '@sentry/react-native';
 import i18n from '@/i18n';
 
@@ -173,11 +173,13 @@ function RootLayout() {
   useEffect(() => {
     (async () => {
       try {
-        await Font.loadAsync(PRETENDARD_ASSETS);
+        await Font.loadAsync(APP_FONT_ASSETS);
         applyDefaultFont();
       } finally {
         setFontsLoaded(true);
       }
+      // 배지 숫자 전용 폰트는 첫 페인트를 막지 않는다 (로드 전엔 시스템 폰트 폴백).
+      Font.loadAsync(DEFERRED_FONT_ASSETS).catch(() => {});
     })();
   }, []);
 
