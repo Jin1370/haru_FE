@@ -350,14 +350,15 @@ export default {
         bioLockedHint: "ボイスクローンを登録するとボイスひとことが自動生成されます。先に「自分の声を登録」で声を登録してください。",
         bioPicker: {
             customPlaceholder: "言いたい言葉を直接入力してみてください",
-            category: {
-                taste: "好み",
-                simple: "シンプル",
-                sincere: "本音",
-                flutter: "ときめき",
-                confidence: "自信",
-                aegyo: "甘え",
-                custom: "自由入力",
+            customTag: "自由入力",
+            tags: {
+                daily: "日常",
+                listen: "相談",
+                greeting: "あいさつ",
+                talk: "おしゃべり",
+                friend: "友達",
+                food: "グルメ",
+                music: "音楽",
             },
         },
         interests: "興味 ({{count}}/10)",

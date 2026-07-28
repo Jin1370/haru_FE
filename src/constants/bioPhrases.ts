@@ -1,11 +1,3 @@
-export type BioPhraseCategory =
-  | 'taste'
-  | 'simple'
-  | 'sincere'
-  | 'flutter'
-  | 'confidence'
-  | 'aegyo';
-
 // Voice intro audio is only generated for the i18n active set (ko/ja/en),
 // so any profile language outside this set falls back to English text —
 // otherwise the user picks a preset in their native script that has no
@@ -16,90 +8,79 @@ const FALLBACK_BIO_LANGUAGE: BioPhraseLanguage = 'en';
 
 export interface BioPhrase {
   id: string;
-  category: BioPhraseCategory;
+  // 카드에 붙는 주제 태그. 값은 i18n 키 (`setupProfile.bioPicker.tags.<tag>`) 이자
+  // 픽커의 색상 키(BioPhrasePicker 의 TAG_TINTS) 다. BE 카탈로그에는 없는 FE 전용
+  // 표시용 필드 — 태그를 추가/변경해도 BE 동기화(drift 테스트) 와 무관하다.
+  tag: string;
   text: Record<BioPhraseLanguage, string>;
 }
 
+// ko/ja/en 세 언어를 손번역으로 함께 들고 있는 이유: 프리셋을 고르면 BE 가
+// Gemini 번역을 건너뛰고 이 텍스트를 그대로 TTS 에 넣는다(voice-intro-preset-bypass).
+// 변경 시 haru_BE/src/constants/bioPhrasesCatalog.ts + tests 의 EXPECTED_FE_FIXTURE
+// 까지 3곳을 동시에 갱신해야 CI drift 테스트를 통과한다.
 export const BIO_PHRASES: readonly BioPhrase[] = [
   {
-    id: 'taste-1',
-    category: 'taste',
+    id: 'greeting-1',
+    tag: 'greeting',
     text: {
-      ko: '맛있는 거 먹으러 다니는 게 제 취미인데, 같이 맛집 리스트 공유하실 분 찾아요.',
-      en: "Hunting down good food is basically my hobby — looking for someone to trade restaurant lists with.",
+      ko: '만나서 반가워요. 편하게 말 걸어주세요.',
+      en: 'Nice to meet you. Feel free to say hi anytime.',
+      ja: 'はじめまして。気軽に話しかけてくださいね。',
+    },
+  },
+  {
+    id: 'daily-1',
+    tag: 'daily',
+    text: {
+      ko: '오늘은 어떤 하루였나요? 같이 수다 떨어요.',
+      en: "How was your day today? Let's chat about it.",
+      ja: '今日はどんな一日でしたか？おしゃべりしましょう。',
+    },
+  },
+  {
+    id: 'listen-1',
+    tag: 'listen',
+    text: {
+      ko: '고민 듣는 거 좋아해요. 뭐든지 상담해주세요.',
+      en: "I'm a good listener — bring me whatever's on your mind.",
+      ja: '悩みを聞くのが好きです。何でも相談してくださいね。',
+    },
+  },
+  {
+    id: 'talk-1',
+    tag: 'talk',
+    text: {
+      ko: '말 시작하면 멈추지 않는 타입이에요. 심심할 때 말 걸어주세요.',
+      en: "Once I get talking, I don't stop. Say hi whenever you're bored.",
+      ja: '話し出すと止まらないタイプなんです。暇なときは声かけてください。',
+    },
+  },
+  {
+    id: 'friend-1',
+    tag: 'friend',
+    text: {
+      ko: '그냥 편하게 얘기 나눌 친구를 만들고 싶어요.',
+      en: "I'm just looking for a friend to talk with — no pressure.",
+      ja: '気軽に話せる友達がほしいなと思っています。',
+    },
+  },
+  {
+    id: 'food-1',
+    tag: 'food',
+    text: {
+      ko: '맛있는거 먹으러 다니는 게 제 취미인데, 같이 맛집 리스트 공유하실 분 찾아요.',
+      en: 'Hunting down good food is basically my hobby — looking for someone to trade restaurant lists with.',
       ja: '美味しいものを食べ歩くのが趣味なんです。一緒にお店リストを交換できる人、探してます。',
     },
   },
   {
-    id: 'simple-1',
-    category: 'simple',
+    id: 'music-1',
+    tag: 'music',
     text: {
-      ko: '그냥 자연스럽게 대화해봐요. 인연이면 이어지지 않을까요?',
-      en: "Let's just chat naturally. If we click, things will fall into place, right?",
-      ja: '自然に話してみませんか？縁があれば、きっと繋がりますよね。',
-    },
-  },
-  {
-    id: 'simple-2',
-    category: 'simple',
-    text: {
-      ko: '부담 없이 한 번 얘기해봐요. 그냥 편하게',
-      en: "Let's just chat — no pressure, no big deal.",
-      ja: '気軽に話してみましょう。肩の力を抜いて。',
-    },
-  },
-  {
-    id: 'sincere-1',
-    category: 'sincere',
-    text: {
-      ko: '글로 보는 것보다 목소리로 듣는 게 훨씬 그 사람 같잖아요. 만나서 반가워요.',
-      en: "You learn more about someone from their voice than their words. Nice to meet you.",
-      ja: '文字で読むより、声で聞いたほうがずっとその人らしいですよね。お会いできて嬉しいです。',
-    },
-  },
-  {
-    id: 'flutter-1',
-    category: 'flutter',
-    text: {
-      ko: '여기서 지나가면 조금 아쉬울 것 같지 않아요?',
-      en: "Wouldn't it feel a little like a missed chance if you scrolled past me?",
-      ja: 'ここで通り過ぎたら、ちょっともったいない気がしませんか？',
-    },
-  },
-  {
-    id: 'flutter-2',
-    category: 'flutter',
-    text: {
-      ko: '제 목소리 방금 들었을 때, 1초라도 설렜으면 좋겠는데... 설렜나요?',
-      en: "I'm hoping my voice gave you a flutter — even just for a second. Did it?",
-      ja: '今の声、ほんの一瞬でもときめいてくれたら嬉しいんですけど…どうでした？',
-    },
-  },
-  {
-    id: 'confidence-1',
-    category: 'confidence',
-    text: {
-      ko: '저랑 얘기하면 시간 가는 줄 모르실걸요? 일단 말 걸어주세요!',
-      en: "Talk to me and you'll lose track of time, I promise. Just say hi!",
-      ja: '私と話すと時間を忘れちゃうかも。とりあえず声かけてください！',
-    },
-  },
-  {
-    id: 'aegyo-1',
-    category: 'aegyo',
-    text: {
-      ko: '지금 하트 누를까 말까 고민 중이죠? 그냥 눌러주면 안 돼요?',
-      en: "Still hovering over the heart button? Just press it for me, won't you?",
-      ja: '今ハート押そうか迷ってますよね？そのまま押しちゃだめですか？',
-    },
-  },
-  {
-    id: 'aegyo-2',
-    category: 'aegyo',
-    text: {
-      ko: '저를 버리시려고요? 진짜로요?',
-      en: "Wait — you're really going to swipe me away? Really?",
-      ja: '私のこと、置いていっちゃうんですか？本当に？',
+      ko: '음악 취향 공유할 사람 찾아요. 요즘 뭐 들으세요?',
+      en: 'Looking for someone to swap playlists with. What are you listening to lately?',
+      ja: '音楽の趣味を共有できる人を探してます。最近何聴いてますか？',
     },
   },
 ] as const;

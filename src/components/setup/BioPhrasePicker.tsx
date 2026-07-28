@@ -12,12 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
-import {
-  BIO_PHRASES,
-  findPresetByText,
-  getBioPhraseText,
-  type BioPhraseCategory,
-} from '@/constants/bioPhrases';
+import { BIO_PHRASES, findPresetByText, getBioPhraseText } from '@/constants/bioPhrases';
 
 interface BioPhrasePickerProps {
   value: string;
@@ -40,17 +35,22 @@ interface BioPhrasePickerProps {
   error?: string | null;
 }
 
-const CATEGORY_TINTS: Record<BioPhraseCategory, string> = {
-  taste: '#F6B5C8',
-  simple: '#B8C8DD',
-  sincere: '#E8A88C',
-  flutter: '#E27AA0',
-  confidence: '#F4A261',
-  aegyo: '#D8A8E0',
-};
-
-const CUSTOM_TINT = '#C8ADBA';
 const CUSTOM_MAX = 500;
+const CUSTOM_TINT = '#C8ADBA';
+// 주제 태그 색상. 키는 BIO_PHRASES 의 `tag` (= i18n 키). 미등록 태그는 CUSTOM_TINT
+// 로 폴백하므로 문구를 추가할 때 색을 깜빡해도 렌더는 깨지지 않는다.
+const TAG_TINTS: Record<string, string> = {
+  daily: '#B8C8DD',
+  listen: '#E8A88C',
+  greeting: '#F6B5C8',
+  talk: '#F4A261',
+  friend: '#B8A1C8',
+  food: '#E27AA0',
+  music: '#78C99A',
+};
+// 직접 입력 카드와 프리셋 카드가 같은 높이로 시작하도록 공유하는 본문 최소 높이.
+// 두 카드 모두 위에 태그 칩 행이 붙으므로 이 값만 맞으면 총 높이가 같다.
+const CARD_CONTENT_MIN_HEIGHT = 60;
 
 export function BioPhrasePicker({
   value,
@@ -167,13 +167,11 @@ export function BioPhrasePicker({
       >
         <View style={styles.customHeaderRow}>
           <View style={[styles.tag, { backgroundColor: CUSTOM_TINT }]}>
-            <Text style={styles.tagText}>
-              {t('setupProfile.bioPicker.category.custom')}
-            </Text>
+            <Text style={styles.tagText}>{t('setupProfile.bioPicker.customTag')}</Text>
           </View>
           {/* Counter only shows once the user is actively in custom mode —
-              otherwise it's noise across the preset cards. Turns red at the
-              cap so the user understands why typing stopped. */}
+              otherwise it's noise. Turns red at the cap so the user
+              understands why typing stopped. */}
           {selectedId === 'custom' ? (
             <Text
               style={[
@@ -216,11 +214,11 @@ export function BioPhrasePicker({
             <View
               style={[
                 styles.tag,
-                { backgroundColor: CATEGORY_TINTS[phrase.category] },
+                { backgroundColor: TAG_TINTS[phrase.tag] ?? CUSTOM_TINT },
               ]}
             >
               <Text style={styles.tagText}>
-                {t(`setupProfile.bioPicker.category.${phrase.category}`)}
+                {t(`setupProfile.bioPicker.tags.${phrase.tag}`)}
               </Text>
             </View>
             <Text
@@ -293,17 +291,24 @@ const styles = StyleSheet.create({
   cardError: {
     borderColor: colors.error,
   },
-  tag: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radii.pill,
-  },
   customHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  tag: {
+    alignSelf: 'flex-start',
+    backgroundColor: CUSTOM_TINT,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radii.pill,
+  },
+  tagText: {
+    fontSize: 10,
+    fontFamily: fonts.semibold,
+    color: colors.white,
+    letterSpacing: 0.4,
   },
   charCounter: {
     fontSize: 11,
@@ -315,13 +320,10 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontFamily: fonts.medium,
   },
-  tagText: {
-    fontSize: 10,
-    fontFamily: fonts.semibold,
-    color: colors.white,
-    letterSpacing: 0.4,
-  },
   phraseText: {
+    // 직접 입력 카드와 같은 높이로 시작한다 (CARD_CONTENT_MIN_HEIGHT 공유).
+    // 문구가 길면 그만큼 자연스럽게 늘어난다.
+    minHeight: CARD_CONTENT_MIN_HEIGHT,
     fontSize: 13,
     lineHeight: 19,
     color: colors.text,
@@ -334,7 +336,11 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   customInput: {
-    minHeight: 60,
+    // 고정 높이 — 길게 써도 카드가 세로로 자라지 않고 입력창 안에서 스크롤된다
+    // (multiline TextInput 은 내용이 높이를 넘으면 iOS/Android 모두 내부 스크롤로
+    // 전환되고 캐럿을 따라 자동 스크롤한다). 프리셋 카드와 높이를 맞추는 값이라
+    // 바꾸려면 CARD_CONTENT_MIN_HEIGHT 를 조정한다.
+    height: CARD_CONTENT_MIN_HEIGHT,
     fontSize: 13,
     lineHeight: 19,
     color: colors.text,

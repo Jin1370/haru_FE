@@ -353,14 +353,15 @@ export default {
     bioLockedHint: "Your voice intro is generated automatically once your voice clone is registered. Please register your voice in 'Register My Voice' first.",
     bioPicker: {
       customPlaceholder: 'Type your own message',
-      category: {
-        taste: 'Taste',
-        simple: 'Casual',
-        sincere: 'Sincere',
-        flutter: 'Flutter',
-        confidence: 'Confident',
-        aegyo: 'Cute',
-        custom: 'Custom',
+      customTag: 'Custom',
+      tags: {
+        daily: 'Daily',
+        listen: 'Listening',
+        greeting: 'Hello',
+        talk: 'Chatty',
+        friend: 'Friends',
+        food: 'Food',
+        music: 'Music',
       },
     },
     interests: 'Interests ({{count}}/10)',

@@ -350,14 +350,15 @@ export default {
         bioLockedHint: "보이스 클론이 등록되어야 보이스 한마디가 자동으로 생성돼요. 먼저 '내 목소리 등록'에서 목소리를 등록해주세요.",
         bioPicker: {
             customPlaceholder: "하고 싶은 말을 직접 입력해보세요",
-            category: {
-                taste: "취향",
-                simple: "담백",
-                sincere: "진심",
-                flutter: "설렘",
-                confidence: "자신감",
-                aegyo: "애교",
-                custom: "직접 입력",
+            customTag: "직접 입력",
+            tags: {
+                daily: "일상",
+                listen: "고민 상담",
+                greeting: "인사",
+                talk: "수다",
+                friend: "친구",
+                food: "맛집",
+                music: "음악",
             },
         },
         interests: "관심사 ({{count}}/10)",
