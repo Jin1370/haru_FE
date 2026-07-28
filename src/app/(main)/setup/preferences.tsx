@@ -46,6 +46,7 @@ export default function SetupPreferences() {
   const profileNationality = useAuthStore((s) => s.profile?.nationality);
   const ownNationality = profileNationality || draftNationality;
   const nationalityOptions = selectableNationalities(ownNationality);
+  const selectableCodes = new Set<string>(nationalityOptions.map((n) => n.code));
 
   const toggleGender = (g: 'male' | 'female' | 'other') => {
     setGenders((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
@@ -69,7 +70,8 @@ export default function SetupPreferences() {
       min_age: ageRange.min,
       max_age: ageRange.max,
       preferred_genders: genders,
-      preferred_nationalities: nationalities.filter((c) => c !== ownNationality),
+      // 지금 고를 수 있는 국가만 저장 (설정 화면과 동일 — 유령 값 정리).
+      preferred_nationalities: nationalities.filter((c) => selectableCodes.has(c)),
     };
     // Wizard position 3: profile row already exists (INSERTed at position 2),
     // so write preferences straight to BE. Reloading at any point past this

@@ -60,7 +60,9 @@ export default {
 
   auth: {
     appName: 'HARU',
-    tagline: 'Different languages, one shared day',
+    // 자동 줄바꿈은 'shared' 뒤에서 접혀 의미 단위가 끊긴다. 쉼표(문장 단위)에서
+    // 접히도록 개행을 고정 — ko/ja 는 한 줄에 들어가 개행 불필요.
+    tagline: 'Different languages,\none shared day',
     email: 'Email',
     password: 'Password',
     login: 'Log In',

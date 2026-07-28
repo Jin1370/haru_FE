@@ -333,7 +333,7 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
                     ]}
                 >
                     <Text style={[styles.stampText, { color: colors.white }]}>
-                        SKIP
+                        PASS
                     </Text>
                 </Animated.View>
                 <View style={[styles.cover, { width: COVER_SIZE, height: COVER_SIZE }]}>
@@ -400,7 +400,7 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
                         <Text
                             style={[styles.sideLabel, { color: colors.white }]}
                         >
-                            Skip
+                            Pass
                         </Text>
                         <Ionicons
                             name="play-back"

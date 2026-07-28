@@ -517,6 +517,11 @@ const styles = StyleSheet.create({
         marginTop: 12,
         letterSpacing: 0.6,
         fontFamily: fonts.medium,
+        // 두 줄로 접힐 때 각 줄이 가운데 오도록. header 의 alignItems 는 텍스트
+        // 블록만 가운데 놓을 뿐, 블록 안 줄 정렬은 이 속성이 담당한다.
+        textAlign: "center",
+        // 기본 행간(≈18)은 두 줄이 붙어 보인다. 15px 기준 1.5배로 띄운다.
+        lineHeight: 23,
         textShadowColor: "rgba(226,122,160,0.45)",
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 14,

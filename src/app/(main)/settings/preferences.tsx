@@ -38,6 +38,7 @@ export default function PreferencesScreen() {
   // 본인 국적은 선택지에서 제외 (외국인끼리 매칭 정책 — selectableNationalities 주석 참고).
   const ownNationality = useAuthStore((s) => s.profile?.nationality);
   const nationalityOptions = selectableNationalities(ownNationality);
+  const selectableCodes = new Set<string>(nationalityOptions.map((n) => n.code));
 
   useEffect(() => {
     loadPreferences();
@@ -76,8 +77,10 @@ export default function PreferencesScreen() {
         min_age: ageRange.min,
         max_age: ageRange.max,
         preferred_genders: genders,
-        // 정책 변경 전에 저장된 값에 본인 국적이 남아 있을 수 있어 저장 시 한 번 더 거른다.
-        preferred_nationalities: nationalities.filter((c) => c !== ownNationality),
+        // 지금 고를 수 있는 국가만 저장한다. 정책 도입 전에 저장된 같은 언어권
+        // 국가(예: 미국 사용자의 '영국')는 화면에 안 보이는데 값만 남아 유령이
+        // 되므로 저장 시점에 정리 — BE 는 어차피 무시하지만 상태를 정직하게 유지.
+        preferred_nationalities: nationalities.filter((c) => selectableCodes.has(c)),
       });
       // Tell the discover screen to drop its cached candidates and re-fetch
       // with the freshly-saved filters next time the user is on the tab.
