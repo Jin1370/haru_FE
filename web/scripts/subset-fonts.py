@@ -60,12 +60,12 @@ PRETENDARD_WEIGHTS = {
     "Pretendard-ExtraBold.ttf": "Pretendard-ExtraBold.woff2",
 }
 
-# .font-pixel only ever renders these: wordmark + discover card name/age/sep.
-GALMURI_TEXT = (
-    "".join(chr(c) for c in range(0x20, 0x7F))  # ASCII (haru, JP/KR, digits, y/o)
-    + "インドア派새벽텐세歳"                      # card names + age units (ko/ja)
-    + "•·"                                        # separators
-)
+# .font-pixel is the app's own font (src/constants/fonts.ts → Galmuri11), so the
+# demo cards render their whole text with it: wordmark, discover name/age, chat
+# bubbles, times. It therefore needs the SAME glyph set as Pretendard — a
+# hand-listed subset silently drops most card copy to the Pretendard fallback,
+# and any character that happens to be listed then renders visibly larger.
+GALMURI_EXTRA = "•·"  # separators (not guaranteed to appear in the copy)
 
 
 def collect_pretendard_text() -> str:
@@ -127,10 +127,10 @@ def main() -> None:
         total_after += after
         print(f"  {out_name}: {before/1024:.0f}KB -> {after/1024:.0f}KB")
 
-    # Galmuri (pixel logo font) — tiny targeted set.
+    # Galmuri (pixel font): same copy glyphs as Pretendard — see GALMURI_EXTRA.
     g_out = OUT_FONTS / "Galmuri11.woff2"
     g_before = g_out.stat().st_size if g_out.exists() else 0
-    subset(SRC_FONTS / "Galmuri11.ttf", g_out, GALMURI_TEXT, "U+0020-007E")
+    subset(SRC_FONTS / "Galmuri11.ttf", g_out, pre_text + GALMURI_EXTRA, "U+0020-007E")
     g_after = g_out.stat().st_size
     total_before += g_before
     total_after += g_after
