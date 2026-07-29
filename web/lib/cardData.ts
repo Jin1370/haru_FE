@@ -47,8 +47,8 @@ export const DISCOVER_CARD: Record<Locale, DiscoverCardData> = {
     audio: '/cards/discover-en.mp3',
   },
   ja: {
-    name: '새벽',
-    age: 24,
+    name: '텐텐',
+    age: 22,
     nationality: 'KR',
     photo: '/cards/discover-ja.jpg',
     audio: '/cards/discover-ja.mp3',
@@ -134,11 +134,10 @@ export const TRANSLATE_BUBBLE: Record<Locale, TranslateThreadData> = {
     // Mirror of the Korean card with roles flipped: the Korean-speaking partner
     // opens with two messages (reusing the ko voice clips), and I reply once.
     partner: [
-      { original: '처음 뵙겠습니다. 만나서 반가워요', translated: 'はじめまして。お会いできて嬉しいです。', audio: '/cards/translate-mine1-ko.mp3' },
-      { original: '음악 듣는 걸 좋아하시나봐요.', translated: '音楽を聴くのがお好きみたいですね。', audio: '/cards/translate-mine2-ko.mp3' },
+      { original: '안녕하세요~ 반가워요!', translated: 'こんにちは〜 お会いできて嬉しいです！', audio: '/cards/translate-partner1-ja.mp3' },
     ],
     partnerTime: '午後 4:48',
-    mine: [{ text: 'はい。好きです!', audio: '/cards/translate-ko.mp3' }],
+    mine: [{ text: '私もうれしいです！同い年ですね☺️', audio: '/cards/translate-mine1-ja.mp3' }],
     mineTime: '午後 4:49',
     avatar: '/cards/translate-avatar-ja.jpg',
     partnerFirst: true,
@@ -226,7 +225,7 @@ export const EMOTION_THREAD: Record<Locale, EmotionThreadData> = {
       time: '午後 4:50',
       emoji: '😆',
     },
-    avatar: '/cards/translate-avatar-ja.jpg',
+    avatar: '/cards/emotion-avatar-ja.jpg',
     mineFirst: true,
   },
 };

@@ -16,8 +16,16 @@ Galmuri11 is the pixel logo font, used ONLY by `.font-pixel`: the "haru"
 wordmark + the discover card's name/age/nationality. It gets a tiny targeted set.
 
 RE-RUN THIS after changing copy (messages/*.json) or the demo card data, then
-commit the regenerated public/fonts/*.woff2. Source of truth = the full TTFs in
-haru_FE/assets/fonts/ (never subset those). Requires: fonttools + brotli.
+commit the regenerated public/fonts/*.woff2. Skipping it means new characters
+fall back to a system font and visibly render at a different size.
+
+Source of truth = the full TTFs in haru_FE/assets/fonts/ (never subset those).
+Only SemiBold still lives there — Regular/Medium/Bold/ExtraBold were removed in
+63b654d (app cold start), so restore them for the run and delete them after:
+  cd haru_FE && for f in Regular Medium Bold ExtraBold; do \
+    git show 63b654d^:assets/fonts/Pretendard-$f.ttf > assets/fonts/Pretendard-$f.ttf; done
+
+Requires: fonttools + brotli.
   python scripts/subset-fonts.py
 """
 
@@ -55,7 +63,7 @@ PRETENDARD_WEIGHTS = {
 # .font-pixel only ever renders these: wordmark + discover card name/age/sep.
 GALMURI_TEXT = (
     "".join(chr(c) for c in range(0x20, 0x7F))  # ASCII (haru, JP/KR, digits, y/o)
-    + "インドア派새벽세歳"                        # card names + age units (ko/ja)
+    + "インドア派새벽텐세歳"                      # card names + age units (ko/ja)
     + "•·"                                        # separators
 )
 

@@ -5,8 +5,8 @@
   },
   "hero": {
     "eyebrow": "Voice preview",
-    "title": "First impressions, met by voice",
-    "subtitle": "Swipe through profiles and listen to each person's voice. Feel the mood and tone behind the photo, and discover their real charm.",
+    "title": "Conversations that start with a voice",
+    "subtitle": "Swipe through profiles and listen to each person's voice. You'll pick up the mood and the way they talk — things a photo can't show.",
     "ctaPrimary": "Get free early access",
     "ctaStore": "Google Play",
     "imageAlt": "haru Discover screen — listening to someone's voice intro on a profile card"
@@ -37,7 +37,7 @@
     },
     "voiceintro": {
       "tag": "Voice intro",
-      "title": "A line you want them to hear",
+      "title": "Just a casual hello",
       "body": "Pick a line you'd like to share or write your own, and it's auto-generated in your own voice. It appears next to your profile photo on the Discover tab.",
       "imageAlt": "haru voice intro screen — a chosen line synthesized in your own voice"
     }
@@ -47,10 +47,10 @@
     "title": "Who haru is for",
     "imageAlt": "haru matching preferences screen — choosing preferred age, gender, and nationality",
     "items": [
-      "Anyone hoping to meet someone new from Korea, Japan, and beyond",
       "Anyone who wants to make foreign friends or exchange languages",
-      "Anyone whose ideal type is a great voice",
-      "Anyone who wants to charm others with their own voice",
+      "Anyone who just wants to talk with someone and unwind",
+      "Anyone who'd love to chat with someone who has a great voice",
+      "Anyone who wants to express themselves in their own voice",
       "Anyone who feels uneasy showing real photos"
     ]
   },
