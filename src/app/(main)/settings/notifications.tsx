@@ -28,6 +28,7 @@ export default function NotificationsSettingsScreen() {
   const [prefs, setPrefs] = useState<NotificationPreferences>({
     notify_messages: true,
     notify_matches: true,
+    notify_likes: true,
   });
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
@@ -88,6 +89,16 @@ export default function NotificationsSettingsScreen() {
             <Switch
               value={prefs.notify_matches}
               onValueChange={(v) => togglePref('notify_matches', v)}
+              trackColor={{ false: colors.borderSoft, true: colors.primary }}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor={colors.borderSoft}
+            />
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>{t('settings.notifications.likes')}</Text>
+            <Switch
+              value={prefs.notify_likes}
+              onValueChange={(v) => togglePref('notify_likes', v)}
               trackColor={{ false: colors.borderSoft, true: colors.primary }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={colors.borderSoft}

@@ -9,7 +9,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { colors, radii } from '@/constants/colors';
+import { colors, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { ErrorText } from './ErrorText';
 
@@ -107,15 +107,23 @@ const styles = StyleSheet.create({
   },
   inputWrap: {
     position: 'relative',
+    // 그림자는 TextInput 이 아니라 래퍼가 담당한다 — Android 에서 elevation 이
+    // z-order 를 올려버려 형제로 얹은 placeholder 오버레이가 가려지기 때문.
+    // elevation 이 그림자를 그리려면 불투명 배경이 필요해 배경/모서리도 함께 준다.
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    ...shadows.soft,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.borderSoft,
+    // 크림색 배경 위에서 borderSoft 는 거의 안 보여 입력창 경계가 흐릿했다.
+    // 설정 화면 카드와 같은 border + soft shadow 조합으로 면을 띄운다.
+    borderColor: colors.border,
     borderRadius: radii.md,
     paddingHorizontal: 16,
     fontSize: 16,
     color: colors.text,
-    backgroundColor: colors.card,
+    backgroundColor: colors.white,
     fontFamily: fonts.regular,
     // 높이를 고정하고 세로 패딩을 0 으로 둬 "내용영역 = 박스 전체(52px)" 로 만든다.
     // 픽셀 폰트가 빈칸-신규 / 빈칸-입력후삭제 의 자연 높이를 다르게 측정해 출렁이던
@@ -125,9 +133,9 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     textAlignVertical: 'center',
   },
+  // 배경은 처음부터 흰색이라 포커스 표시는 테두리 색만으로 한다.
   inputFocused: {
     borderColor: colors.primary,
-    backgroundColor: colors.white,
   },
   inputError: {
     borderColor: colors.error,

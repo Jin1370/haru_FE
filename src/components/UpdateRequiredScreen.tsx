@@ -2,6 +2,7 @@ import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { colors, radii, shadows } from '@/constants/colors';
+import { fonts } from '@/constants/fonts';
 
 // 강제 업데이트 차단 화면 (최소판). useForceUpdate 가 blocked=true 일 때 앱 전체
 // 대신 렌더된다 — 닫기/뒤로 경로 없음 (사용자는 업데이트 외엔 진행 불가).
@@ -53,11 +54,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
+    fontFamily: fonts.semibold,
     color: colors.text,
     textAlign: 'center',
   },
   message: {
     fontSize: 15,
+    fontFamily: fonts.regular,
     lineHeight: 22,
     color: colors.textSecondary,
     textAlign: 'center',
@@ -73,5 +76,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: colors.white,
     fontSize: 16,
+    fontFamily: fonts.semibold,
   },
 });

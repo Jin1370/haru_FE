@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, TextInput } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -20,7 +20,7 @@ import { UpdateRequiredScreen } from '@/components/UpdateRequiredScreen';
 import { useForceUpdate } from '@/hooks/useForceUpdate';
 import { showAlert } from '@/stores/alertStore';
 import { SWRConfigProvider } from '@/lib/swr';
-import { APP_FONT_ASSETS, DEFERRED_FONT_ASSETS, fonts } from '@/constants/fonts';
+import { APP_FONT_ASSETS, DEFERRED_FONT_ASSETS } from '@/constants/fonts';
 import * as Sentry from '@sentry/react-native';
 import i18n from '@/i18n';
 
@@ -100,7 +100,10 @@ Notifications.setNotificationHandler({
 // 해결: 탭 응답을 pending 으로 저장만 하고, 실제 router.push 는 RootLayout 이
 // "네비게이션 마운트 + 인증/프로필 확정" 상태가 됐을 때 flush 한다. 아래
 // pendingDeepLink 은 모듈 스코프에 두고, 컴포넌트의 flush effect 가 소비한다.
-type DeepLink = { type: 'message'; match_id: string } | { type: 'match' };
+type DeepLink =
+  | { type: 'message'; match_id: string }
+  | { type: 'match' }
+  | { type: 'like' };
 
 let pendingDeepLink: DeepLink | null = null;
 
@@ -118,26 +121,25 @@ function extractDeepLink(
   if (data.type === 'match') {
     return { type: 'match' };
   }
+  if (data.type === 'like') {
+    return { type: 'like' };
+  }
   return null;
 }
 
 function navigateToDeepLink(link: DeepLink) {
   if (link.type === 'message') {
     router.push(`/chat/${link.match_id}`);
+  } else if (link.type === 'like') {
+    router.push('/(main)/(tabs)/likes');
   } else {
     router.push('/(main)/(tabs)/matches');
   }
 }
 
-function applyDefaultFont() {
-  const textAny = Text as unknown as { defaultProps?: { style?: unknown } };
-  textAny.defaultProps = textAny.defaultProps ?? {};
-  textAny.defaultProps.style = [{ fontFamily: fonts.pixel }, textAny.defaultProps.style];
-
-  const inputAny = TextInput as unknown as { defaultProps?: { style?: unknown } };
-  inputAny.defaultProps = inputAny.defaultProps ?? {};
-  inputAny.defaultProps.style = [{ fontFamily: fonts.pixel }, inputAny.defaultProps.style];
-}
+// 전역 기본 글꼴은 Text/TextInput 의 defaultProps 로 주입했었으나, React 19 가
+// 함수 컴포넌트의 defaultProps 를 무시하면서 무동작 코드가 됐다. 각 스타일이
+// fontFamily 를 명시하는 방식으로 일원화 (미지정 시 시스템 폰트 폴백).
 
 function RootShell() {
   // Force adjustResize at the activity level once for the whole tree. Every
@@ -174,7 +176,6 @@ function RootLayout() {
     (async () => {
       try {
         await Font.loadAsync(APP_FONT_ASSETS);
-        applyDefaultFont();
       } finally {
         setFontsLoaded(true);
       }

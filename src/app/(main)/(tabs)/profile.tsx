@@ -417,7 +417,7 @@ export default function ProfileScreen() {
     return (
       <PhotoBackground variant="app">
         <View style={styles.center}>
-          <Text>{t('profile.loadingProfile')}</Text>
+          <Text style={styles.loadingText}>{t('profile.loadingProfile')}</Text>
         </View>
       </PhotoBackground>
     );
@@ -953,6 +953,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   photoGrid: {
     flexDirection: 'row',

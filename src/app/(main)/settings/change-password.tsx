@@ -14,14 +14,19 @@ import { validatePassword } from '@/utils/validators';
 import { userFacingError } from '@/utils/errors';
 import { colors } from '@/constants/colors';
 
-type FieldErrors = { current: string | null; next: string | null };
-const NO_ERRORS: FieldErrors = { current: null, next: null };
+type FieldErrors = {
+  current: string | null;
+  next: string | null;
+  confirm: string | null;
+};
+const NO_ERRORS: FieldErrors = { current: null, next: null, confirm: null };
 
 export default function ChangePasswordScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<FieldErrors>(NO_ERRORS);
   const [loading, setLoading] = useState(false);
 
@@ -33,16 +38,20 @@ export default function ChangePasswordScreen() {
     // New-password format mirrors the BE rule so the user gets immediate
     // feedback before the round-trip.
     if (currentPassword.length === 0) {
-      setErrors({ current: t('validation.passwordRequired'), next: null });
+      setErrors({ ...NO_ERRORS, current: t('validation.passwordRequired') });
       return;
     }
     const newErr = validatePassword(newPassword);
     if (newErr) {
-      setErrors({ current: null, next: t(newErr.key, newErr.vars) });
+      setErrors({ ...NO_ERRORS, next: t(newErr.key, newErr.vars) });
       return;
     }
     if (currentPassword === newPassword) {
-      setErrors({ current: null, next: t('validation.samePassword') });
+      setErrors({ ...NO_ERRORS, next: t('validation.samePassword') });
+      return;
+    }
+    if (confirmPassword !== newPassword) {
+      setErrors({ ...NO_ERRORS, confirm: t('validation.passwordMismatch') });
       return;
     }
 
@@ -64,13 +73,13 @@ export default function ChangePasswordScreen() {
         // alert via the unified host.
         switch (e.code) {
           case 'WRONG_CURRENT_PASSWORD':
-            setErrors({ current: t('validation.currentPasswordWrong'), next: null });
+            setErrors({ ...NO_ERRORS, current: t('validation.currentPasswordWrong') });
             return;
           case 'PASSWORD_FORMAT':
-            setErrors({ current: null, next: t('validation.passwordFormat') });
+            setErrors({ ...NO_ERRORS, next: t('validation.passwordFormat') });
             return;
           case 'SAME_PASSWORD':
-            setErrors({ current: null, next: t('validation.samePassword') });
+            setErrors({ ...NO_ERRORS, next: t('validation.samePassword') });
             return;
         }
       }
@@ -122,6 +131,8 @@ export default function ChangePasswordScreen() {
           onChangeText={(v) => {
             setNewPassword(v);
             if (errors.next) setErrors((prev) => ({ ...prev, next: null }));
+            // 새 비밀번호를 고치면 이전에 뜬 불일치 오류는 의미가 없어진다.
+            if (errors.confirm) setErrors((prev) => ({ ...prev, confirm: null }));
           }}
           secureTextEntry
           autoCapitalize="none"
@@ -129,6 +140,21 @@ export default function ChangePasswordScreen() {
           textContentType="newPassword"
           error={errors.next}
           errorTestID="change-password-new-error"
+          containerStyle={styles.fieldGap}
+        />
+        <FormField
+          label={t('changePassword.confirmPassword')}
+          value={confirmPassword}
+          onChangeText={(v) => {
+            setConfirmPassword(v);
+            if (errors.confirm) setErrors((prev) => ({ ...prev, confirm: null }));
+          }}
+          secureTextEntry
+          autoCapitalize="none"
+          autoComplete="new-password"
+          textContentType="newPassword"
+          error={errors.confirm}
+          errorTestID="change-password-confirm-error"
           containerStyle={styles.fieldGap}
         />
       </KeyboardAwareScrollView>

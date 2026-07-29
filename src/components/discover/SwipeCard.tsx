@@ -515,6 +515,7 @@ const styles = StyleSheet.create({
     },
     detailSep: {
         fontSize: 13,
+        fontFamily: fonts.medium,
         color: "rgba(255,255,255,0.55)",
         marginHorizontal: 8,
     },

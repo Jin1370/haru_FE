@@ -6,6 +6,7 @@ export type Platform = 'ios' | 'android';
 export interface NotificationPreferences {
   notify_messages: boolean;
   notify_matches: boolean;
+  notify_likes: boolean;
 }
 
 export function registerToken(
