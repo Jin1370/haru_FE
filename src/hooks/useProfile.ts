@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { useDiscoverStore } from '@/stores/discoverStore';
 import * as profileService from '@/services/profile';
 import type { ProfileUpsertRequest, PhotoUploadResponse, PhotoDeleteResponse, PhotoStatus } from '@/types';
 
@@ -31,6 +32,12 @@ export function useProfile() {
     try {
       const updated = await profileService.upsertProfile(data);
       setProfile(updated);
+      // 국적(→ language 파생)·관심사가 바뀌면 후보 풀 자체가 달라진다 — 같은 언어
+      // 후보 하드 제외와 보이스 슬롯 선택이 viewer language 기준이라 옛 덱은 그냥
+      // stale 이 아니라 정책 위반 카드를 들고 있게 된다. 선호 설정 저장과 동일하게
+      // 디스커버에 재조회를 요청한다(받은 좋아요는 useFocusEffect 가 이미 커버).
+      // 온보딩 setup 단계 호출은 디스커버 마운트 전이라 무해(카운터만 증가).
+      useDiscoverStore.getState().bumpReload();
       return updated;
     } catch (e: any) {
       setError(e.message);
