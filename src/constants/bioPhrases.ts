@@ -42,7 +42,7 @@ export const BIO_PHRASES: readonly BioPhrase[] = [
     id: 'listen-1',
     tag: 'listen',
     text: {
-      ko: '고민 듣는 거 좋아해요.\n뭐든지 상담해주세요.',
+      ko: '고민 듣는 거 좋아해요.\n뭐든지 얘기해주세요.',
       en: "I'm a good listener — bring me whatever's on your mind.",
       ja: '悩みを聞くのが好きです。\n何でも相談してくださいね。',
     },
