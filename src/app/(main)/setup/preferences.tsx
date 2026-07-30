@@ -34,8 +34,11 @@ export default function SetupPreferences() {
     min: MIN_AGE,
     max: MAX_AGE,
   });
+  // 기본 선택은 male+female ('other' 는 직접 고를 수 있음). BE 기본값과 동일 —
+  // haru_BE schemas/preference.ts + routes/preference.ts GET 폴백 + mig 048.
   const [genders, setGenders] = useState<('male' | 'female' | 'other')[]>([
-    ...GENDER_OPTIONS,
+    'male',
+    'female',
   ]);
   const [nationalities, setNationalities] = useState<string[]>([]);
   // 본인 국적은 선택지에서 제외 (외국인끼리 매칭 정책).
