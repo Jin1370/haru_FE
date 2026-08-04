@@ -15,6 +15,7 @@ import {
   AdminApiError,
   type DevAccount,
   type DiscoverCard,
+  type DiscoverQuota,
   type Message,
   type MatchSummary,
   type MyProfile,
@@ -26,6 +27,7 @@ import {
   connectNotifySink,
   disconnectNotifySink,
   getDiscover,
+  getDiscoverQuota,
   getMyProfile,
   getNotifySink,
   getPartnerDetail,
@@ -35,6 +37,7 @@ import {
   listMatches,
   listMessages,
   markMessageListened,
+  resetPasses,
   sendMessage,
   getAdminUser,
   setAdminSecret,
@@ -1266,6 +1269,60 @@ function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean })
   );
 }
 
+// ===== pass 초기화 버튼 (탐색 / 받은좋아요 헤더 공용) =====
+//
+// 앱에서 넘긴(pass) 상대는 디스커버에서도 받은좋아요에서도 영구히 사라진다 —
+// 그 상대가 나중에 좋아요를 보내도 탭에 안 뜨고 푸시도 안 온다(BE 의 swipedSet /
+// isLikeVisibleToReceiver). 되돌리는 수단이 이 엔드포인트뿐이라 운영자가 직접
+// 풀 수 있게 노출한다. like·매치는 보존되고 pass 행만 지워진다.
+function PassResetButton({ account, onDone }: { account: DevAccount; onDone: () => void }) {
+  const [quota, setQuota] = useState<DiscoverQuota | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const loadQuota = useCallback(() => {
+    getDiscoverQuota(account.user_id)
+      .then(setQuota)
+      .catch(() => setQuota(null)); // 조회 실패 시 버튼 숨김 (오동작보다 미노출)
+  }, [account.user_id]);
+
+  useEffect(() => {
+    loadQuota();
+  }, [loadQuota]);
+
+  // BE 일몰 게이트가 꺼져 있으면(DISCOVER_PASS_RESET_ENABLED=false) 버튼 자체 없음.
+  if (!quota?.pass_reset_enabled) return null;
+
+  const handleClick = async () => {
+    if (busy) return;
+    if (!window.confirm(`${account.display_name}의 넘긴 상대를 모두 되살립니다. 진행할까요?`)) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const { reset_count } = await resetPasses(account.user_id);
+      window.alert(`pass ${reset_count}건 초기화 완료`);
+      loadQuota();
+      onDone();
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'pass 초기화 실패');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={busy || !quota.has_passes}
+      title={quota.has_passes ? '넘긴 상대 되살리기' : '넘긴 상대 없음'}
+      className="rounded-full border px-3 py-1 text-xs font-semibold transition disabled:opacity-40"
+      style={{ background: C.card, borderColor: C.border, color: C.textSecondary }}
+    >
+      {busy ? '초기화 중...' : 'pass 초기화'}
+    </button>
+  );
+}
+
 // ===== Discover 패널 =====
 
 function DiscoverPane({ account }: { account: DevAccount }) {
@@ -1327,6 +1384,7 @@ function DiscoverPane({ account }: { account: DevAccount }) {
               {actionMsg}
             </span>
           )}
+          <PassResetButton account={account} onDone={refresh} />
           <button
             onClick={refresh}
             disabled={loading}
@@ -1602,6 +1660,7 @@ function LikesPane({ account }: { account: DevAccount }) {
               {actionMsg}
             </span>
           )}
+          <PassResetButton account={account} onDone={refresh} />
           <button
             onClick={refresh}
             disabled={loading}

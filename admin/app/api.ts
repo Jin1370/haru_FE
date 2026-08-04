@@ -370,6 +370,35 @@ export async function swipe(
   });
 }
 
+// 디스커버 일일 예산 + pass 초기화 가능 여부 (GET /api/discover/quota).
+// pass_reset_enabled 는 BE 의 DISCOVER_PASS_RESET_ENABLED 일몰 게이트,
+// has_passes 는 지울 pass 가 실제로 있는지.
+export type DiscoverQuota = {
+  count: number;
+  limit: number;
+  remaining: number;
+  date: string;
+  pass_reset_enabled: boolean;
+  has_passes: boolean;
+};
+
+export async function getDiscoverQuota(asUserId: string): Promise<DiscoverQuota> {
+  const tz = new Date().getTimezoneOffset();
+  return adminFetch<DiscoverQuota>(`/api/discover/quota?tz_offset_minutes=${tz}`, {
+    impersonate: asUserId,
+  });
+}
+
+// pass 스와이프 전체 삭제 (DELETE /api/discover/passes). like·매치는 보존.
+// 한 번 넘긴 상대는 디스커버에서도 받은좋아요에서도 영구히 사라지므로(그 상대가
+// 나중에 보내는 좋아요와 푸시까지 차단) 복구 수단이 이것뿐이다.
+export async function resetPasses(asUserId: string): Promise<{ reset_count: number }> {
+  return adminFetch<{ reset_count: number }>('/api/discover/passes', {
+    method: 'DELETE',
+    impersonate: asUserId,
+  });
+}
+
 // 내 프로필 조회 (GET /api/profile/me).
 export async function getMyProfile(asUserId: string): Promise<MyProfile> {
   return adminFetch<MyProfile>('/api/profile/me', { impersonate: asUserId });
