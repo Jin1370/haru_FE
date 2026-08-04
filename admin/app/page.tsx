@@ -591,8 +591,10 @@ function NotifySinkControl() {
           style={{ background: C.card, borderColor: C.border }}
         >
           <p className="mb-3 text-xs leading-relaxed" style={{ color: C.textSecondary }}>
-            연결된 계정의 알림을 받을 마스터 계정의 이메일을 입력하세요. 휴대폰이 그
-            계정으로 로그인되어 있어야 알림이 갑니다.
+            알림을 받을 폰의 계정 이메일을 입력하세요. <b>연결하는 지금</b> 그 계정으로
+            폰에 로그인 + 알림 권한이 허용돼 있어야 합니다. 연결 후에는 폰에서 다른
+            계정으로 로그인해도 알림은 계속 이 폰으로 옵니다 (계정이 아니라 기기 토큰에
+            연결되기 때문).
           </p>
           <input
             value={email}
@@ -632,7 +634,7 @@ function NotifySinkControl() {
           {/* 지금 알림을 받고 있는 마스터 계정. 폰 토큰이 폐기되면 목록에서 사라진다. */}
           <div className="mt-3 border-t pt-2" style={{ borderColor: C.borderSoft }}>
             <div className="mb-1 text-[0.6875rem] font-semibold" style={{ color: C.textSecondary }}>
-              연결된 마스터 계정
+              현재 알림 받는 폰의 로그인 계정
             </div>
             {status?.masters && status.masters.length > 0 ? (
               <ul className="flex flex-col gap-0.5">
