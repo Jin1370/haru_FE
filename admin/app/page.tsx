@@ -126,6 +126,66 @@ const VOICE_BTN = {
   active: '#DB2777', // pink-600 — 재생 중 채움색
 } as const;
 
+// 운영 계정 페르소나 — 채팅 시 말투·상황을 일관되게 유지하기 위한 설정 메모.
+// 이메일로 키를 잡는다 (display_name 은 바뀔 수 있고, user_id 는 환경마다 다름).
+// 괄호 숫자는 출생연도. 미정의 계정은 화면에서 '아직 없음' 으로 표시된다.
+const PERSONAS: Record<string, { name: string; age: string; job: string; notes: string[] }> = {
+  'dev-11@haru.test': {
+    name: '경우 (04년생)',
+    age: '23세',
+    job: '외식업체 매장 매니저',
+    notes: [
+      '시니컬해 보이지만 실제로는 속정이 깊은 츤데레',
+      '조만간 독립하기 위해 열심히 목돈 모으는 중',
+    ],
+  },
+  'dev-12@haru.test': {
+    name: '동해 (06년생)',
+    age: '21세',
+    job: '대학생 (경영학과 1학년)',
+    notes: [
+      '감수성이 풍부하고 행동력이 뛰어남',
+      '수능을 마치고 설레는 마음으로 캠퍼스 라이프를 즐기는 중',
+    ],
+  },
+  'dev-13@haru.test': {
+    name: '게토레이굿 (01년생)',
+    age: '26세',
+    job: '스타트업 백엔드 개발자 (2년 차)',
+    notes: [
+      '털털하고 매사에 긍정적임',
+      '잦은 야근 속에서도 연봉 협상과 커리어 성장을 위해 열일 중',
+    ],
+  },
+  'dev-14@haru.test': {
+    name: '일본친구원해요 (03년생)',
+    age: '24세',
+    job: '유학 준비생 (일어일문학과 휴학 중)',
+    notes: [
+      '하나에 꽂히면 깊게 파고드는 열정파',
+      '내년 일본 유학을 목표로 시험 공부와 현지 인맥 만들기에 집중 중',
+    ],
+  },
+  'dev-15@haru.test': {
+    name: '그만두 (05년생)',
+    age: '22세',
+    job: '대학생 (미디어영상학과 2학년)',
+    notes: [
+      '사교적이고 밝으며 사람들과 잘 어울림',
+      '과제 폭탄과 카페 알바로 지쳐 입에 "그만두고 싶다"를 달고 삼',
+    ],
+  },
+  'kts123@estsoft.com': {
+    name: '도도한프리렌 (02년생)',
+    age: '25세',
+    job: '바리스타 겸 타투이스트 지망생 (카페 근무 및 타투 도안 공부 중)',
+    notes: [
+      '화려하고 날티 나는 외모와 달리 침착하고 마이페이스 성향',
+      '커피를 내리며 생계를 유지하고, 퇴근 후에는 자신만의 감성이 담긴 타투 도안 작업과 실습에 집중 중',
+    ],
+  },
+};
+
 const ROOT_STYLE: React.CSSProperties = {
   colorScheme: 'light',
   fontFamily: FONT_STACK,
@@ -941,6 +1001,7 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [photosOpen, setPhotosOpen] = useState(false);
+  const [personaOpen, setPersonaOpen] = useState(false);
   // 나이·성별은 매치 목록 응답에 없어 상대 상세 라우트로 한 번만 받아온다.
   const [partnerDetail, setPartnerDetail] = useState<PartnerDetail | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -1153,10 +1214,20 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
               .join(" · ")}
           </div>
         </div>
-        <span className="ml-auto shrink-0 text-sm font-semibold" style={{ color: C.primary }}>
+        <button
+          onClick={() => setPersonaOpen(true)}
+          className="ml-auto shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition"
+          style={{ background: C.card, borderColor: C.border, color: C.textSecondary }}
+          title={`${account.display_name ?? ''} 페르소나`}
+        >
+          페르소나 보기
+        </button>
+        <span className="shrink-0 text-sm font-semibold" style={{ color: C.primary }}>
           왕복 {match.round_trip_count ?? 0}회
         </span>
       </div>
+
+      {personaOpen && <PersonaNote account={account} onClose={() => setPersonaOpen(false)} />}
 
       {photosOpen && (
         <PartnerPhotosModal match={match} onClose={() => setPhotosOpen(false)} />
@@ -1228,6 +1299,68 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
         {match.unmatched_at && (
           <div className="mt-2 text-xs" style={{ color: C.textSecondary }}>
             언매치된 매치 — 전송 불가
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// 운영 계정 페르소나 메모 — 채팅 중 말투·설정을 즉시 확인하기 위한 읽기 전용 쪽지.
+// 내용은 PERSONAS 상수(이메일 키)에서 온다. 미정의 계정은 '아직 없음'.
+function PersonaNote({ account, onClose }: { account: DevAccount; onClose: () => void }) {
+  const persona = account.email ? PERSONAS[account.email] : undefined;
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-8"
+      style={{ background: 'rgba(17,24,39,0.55)' }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-full w-full max-w-md overflow-y-auto rounded-2xl p-6"
+        // 메모장 느낌 — 미색 종이 + 가로 괘선.
+        style={{
+          background: '#FFFDF5',
+          border: '1px solid #F0E6C8',
+          boxShadow: '0 10px 34px rgba(17,24,39,0.18)',
+        }}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-base font-semibold" style={{ color: C.text }}>
+            {account.display_name ?? '(프로필 없음)'} 페르소나
+          </span>
+          <button
+            onClick={onClose}
+            className="rounded-full border px-4 py-1.5 text-sm transition"
+            style={{ borderColor: C.border, color: C.textSecondary }}
+          >
+            닫기
+          </button>
+        </div>
+
+        {!persona ? (
+          <div className="py-10 text-center text-sm" style={{ color: C.textSecondary }}>
+            아직 없음
+          </div>
+        ) : (
+          <div
+            className="rounded-xl px-4 py-3 text-[0.9375rem] leading-[1.9]"
+            style={{
+              color: C.text,
+              backgroundImage: 'repeating-linear-gradient(#FFFDF5 0 calc(1.9em - 1px), #EFE4C4 0 1.9em)',
+            }}
+          >
+            <div className="font-semibold">{persona.name}</div>
+            <div>나이: {persona.age}</div>
+            <div>직업: {persona.job}</div>
+            <div className="mt-2 font-semibold">특이사항</div>
+            <ul className="list-disc pl-5">
+              {persona.notes.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
