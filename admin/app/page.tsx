@@ -1278,6 +1278,7 @@ function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean })
 function PassResetButton({ account, onDone }: { account: DevAccount; onDone: () => void }) {
   const [quota, setQuota] = useState<DiscoverQuota | null>(null);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const loadQuota = useCallback(() => {
     getDiscoverQuota(account.user_id)
@@ -1292,34 +1293,41 @@ function PassResetButton({ account, onDone }: { account: DevAccount; onDone: () 
   // BE 일몰 게이트가 꺼져 있으면(DISCOVER_PASS_RESET_ENABLED=false) 버튼 자체 없음.
   if (!quota?.pass_reset_enabled) return null;
 
+  // 확인창·성공 알림 없이 즉시 실행 — 되살리기만 하는 저위험 동작이고, 성공은
+  // 버튼이 비활성(넘긴 상대 없음)으로 바뀌고 목록이 갱신되는 것으로 드러난다.
+  // 실패만 버튼 옆에 인라인으로 남긴다 (조용히 삼키지 않기).
   const handleClick = async () => {
     if (busy) return;
-    if (!window.confirm(`${account.display_name}의 넘긴 상대를 모두 되살립니다. 진행할까요?`)) {
-      return;
-    }
     setBusy(true);
+    setErr(null);
     try {
-      const { reset_count } = await resetPasses(account.user_id);
-      window.alert(`pass ${reset_count}건 초기화 완료`);
+      await resetPasses(account.user_id);
       loadQuota();
       onDone();
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'pass 초기화 실패');
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'pass 초기화 실패');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <button
-      onClick={handleClick}
-      disabled={busy || !quota.has_passes}
-      title={quota.has_passes ? '넘긴 상대 되살리기' : '넘긴 상대 없음'}
-      className="rounded-full border px-3 py-1 text-xs font-semibold transition disabled:opacity-40"
-      style={{ background: C.card, borderColor: C.border, color: C.textSecondary }}
-    >
-      {busy ? '초기화 중...' : 'pass 초기화'}
-    </button>
+    <>
+      {err && (
+        <span className="text-xs" style={{ color: C.error }}>
+          {err}
+        </span>
+      )}
+      <button
+        onClick={handleClick}
+        disabled={busy || !quota.has_passes}
+        title={quota.has_passes ? '넘긴 상대 되살리기' : '넘긴 상대 없음'}
+        className="rounded-full border px-3 py-1 text-xs font-semibold transition disabled:opacity-40"
+        style={{ background: C.card, borderColor: C.border, color: C.textSecondary }}
+      >
+        {busy ? '초기화 중...' : 'pass 초기화'}
+      </button>
+    </>
   );
 }
 
