@@ -4,6 +4,14 @@
   color-scheme: light;
 }
 
+/* 전체 확대 — Tailwind 의 글자 크기와 여백은 rem 기반이라 루트 폰트 크기 하나로
+   함께 커진다 (브라우저 기본 16px 대비 1.25배). 개별 클래스 수정 불필요이며,
+   page.tsx 의 하드코딩 크기도 rem 으로 바꿔 같이 스케일된다.
+   더 키우려면 이 값만 올린다. */
+html {
+  font-size: 20px;
+}
+
 html,
 body {
   height: 100%;

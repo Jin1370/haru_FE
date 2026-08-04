@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'haru admin',
-  description: 'dev/QA dashboard',
+  description: 'dev/QA 대시보드',
   robots: { index: false, follow: false },
 };
 

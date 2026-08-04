@@ -77,6 +77,15 @@ locale 분기 없음 (한국어 인라인).
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | 클라이언트 | BE 주소. 없으면 `http://localhost:3000` 폴백 |
 
+브라우저가 BE 를 **직접** 호출한다 (프록시 홉 없음). 따라서 BE 의 `CORS_ALLOWED_ORIGINS`
+에 이 대시보드 origin 이 등록돼 있어야 한다 — 배포된 Vercel URL 은 이미 등록됨.
+로컬은 `localhost:3000` 의 BE(`NODE_ENV=development`, 화이트리스트 미설정 → 와이드 오픈)
+를 보므로 추가 설정 불필요. 배포된 Fly BE 를 로컬에서 보려면 Fly 쪽 화이트리스트에
+`http://localhost:3100` 을 추가해야 한다.
+
+**로컬 개발은 dev 환경(로컬 BE → dev Supabase)에 붙는다.** dev seed 계정은 prod 와
+세대가 달라(사진 변환 이전) 화면이 다르게 보이는 게 정상.
+
 추가 시크릿 없음. ADMIN_SECRET 은 사용자가 직접 입력하고 sessionStorage 에 저장.
 
 ## 디자인 가드레일
@@ -106,3 +115,8 @@ locale 분기 없음 (한국어 인라인).
 | 날짜 | 변경 | 사유 |
 | --- | --- | --- |
 | 2026-05-13 | 초기 분리 (haru_FE/web/admin → haru_FE/admin) | 별 Vercel 프로젝트로 분리해 출시 시 통째로 disable 가능하게. monorepo 도구 미도입 |
+| 2026-08-04 | 채팅방 진입 시 즉시 읽음 처리 + 첫 매치 자동선택 제거 | 앱(haru_FE)은 음성 완청 시에만 `listened` POST 를 쏘지만 admin 은 방을 열면 수신 메시지를 곧바로 마킹 (카카오톡식). dev/QA 툴이라 보이스 게이팅 재현 가치가 없고 unread 뱃지가 영구히 남는 게 운영에 방해. 기존 per-message 라우트 재사용(벌크 라우트 신설 X), `markedRef` 로 3초 폴링 중복 호출 차단 + 실패 시 되돌려 재시도. **주의: 상대에게는 음성을 안 들어도 읽음(체크마크)이 뜬다** |
+| 2026-08-04 | UI 전면 한국어화 (탭/버튼/폼 라벨/상태 칩) | 운영자가 한국어 사용자 — 영문 라벨(Matches/Discover/…)과 raw 코드(male/KR/pending)를 그대로 노출할 이유 없음. 저장 페이로드는 코드 그대로, 표시만 한국어 (`GENDER_LABEL_KO`/`NATIONALITY_LABEL_KO`/`STATUS_LABEL_KO`). BE 필드명이 그대로 필요한 자리(`p.id`, `voice_clone_status` 값 등)는 유지 |
+| 2026-08-04 | (철회) same-origin 프록시 도입 → 직접 호출 유지 | 로컬에서 Fly BE 를 보려다 CORS 에 막혀 프록시를 넣었으나, 배포판까지 `브라우저 → Vercel 함수 → Fly` 로 홉이 늘어 prod 경로에 비용을 얹는 구조였음. **로컬 개발은 dev 환경(로컬 BE)에 붙는 것으로 정리**해 프록시 자체가 불필요해짐 — `app/api/be/*` 삭제, `API_BASE = NEXT_PUBLIC_API_URL` 원복 |
+| 2026-08-04 | 로컬 포트 분리 (admin dev 3100) | BE 와 admin 이 둘 다 3000 이라 admin 이 자기 자신에게 `/api/admin/auth/verify` 를 쏴 404 → "잘못된 admin secret" 오진. `dev` 스크립트에 `-p 3100` 고정 + `verifyAdminSecret` 이 401 만 시크릿 오류로 취급하고 그 외 상태코드는 그대로 노출 |
+| 2026-08-04 | BE 드리프트 동기화 (swipe 응답 shape / mig 042 언어 파생) | (1) swipe 응답이 `{direction, match}` 인데 admin 은 옛 `matched` 필드를 봐서 매치 성사 배너가 절대 안 뜨던 버그 (2) mig 042 로 language 가 국적 파생이 됐는데 admin 만 language 셀렉트가 남아 앱이 못 만드는 조합(KR+en 등) 생성 가능 → 셀렉트 제거하고 저장 시 국적에서 파생. 좋아요 한도 관련 UI 는 미도입 (dev seed 계정은 한도 면제 예정) |

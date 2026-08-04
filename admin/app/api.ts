@@ -6,8 +6,10 @@
 //     → BE authMiddleware 가 해당 dev 계정으로 req.userId 설정 → 기존 /api/* 라우트 그대로 사용.
 //
 // API_BASE:
-//   * NEXT_PUBLIC_API_URL (예: http://localhost:3000) 에서 읽음.
-//   * 미설정 시 localhost:3000 폴백.
+//   * NEXT_PUBLIC_API_URL (예: http://localhost:3000) 에서 읽음. 미설정 시 localhost:3000.
+//   * 브라우저가 BE 를 직접 호출한다 (프록시 홉 없음) → BE 의 CORS_ALLOWED_ORIGINS 에
+//     이 대시보드 origin 이 등록돼 있어야 한다. 로컬 BE 는 NODE_ENV=development 라
+//     화이트리스트 미설정 시 와이드 오픈이므로 로컬 개발은 그대로 동작.
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -69,7 +71,11 @@ export async function verifyAdminSecret(secret: string): Promise<boolean> {
       'X-Admin-Secret': secret,
     },
   });
-  return res.ok;
+  if (res.ok) return true;
+  // 401 만 "시크릿 틀림". 404(=API_BASE 가 BE 가 아니거나 ADMIN_DASHBOARD_ENABLED=false)
+  // 같은 응답까지 시크릿 오류로 뭉뚱그리면 원인 진단이 불가능하다.
+  if (res.status === 401) return false;
+  throw new AdminApiError(res.status, `${API_BASE} 응답 ${res.status} — BE 주소(NEXT_PUBLIC_API_URL)와 ADMIN_DASHBOARD_ENABLED 확인`);
 }
 
 // ----- 타입 -----
@@ -211,7 +217,15 @@ export type UserPreferences = {
 
 export async function listDevAccounts(): Promise<DevAccount[]> {
   const res = await adminFetch<{ accounts: DevAccount[] }>('/api/admin/accounts');
-  return res.accounts;
+  // BE 는 display_name 자연 정렬로 주지만, 목록에서 찾을 때 기준이 되는 건 이메일
+  // (dev-01 → dev-02 → ...). numeric:true 라 dev-2 < dev-10 도 올바르게 정렬된다.
+  // 이메일 없는 계정은 뒤로.
+  return [...res.accounts].sort((a, b) => {
+    if (!a.email && !b.email) return 0;
+    if (!a.email) return 1;
+    if (!b.email) return -1;
+    return a.email.localeCompare(b.email, undefined, { numeric: true, sensitivity: 'base' });
+  });
 }
 
 // ----- dev 알림 싱크 (mig 040) -----
@@ -221,6 +235,9 @@ export type NotifySinkStatus = {
   linked_accounts: number;
   tokens: number;
   labels: string[];
+  // 알림을 실제로 받는 폰의 로그인 계정(마스터) 이메일 목록. 옛 BE 배포에서는
+  // 응답에 없을 수 있어 optional.
+  masters?: string[];
 };
 
 export function getNotifySink(): Promise<NotifySinkStatus> {
@@ -249,10 +266,19 @@ export async function listMatches(asUserId: string): Promise<MatchSummary[]> {
   return adminFetch<MatchSummary[]>('/api/matches', { impersonate: asUserId });
 }
 
-export async function listMessages(asUserId: string, matchId: string, limit = 50): Promise<Message[]> {
-  // BE 는 DESC 정렬로 반환. 화면 표시는 ASC.
+// BE 는 DESC(최신순) 로 반환 — 화면 표시는 ASC 라 뒤집는다.
+// limit 은 BE zod 상한이 100. `before` 는 커서(그보다 오래된 메시지) — 반환 배열의
+// 첫 원소(=가장 오래된 메시지) created_at 을 넘기면 다음 페이지.
+export async function listMessages(
+  asUserId: string,
+  matchId: string,
+  limit = 100,
+  before?: string,
+): Promise<Message[]> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (before) query.set('before', before);
   const data = await adminFetch<Message[]>(
-    `/api/matches/${matchId}/messages?limit=${limit}`,
+    `/api/matches/${matchId}/messages?${query.toString()}`,
     { impersonate: asUserId },
   );
   return [...data].reverse();
@@ -266,10 +292,41 @@ export async function sendMessage(asUserId: string, matchId: string, text: strin
   });
 }
 
+// 수신 메시지 1건을 청취(=읽음) 처리. BE 는 listened_at 단일 컬럼만 UPDATE 하며
+// idempotent (이미 set 이면 현재 row 반환), 송신자 본인 호출은 403.
+//
+// 앱(haru_FE)은 음성을 끝까지 재생해야 호출하지만, admin 은 채팅방을 열면 곧바로
+// 호출한다 (카카오톡식 "열면 읽음"). dev/QA 툴이라 음성 청취 게이팅을 재현할 이유가
+// 없고, unread 뱃지가 영구히 남는 쪽이 운영에 방해된다.
+export function markMessageListened(
+  asUserId: string,
+  matchId: string,
+  messageId: string,
+): Promise<Message> {
+  return adminFetch<Message>(`/api/matches/${matchId}/messages/${messageId}/listened`, {
+    method: 'POST',
+    impersonate: asUserId,
+  });
+}
+
 // read-at-removal-list-mask sprint: markMessagesRead 함수 제거.
 // PATCH /api/matches/:matchId/messages/read 라우트가 폐기되었고, "읽음" 의미는
 // listened_at 단일 진실원으로 일원화됐다. admin 대시보드에서 일괄 read 마킹이
 // 필요했던 동선 자체가 무의미해짐.
+
+// 매치 상대 상세 (GET /api/matches/:matchId/partner). 매치 목록의 partner 는
+// 이름/국적/사진만 담고 있어 나이·성별은 이 라우트로 따로 받는다.
+// gender 는 나중에 추가된 필드라 옛 BE 배포에서는 안 올 수 있어 optional.
+export type PartnerDetail = {
+  birth_date: string;
+  gender?: 'male' | 'female' | 'other' | null;
+  interests: string[];
+  voice_intro_audio_url: string | null;
+};
+
+export function getPartnerDetail(asUserId: string, matchId: string): Promise<PartnerDetail> {
+  return adminFetch<PartnerDetail>(`/api/matches/${matchId}/partner`, { impersonate: asUserId });
+}
 
 export async function getDiscover(asUserId: string, limit = 10): Promise<DiscoverCard[]> {
   return adminFetch<DiscoverCard[]>(`/api/discover?limit=${limit}`, { impersonate: asUserId });
@@ -281,11 +338,12 @@ export async function getReceivedLikes(asUserId: string): Promise<DiscoverCard[]
   return adminFetch<DiscoverCard[]>(`/api/discover/likes-received`, { impersonate: asUserId });
 }
 
+// BE 응답은 { direction, match } — match 가 null 이 아니면 매치 성사.
 export async function swipe(
   asUserId: string,
   swipedId: string,
   direction: 'like' | 'pass',
-): Promise<{ matched?: boolean; match?: { id: string } } | unknown> {
+): Promise<{ direction: 'like' | 'pass'; match: { id: string } | null }> {
   return adminFetch(`/api/discover/swipe`, {
     method: 'POST',
     impersonate: asUserId,
