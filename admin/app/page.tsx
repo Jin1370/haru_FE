@@ -208,12 +208,9 @@ function LoginScreen({ onAuthed }: { onAuthed: () => void }) {
         className="w-full max-w-sm rounded-3xl border p-8 shadow-[0_4px_24px_rgba(17,24,39,0.06)]"
         style={{ background: C.card, borderColor: C.border }}
       >
-        <h1 className="mb-1 text-xl font-semibold" style={{ color: C.text }}>
+        <h1 className="mb-6 text-xl font-semibold" style={{ color: C.text }}>
           haru admin
         </h1>
-        <p className="mb-6 text-sm" style={{ color: C.textSecondary }}>
-          dev/QA 대시보드
-        </p>
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
