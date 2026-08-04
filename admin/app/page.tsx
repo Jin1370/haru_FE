@@ -104,13 +104,11 @@ function ageFromBirthDate(birthDate: string): number {
 // 계정 목록처럼 좁은 자리용 축약 성별 표기 (폼 라벨은 남성/여성 전체 표기 유지).
 const GENDER_SHORT_KO: Record<string, string> = { male: '남', female: '여', other: '기타' };
 
-// 디스커버 카드 액션 버튼 색 — 넘기기=연회색(중립), 좋아요=분홍 채움.
-const PASS_BTN = {
-  bg: '#F3F4F6', // gray-100
-  hover: '#E5E7EB', // gray-200
-  border: '#E5E7EB',
-  text: '#4B5563', // gray-600
-} as const;
+// 디스커버 카드 액션 버튼 색 — 좋아요=분홍 채움.
+// 넘기기(pass) 버튼은 의도적으로 없다: 대시보드는 덱이 아니라 리스트라 화면 정리
+// 외의 이득이 없는데, 대가로 swipes 행이 영구히 남아 그 상대가 나중에 보내는
+// 좋아요를 받은좋아요 탭에서도(swipe.ts likes-received 의 swipedSet) 푸시에서도
+// (isLikeVisibleToReceiver) 영구히 차단한다. 되돌리려면 pass 전체 초기화뿐.
 const LIKE_BTN = {
   bg: '#FCE7F3', // pink-100
   hover: '#FBCFE8', // pink-200
@@ -1291,19 +1289,15 @@ function DiscoverPane({ account }: { account: DevAccount }) {
     refresh();
   }, [refresh]);
 
-  const handleSwipe = async (card: DiscoverCard, direction: 'like' | 'pass') => {
+  const handleLike = async (card: DiscoverCard) => {
     if (busyIds.has(card.id)) return;
     setBusyIds((prev) => new Set(prev).add(card.id));
     setActionMsg(null);
     try {
-      const result = await swipe(account.user_id, card.id, direction);
-      if (direction === 'pass') {
-        setActionMsg(`Pass: ${card.display_name}`);
-      } else {
-        setActionMsg(
-          result.match ? `매치 성사! ${card.display_name}` : `Like 전송: ${card.display_name}`,
-        );
-      }
+      const result = await swipe(account.user_id, card.id, 'like');
+      setActionMsg(
+        result.match ? `매치 성사! ${card.display_name}` : `Like 전송: ${card.display_name}`,
+      );
       // 처리 끝난 카드 제거. 리스트가 빌 때까지 인터랙션 가능.
       setCards((prev) => prev.filter((c) => c.id !== card.id));
     } catch (err) {
@@ -1393,8 +1387,7 @@ function DiscoverPane({ account }: { account: DevAccount }) {
               key={c.id}
               card={c}
               busy={busyIds.has(c.id)}
-              onPass={() => handleSwipe(c, 'pass')}
-              onLike={() => handleSwipe(c, 'like')}
+              onLike={() => handleLike(c)}
             />
           ))}
         </div>
@@ -1466,12 +1459,10 @@ function AudioPlayButton({ url }: { url: string | null }) {
 function DiscoverRow({
   card,
   busy,
-  onPass,
   onLike,
 }: {
   card: DiscoverCard;
   busy: boolean;
-  onPass: () => void;
   onLike: () => void;
 }) {
   const age = ageFromBirthDate(card.birth_date);
@@ -1519,28 +1510,8 @@ function DiscoverRow({
         </div>
       </div>
 
-      {/* 오른쪽: 넘기기(좌) / 좋아요(우) — 실제 스와이프 방향과 같은 가로 배치 */}
+      {/* 오른쪽: 좋아요만 (넘기기 없음 — 위 LIKE_BTN 주석 참고) */}
       <div className="flex shrink-0 items-center gap-2.5">
-        <button
-          onClick={onPass}
-          disabled={busy}
-          className="rounded-full border px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50"
-          style={{
-            background: PASS_BTN.bg,
-            borderColor: PASS_BTN.border,
-            color: PASS_BTN.text,
-            minWidth: '100px',
-            boxShadow: '0 3px 10px rgba(17,24,39,0.12)',
-          }}
-          onMouseEnter={(e) => {
-            if (!busy) e.currentTarget.style.background = PASS_BTN.hover;
-          }}
-          onMouseLeave={(e) => {
-            if (!busy) e.currentTarget.style.background = PASS_BTN.bg;
-          }}
-        >
-          넘기기
-        </button>
         <button
           onClick={onLike}
           disabled={busy}
@@ -1594,20 +1565,16 @@ function LikesPane({ account }: { account: DevAccount }) {
     refresh();
   }, [refresh]);
 
-  const handleSwipe = async (card: DiscoverCard, direction: 'like' | 'pass') => {
+  const handleLike = async (card: DiscoverCard) => {
     if (busyIds.has(card.id)) return;
     setBusyIds((prev) => new Set(prev).add(card.id));
     setActionMsg(null);
     try {
-      const result = await swipe(account.user_id, card.id, direction);
-      if (direction === 'pass') {
-        setActionMsg(`Pass: ${card.display_name}`);
-      } else {
-        // received-likes 풀의 like 는 상대가 이미 like 한 상태라 항상 즉시 매치.
-        setActionMsg(
-          result.match ? `매치 성사! ${card.display_name}` : `Like 전송: ${card.display_name}`,
-        );
-      }
+      const result = await swipe(account.user_id, card.id, 'like');
+      // received-likes 풀의 like 는 상대가 이미 like 한 상태라 항상 즉시 매치.
+      setActionMsg(
+        result.match ? `매치 성사! ${card.display_name}` : `Like 전송: ${card.display_name}`,
+      );
       setCards((prev) => prev.filter((c) => c.id !== card.id));
     } catch (err) {
       setActionMsg(err instanceof Error ? err.message : '스와이프 실패');
@@ -1680,8 +1647,7 @@ function LikesPane({ account }: { account: DevAccount }) {
               key={c.id}
               card={c}
               busy={busyIds.has(c.id)}
-              onPass={() => handleSwipe(c, 'pass')}
-              onLike={() => handleSwipe(c, 'like')}
+              onLike={() => handleLike(c)}
             />
           ))}
         </div>
