@@ -117,7 +117,8 @@ Notifications.setNotificationHandler({
 type DeepLink =
   | { type: 'message'; match_id: string }
   | { type: 'match' }
-  | { type: 'like' };
+  | { type: 'like' }
+  | { type: 'voice_reminder' };
 
 let pendingDeepLink: DeepLink | null = null;
 
@@ -138,6 +139,9 @@ function extractDeepLink(
   if (data.type === 'like') {
     return { type: 'like' };
   }
+  if (data.type === 'voice_reminder') {
+    return { type: 'voice_reminder' };
+  }
   return null;
 }
 
@@ -146,6 +150,8 @@ function navigateToDeepLink(link: DeepLink) {
     router.push(`/chat/${link.match_id}`);
   } else if (link.type === 'like') {
     router.push('/(main)/(tabs)/likes');
+  } else if (link.type === 'voice_reminder') {
+    router.push('/(main)/settings/voice');
   } else {
     router.push('/(main)/(tabs)/matches');
   }

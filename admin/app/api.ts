@@ -303,11 +303,19 @@ export async function listMessages(
   return [...data].reverse();
 }
 
-export async function sendMessage(asUserId: string, matchId: string, text: string): Promise<Message> {
+// clientMessageId 를 주면 BE 가 그 UUID 를 메시지 row 의 PK 로 쓴다(멱등 전송).
+// 낙관적 업데이트의 stub id 와 서버 row id 가 같아져, 3초 폴링이 먼저 도착해도
+// 같은 메시지가 두 개로 보이지 않는다.
+export async function sendMessage(
+  asUserId: string,
+  matchId: string,
+  text: string,
+  clientMessageId?: string,
+): Promise<Message> {
   return adminFetch<Message>(`/api/matches/${matchId}/messages`, {
     method: 'POST',
     impersonate: asUserId,
-    body: { text },
+    body: clientMessageId ? { text, client_message_id: clientMessageId } : { text },
   });
 }
 

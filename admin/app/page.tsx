@@ -940,7 +940,6 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
   const [photosOpen, setPhotosOpen] = useState(false);
   // 나이·성별은 매치 목록 응답에 없어 상대 상세 라우트로 한 번만 받아온다.
   const [partnerDetail, setPartnerDetail] = useState<PartnerDetail | null>(null);
@@ -988,10 +987,17 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
     [account.user_id, match.match_id],
   );
 
+  // 전송 중인 낙관적 stub — 서버에 아직 안 보이는 동안 폴링이 화면에서 지우지
+  // 않도록 보관한다. stub id = client_message_id = 서버 row id 라 커밋된 뒤엔
+  // 같은 id 로 자연히 대체된다.
+  const pendingRef = useRef<Map<string, Message>>(new Map());
+
   const fetchMessages = useCallback(() => {
     listMessages(account.user_id, match.match_id)
       .then((msgs) => {
-        setMessages(msgs);
+        const serverIds = new Set(msgs.map((m) => m.id));
+        const stubs = [...pendingRef.current.values()].filter((s) => !serverIds.has(s.id));
+        setMessages(stubs.length > 0 ? [...msgs, ...stubs] : msgs);
         setLoading(false);
         void markListenedBatch(msgs);
       })
@@ -1003,6 +1009,8 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
 
   useEffect(() => {
     setLoading(true);
+    // 방을 바꾸면 이전 방의 stub 이 따라오지 않게 비운다.
+    pendingRef.current.clear();
     fetchMessages();
     const interval = setInterval(fetchMessages, 3000);
     return () => clearInterval(interval);
@@ -1034,19 +1042,41 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
     }
   }, [messages.length]);
 
+  // 낙관적 전송 — 입력을 즉시 비우고 말풍선을 먼저 그린다. 옛 동작은 POST 가
+  // 끝날 때까지(발신자에게 voice clone 이 있으면 수 초) 입력창에 글이 남아 있어
+  // 전송이 실패한 것처럼 보였다.
   const send = async () => {
     const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
+    if (!text) return;
+    const id = crypto.randomUUID();
+    const stub: Message = {
+      id,
+      match_id: match.match_id,
+      sender_id: account.user_id,
+      original_text: text,
+      original_language: '',
+      translated_text: null,
+      translated_language: null,
+      audio_url: null,
+      audio_status: 'pending',
+      emotion: null,
+      listened_at: null,
+      created_at: new Date().toISOString(),
+    };
+    pendingRef.current.set(id, stub);
+    setMessages((prev) => [...prev, stub]);
+    setDraft('');
     setError(null);
     try {
-      await sendMessage(account.user_id, match.match_id, text);
-      setDraft('');
-      fetchMessages();
+      const saved = await sendMessage(account.user_id, match.match_id, text, id);
+      pendingRef.current.delete(id);
+      setMessages((prev) => prev.map((m) => (m.id === id ? saved : m)));
     } catch (err) {
+      // 실패한 말풍선은 걷어내고 입력을 되돌린다 (재전송은 다시 누르면 됨).
+      pendingRef.current.delete(id);
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+      setDraft((cur) => (cur.trim() ? cur : text));
       setError(err instanceof Error ? err.message : '전송 실패');
-    } finally {
-      setSending(false);
     }
   };
 
@@ -1132,7 +1162,7 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
               }
             }}
             placeholder={`${account.display_name}(으)로 메시지 작성`}
-            disabled={sending || !!match.unmatched_at}
+            disabled={!!match.unmatched_at}
             className="flex-1 rounded-2xl border px-4 py-3 text-sm outline-none transition disabled:opacity-50"
             style={{
               background: '#FFFFFF',
@@ -1144,7 +1174,7 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
           />
           <button
             onClick={send}
-            disabled={sending || !draft.trim() || !!match.unmatched_at}
+            disabled={!draft.trim() || !!match.unmatched_at}
             className="rounded-full px-6 py-3 text-sm font-semibold text-white transition disabled:opacity-50"
             style={{
               background: C.primary,
@@ -1152,7 +1182,7 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
               letterSpacing: '0.3px',
             }}
           >
-            {sending ? '...' : '전송'}
+            전송
           </button>
         </div>
         {match.unmatched_at && (
