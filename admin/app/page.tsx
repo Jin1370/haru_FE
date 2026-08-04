@@ -274,6 +274,8 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [tab, setTab] = useState<'matches' | 'discover' | 'likes' | 'profile'>('matches');
   const [unreadByAccount, setUnreadByAccount] = useState<Record<string, number>>({});
+  // 계정별 받은좋아요 수 — unread 와 같은 폴링 회차에 함께 채운다.
+  const [likesByAccount, setLikesByAccount] = useState<Record<string, number>>({});
 
   useEffect(() => {
     listDevAccounts()
@@ -312,6 +314,14 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
             if (!cancelled) setUnreadByAccount((prev) => ({ ...prev, [acc.user_id]: total }));
           } catch {
             // 개별 실패는 무시 — 다음 회차(30s / 탭 복귀)에 다시 시도.
+          }
+          try {
+            // 받은좋아요는 별도 카운트 엔드포인트가 없어 목록 길이를 쓴다. 응답이
+            // 최신 300건 상한이라 그 이상은 300 으로 포화 (dev 규모에선 무의미).
+            const likes = await getReceivedLikes(acc.user_id);
+            if (!cancelled) setLikesByAccount((prev) => ({ ...prev, [acc.user_id]: likes.length }));
+          } catch {
+            // 위와 동일 — 다음 회차에 재시도.
           }
         }),
       );
@@ -401,6 +411,7 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           </div>
           {accounts.map((acc) => {
             const unread = unreadByAccount[acc.user_id] ?? 0;
+            const likes = likesByAccount[acc.user_id] ?? 0;
             const selected = acc.user_id === selectedUserId;
             return (
               <button
@@ -453,17 +464,35 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                         </span>
                       )}
                     </div>
-                    {unread > 0 && (
-                      <span
-                        className="shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-bold text-white"
-                        style={{
-                          background: C.like,
-                          boxShadow: '0 1px 4px rgba(220,38,38,0.30)',
-                        }}
-                      >
-                        {unread}
-                      </span>
-                    )}
+                    <div className="flex shrink-0 items-center gap-1">
+                      {/* 받은좋아요 — 분홍(앱의 좋아요 색). 빨강은 unread 전용이라
+                          같은 색을 쓰면 "안 읽은 메시지" 로 오독된다. */}
+                      {likes > 0 && (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[0.625rem] font-bold"
+                          style={{
+                            background: LIKE_BTN.bg,
+                            color: LIKE_BTN.text,
+                            border: `1px solid ${LIKE_BTN.border}`,
+                          }}
+                          title={`받은좋아요 ${likes}`}
+                        >
+                          ♥ {likes}
+                        </span>
+                      )}
+                      {unread > 0 && (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[0.625rem] font-bold text-white"
+                          style={{
+                            background: C.like,
+                            boxShadow: '0 1px 4px rgba(220,38,38,0.30)',
+                          }}
+                          title={`안 읽은 메시지 ${unread}`}
+                        >
+                          {unread}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="mt-0.5 text-xs" style={{ color: C.textSecondary }}>
                     {NATIONALITY_LABEL_KO[acc.nationality ?? ''] ?? acc.nationality ?? '?'} ·{' '}
