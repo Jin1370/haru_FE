@@ -32,6 +32,20 @@ Sentry.init({
   // 성능 트레이스 비활성 (0). 무료 플랜 스팬 쿼터 보호 + 현재 트레이싱 데이터 미사용.
   // 앱 속도/병목 분석이 필요해지면 0.05~0.2 로 올린다.
   tracesSampleRate: 0,
+  // 'Session expired' 는 리프레시 토큰 만료 → onSessionExpired() 로그아웃이
+  // 이미 처리한 정상 흐름. 호출처가 catch 안 하면 unhandledrejection 으로
+  // Sentry 에 올라오지만 조치할 버그가 아니라 노이즈라 필터.
+  ignoreErrors: ['Session expired'],
+  beforeSend(event, hint) {
+    // ApiRequestError 는 "요청이 정상적으로 답을 받았다" 는 뜻 — status 0(오프라인/
+    // 타임아웃)과 4xx(검증·중복·차단 등 BE 가 의도적으로 내린 거절)는 앱 버그가 아니다.
+    // 5xx 만 남기는데 그것도 BE Sentry 가 원인과 함께 이미 잡으므로 여기선 참고용.
+    const err = hint?.originalException as { name?: string; status?: number } | undefined;
+    if (err?.name === 'ApiRequestError' && typeof err.status === 'number' && err.status < 500) {
+      return null;
+    }
+    return event;
+  },
 });
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
