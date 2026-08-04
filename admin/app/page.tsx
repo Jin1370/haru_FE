@@ -991,6 +991,9 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
   // 않도록 보관한다. stub id = client_message_id = 서버 row id 라 커밋된 뒤엔
   // 같은 id 로 자연히 대체된다.
   const pendingRef = useRef<Map<string, Message>>(new Map());
+  // 전송 실패한 stub id (말풍선에 재전송 버튼 노출) / 재전송 진행 중인 id.
+  const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
+  const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
 
   const fetchMessages = useCallback(() => {
     listMessages(account.user_id, match.match_id)
@@ -1011,6 +1014,8 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
     setLoading(true);
     // 방을 바꾸면 이전 방의 stub 이 따라오지 않게 비운다.
     pendingRef.current.clear();
+    setFailedIds(new Set());
+    setRetryingIds(new Set());
     fetchMessages();
     const interval = setInterval(fetchMessages, 3000);
     return () => clearInterval(interval);
@@ -1042,6 +1047,32 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
     }
   }, [messages.length]);
 
+  // 실제 POST. 성공하면 stub 을 서버 row 로 갈아끼우고, 실패하면 말풍선을 남긴 채
+  // 실패로 표시한다 (재전송 버튼). 재전송도 같은 id 를 쓰므로 첫 요청이 실은
+  // 서버에 닿았던 경우에도 메시지가 중복 생성되지 않는다 (BE 멱등 INSERT).
+  const postMessage = async (id: string, text: string) => {
+    setFailedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setRetryingIds((prev) => new Set(prev).add(id));
+    try {
+      const saved = await sendMessage(account.user_id, match.match_id, text, id);
+      pendingRef.current.delete(id);
+      setMessages((prev) => prev.map((m) => (m.id === id ? saved : m)));
+    } catch (err) {
+      setFailedIds((prev) => new Set(prev).add(id));
+      setError(err instanceof Error ? err.message : '전송 실패');
+    } finally {
+      setRetryingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
   // 낙관적 전송 — 입력을 즉시 비우고 말풍선을 먼저 그린다. 옛 동작은 POST 가
   // 끝날 때까지(발신자에게 voice clone 이 있으면 수 초) 입력창에 글이 남아 있어
   // 전송이 실패한 것처럼 보였다.
@@ -1067,17 +1098,7 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
     setMessages((prev) => [...prev, stub]);
     setDraft('');
     setError(null);
-    try {
-      const saved = await sendMessage(account.user_id, match.match_id, text, id);
-      pendingRef.current.delete(id);
-      setMessages((prev) => prev.map((m) => (m.id === id ? saved : m)));
-    } catch (err) {
-      // 실패한 말풍선은 걷어내고 입력을 되돌린다 (재전송은 다시 누르면 됨).
-      pendingRef.current.delete(id);
-      setMessages((prev) => prev.filter((m) => m.id !== id));
-      setDraft((cur) => (cur.trim() ? cur : text));
-      setError(err instanceof Error ? err.message : '전송 실패');
-    }
+    await postMessage(id, text);
   };
 
   return (
@@ -1142,7 +1163,14 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
         )}
         <div className="flex flex-col gap-2">
           {messages.map((m) => (
-            <MessageBubble key={m.id} message={m} isOwn={m.sender_id === account.user_id} />
+            <MessageBubble
+              key={m.id}
+              message={m}
+              isOwn={m.sender_id === account.user_id}
+              failed={failedIds.has(m.id)}
+              retrying={retryingIds.has(m.id)}
+              onRetry={() => postMessage(m.id, m.original_text)}
+            />
           ))}
         </div>
       </div>
@@ -1271,7 +1299,22 @@ function PartnerPhotosModal({
   );
 }
 
-function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean }) {
+function MessageBubble({
+  message,
+  isOwn,
+  failed = false,
+  retrying = false,
+  onRetry,
+}: {
+  message: Message;
+  isOwn: boolean;
+  // 전송 실패한 낙관적 stub — 말풍선을 남겨두고 여기서 바로 재전송한다.
+  // 같은 client_message_id 로 다시 보내므로 첫 요청이 실은 서버에 닿았더라도
+  // 메시지가 두 개 생기지 않는다 (BE 멱등 INSERT).
+  failed?: boolean;
+  retrying?: boolean;
+  onRetry?: () => void;
+}) {
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -1313,12 +1356,26 @@ function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean })
               minute: "2-digit",
             })}
           </span>
-          {message.audio_status === 'pending' && <span>· 음성 대기 중</span>}
-          {message.audio_status === 'processing' && <span>· 음성 합성 중</span>}
-          {message.audio_status === 'failed' && (
-            <span style={{ color: C.error }}>· 음성 실패</span>
+          {/* 전송 실패는 음성 상태보다 우선 — stub 이라 audio_status 는 의미 없다. */}
+          {failed ? (
+            <button
+              onClick={onRetry}
+              disabled={retrying}
+              className="font-semibold underline underline-offset-2 disabled:opacity-50"
+              style={{ color: C.error }}
+            >
+              {retrying ? '· 재전송 중...' : '· 전송 실패 — 재전송'}
+            </button>
+          ) : (
+            <>
+              {message.audio_status === 'pending' && <span>· 음성 대기 중</span>}
+              {message.audio_status === 'processing' && <span>· 음성 합성 중</span>}
+              {message.audio_status === 'failed' && (
+                <span style={{ color: C.error }}>· 음성 실패</span>
+              )}
+              {message.audio_url && <AudioPlayButton url={message.audio_url} />}
+            </>
           )}
-          {message.audio_url && <AudioPlayButton url={message.audio_url} />}
         </div>
       </div>
     </div>
