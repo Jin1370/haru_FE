@@ -24,6 +24,20 @@ export function setAdminSecret(value: string | null): void {
   else sessionStorage.setItem('admin_secret', value);
 }
 
+// 운영자 아이디 — 팀 공용 대시보드에서 "누가" 요청하는지. BE 가 (아이디, 비밀번호)
+// 쌍을 ADMIN_USERS 에서 대조해 그 운영자가 담당하는 dev 계정만 노출/조작 허용한다.
+// 슈퍼유저(ADMIN_SECRET 단독)로 들어오면 빈 값.
+export function getAdminUser(): string | null {
+  if (typeof window === 'undefined') return null;
+  return sessionStorage.getItem('admin_user');
+}
+
+export function setAdminUser(value: string | null): void {
+  if (typeof window === 'undefined') return;
+  if (value === null) sessionStorage.removeItem('admin_user');
+  else sessionStorage.setItem('admin_user', value);
+}
+
 export class AdminApiError extends Error {
   constructor(public readonly status: number, message: string) {
     super(message);
@@ -42,6 +56,8 @@ export async function adminFetch<T>(
     'Content-Type': 'application/json',
     'X-Admin-Secret': secret,
   };
+  const adminUser = getAdminUser();
+  if (adminUser) headers['X-Admin-User'] = adminUser;
   if (opts.impersonate) {
     headers['X-Admin-Impersonate'] = opts.impersonate;
   }
@@ -62,17 +78,20 @@ export async function adminFetch<T>(
   return res.json() as Promise<T>;
 }
 
-// 어드민 시크릿 검증 — 로그인 시 사용.
-export async function verifyAdminSecret(secret: string): Promise<boolean> {
+// 어드민 로그인 검증. 아이디는 팀 운영자 계정용이며, 비워두면 ADMIN_SECRET
+// 단독(슈퍼유저) 로그인으로 취급된다.
+export async function verifyAdminSecret(secret: string, user?: string): Promise<boolean> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-Admin-Secret': secret,
+  };
+  if (user) headers['X-Admin-User'] = user;
   const res = await fetch(`${API_BASE}/api/admin/auth/verify`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Admin-Secret': secret,
-    },
+    headers,
   });
   if (res.ok) return true;
-  // 401 만 "시크릿 틀림". 404(=API_BASE 가 BE 가 아니거나 ADMIN_DASHBOARD_ENABLED=false)
+  // 401 만 "아이디/비밀번호 틀림". 404(=API_BASE 가 BE 가 아니거나 ADMIN_DASHBOARD_ENABLED=false)
   // 같은 응답까지 시크릿 오류로 뭉뚱그리면 원인 진단이 불가능하다.
   if (res.status === 401) return false;
   throw new AdminApiError(res.status, `${API_BASE} 응답 ${res.status} — BE 주소(NEXT_PUBLIC_API_URL)와 ADMIN_DASHBOARD_ENABLED 확인`);

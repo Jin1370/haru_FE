@@ -36,7 +36,9 @@ import {
   listMessages,
   markMessageListened,
   sendMessage,
+  getAdminUser,
   setAdminSecret,
+  setAdminUser,
   swipe,
   updateMyProfile,
   updatePreferences,
@@ -140,7 +142,7 @@ export default function AdminPage() {
       setAuthState('unauth');
       return;
     }
-    verifyAdminSecret(stored)
+    verifyAdminSecret(stored, getAdminUser() ?? undefined)
       .then((ok) => {
         if (!ok) {
           sessionStorage.removeItem('admin_secret');
@@ -162,6 +164,7 @@ export default function AdminPage() {
     <Dashboard
       onSignOut={() => {
         setAdminSecret(null);
+        setAdminUser(null);
         setAuthState('unauth');
       }}
     />
@@ -171,6 +174,7 @@ export default function AdminPage() {
 // ===== 로그인 화면 =====
 
 function LoginScreen({ onAuthed }: { onAuthed: () => void }) {
+  const [user, setUser] = useState('');
   const [secret, setSecret] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -180,11 +184,13 @@ function LoginScreen({ onAuthed }: { onAuthed: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      const ok = await verifyAdminSecret(secret);
+      const id = user.trim();
+      const ok = await verifyAdminSecret(secret, id || undefined);
       if (!ok) {
-        setError('잘못된 admin secret');
+        setError('아이디 또는 비밀번호가 올바르지 않습니다');
         return;
       }
+      setAdminUser(id || null);
       setAdminSecret(secret);
       onAuthed();
     } catch (err) {
@@ -208,11 +214,26 @@ function LoginScreen({ onAuthed }: { onAuthed: () => void }) {
           dev/QA 대시보드
         </p>
         <input
+          value={user}
+          onChange={(e) => setUser(e.target.value)}
+          placeholder="아이디"
+          autoFocus
+          autoComplete="username"
+          className="mb-2 w-full rounded-2xl border px-4 py-3 text-base outline-none transition focus:shadow-[0_0_0_3px_rgba(219,39,119,0.18)]"
+          style={{
+            background: "#FFFFFF",
+            borderColor: C.borderSoft,
+            color: C.text,
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = C.primary)}
+          onBlur={(e) => (e.currentTarget.style.borderColor = C.borderSoft)}
+        />
+        <input
           type="password"
           value={secret}
           onChange={(e) => setSecret(e.target.value)}
-          placeholder="ADMIN_SECRET"
-          autoFocus
+          placeholder="비밀번호"
+          autoComplete="current-password"
           className="w-full rounded-2xl border px-4 py-3 text-base outline-none transition focus:shadow-[0_0_0_3px_rgba(219,39,119,0.18)]"
           style={{
             background: '#FFFFFF',
