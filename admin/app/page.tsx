@@ -129,10 +129,9 @@ const VOICE_BTN = {
 // 운영 계정 페르소나 — 채팅 시 말투·상황을 일관되게 유지하기 위한 설정 메모.
 // 이메일로 키를 잡는다 (display_name 은 바뀔 수 있고, user_id 는 환경마다 다름).
 // 괄호 숫자는 출생연도. 미정의 계정은 화면에서 '아직 없음' 으로 표시된다.
-const PERSONAS: Record<string, { name: string; age: string; job: string; notes: string[] }> = {
+const PERSONAS: Record<string, { age: string; job: string; notes: string[] }> = {
   'dev-11@haru.test': {
-    name: '경우 (04년생)',
-    age: '23세',
+    age: '23세 (04년생)',
     job: '외식업체 매장 매니저',
     notes: [
       '시니컬해 보이지만 실제로는 속정이 깊은 츤데레',
@@ -140,8 +139,7 @@ const PERSONAS: Record<string, { name: string; age: string; job: string; notes: 
     ],
   },
   'dev-12@haru.test': {
-    name: '동해 (06년생)',
-    age: '21세',
+    age: '21세 (06년생)',
     job: '대학생 (경영학과 1학년)',
     notes: [
       '감수성이 풍부하고 행동력이 뛰어남',
@@ -149,8 +147,7 @@ const PERSONAS: Record<string, { name: string; age: string; job: string; notes: 
     ],
   },
   'dev-13@haru.test': {
-    name: '게토레이굿 (01년생)',
-    age: '26세',
+    age: '26세 (01년생)',
     job: '스타트업 백엔드 개발자 (2년 차)',
     notes: [
       '털털하고 매사에 긍정적임',
@@ -158,8 +155,7 @@ const PERSONAS: Record<string, { name: string; age: string; job: string; notes: 
     ],
   },
   'dev-14@haru.test': {
-    name: '일본친구원해요 (03년생)',
-    age: '24세',
+    age: '24세 (03년생)',
     job: '유학 준비생 (일어일문학과 휴학 중)',
     notes: [
       '하나에 꽂히면 깊게 파고드는 열정파',
@@ -167,8 +163,7 @@ const PERSONAS: Record<string, { name: string; age: string; job: string; notes: 
     ],
   },
   'dev-15@haru.test': {
-    name: '그만두 (05년생)',
-    age: '22세',
+    age: '22세 (05년생)',
     job: '대학생 (미디어영상학과 2학년)',
     notes: [
       '사교적이고 밝으며 사람들과 잘 어울림',
@@ -176,8 +171,7 @@ const PERSONAS: Record<string, { name: string; age: string; job: string; notes: 
     ],
   },
   'kts123@estsoft.com': {
-    name: '도도한프리렌 (02년생)',
-    age: '25세',
+    age: '25세 (02년생)',
     job: '바리스타 겸 타투이스트 지망생 (카페 근무 및 타투 도안 공부 중)',
     notes: [
       '화려하고 날티 나는 외모와 달리 침착하고 마이페이스 성향',
@@ -1352,9 +1346,12 @@ function PersonaNote({ account, onClose }: { account: DevAccount; onClose: () =>
               backgroundImage: 'repeating-linear-gradient(#FFFDF5 0 calc(1.9em - 1px), #EFE4C4 0 1.9em)',
             }}
           >
-            <div className="font-semibold">{persona.name}</div>
-            <div>나이: {persona.age}</div>
-            <div>직업: {persona.job}</div>
+            <div>
+              <span className="font-semibold">나이</span>: {persona.age}
+            </div>
+            <div>
+              <span className="font-semibold">직업</span>: {persona.job}
+            </div>
             <div className="mt-2 font-semibold">특이사항</div>
             <ul className="list-disc pl-5">
               {persona.notes.map((n) => (
