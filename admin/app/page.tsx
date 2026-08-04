@@ -990,6 +990,12 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
   // 전송 중인 낙관적 stub — 서버에 아직 안 보이는 동안 폴링이 화면에서 지우지
   // 않도록 보관한다. stub id = client_message_id = 서버 row id 라 커밋된 뒤엔
   // 같은 id 로 자연히 대체된다.
+  //
+  // ⚠️ POST 응답(2xx)이 왔다고 stub 을 버리면 안 된다. 발신자에게 voice clone 이
+  // 있으면 BE 는 202 + stub 만 먼저 주고 실제 INSERT 는 TTS 합성 뒤(수 초)에 한다
+  // (chat-audio-async-insert). 그 사이 폴링은 그 메시지를 못 보므로, 응답 시점에
+  // 지우면 말풍선이 떴다가 사라졌다가 다시 뜬다. 서버 목록에 id 가 실제로
+  // 나타났을 때만 버린다.
   const pendingRef = useRef<Map<string, Message>>(new Map());
   // 전송 실패한 stub id (말풍선에 재전송 버튼 노출) / 재전송 진행 중인 id.
   const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
@@ -999,7 +1005,11 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
     listMessages(account.user_id, match.match_id)
       .then((msgs) => {
         const serverIds = new Set(msgs.map((m) => m.id));
-        const stubs = [...pendingRef.current.values()].filter((s) => !serverIds.has(s.id));
+        // 서버에 실제로 나타난 stub 은 여기서 은퇴시킨다 (POST 응답 시점이 아니라).
+        pendingRef.current.forEach((_, id) => {
+          if (serverIds.has(id)) pendingRef.current.delete(id);
+        });
+        const stubs = [...pendingRef.current.values()];
         setMessages(stubs.length > 0 ? [...msgs, ...stubs] : msgs);
         setLoading(false);
         void markListenedBatch(msgs);
@@ -1059,7 +1069,9 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
     setRetryingIds((prev) => new Set(prev).add(id));
     try {
       const saved = await sendMessage(account.user_id, match.match_id, text, id);
-      pendingRef.current.delete(id);
+      // 202(비동기 INSERT) 일 수 있으므로 stub 은 유지하고 내용만 서버 값으로 갱신.
+      // 실제 은퇴는 폴링이 같은 id 를 서버에서 본 시점에 일어난다.
+      pendingRef.current.set(id, saved);
       setMessages((prev) => prev.map((m) => (m.id === id ? saved : m)));
     } catch (err) {
       setFailedIds((prev) => new Set(prev).add(id));
