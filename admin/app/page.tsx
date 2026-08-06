@@ -10,7 +10,7 @@
 // 가독성 위해 본문 텍스트는 진한 그레이, 보조 텍스트는 중간 그레이, border 는 옅은 그레이.
 // unread 뱃지는 semantic notification — 시인성 위해 red 유지 (pink 아님).
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AdminApiError,
   type DevAccount,
@@ -343,6 +343,10 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       });
   }, [onSignOut]);
 
+  // 내가 담당하는 dev 계정끼리 주고받은 like 는 노이즈라 뱃지/목록 양쪽에서 숨긴다.
+  // (listDevAccounts 가 이미 운영자 담당분만 주므로 = 내 풀 안에서만 숨김)
+  const devIds = useMemo(() => new Set(accounts.map((a) => a.user_id)), [accounts]);
+
   useEffect(() => {
     if (accounts.length === 0) return;
     let cancelled = false;
@@ -370,7 +374,8 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
             // 받은좋아요는 별도 카운트 엔드포인트가 없어 목록 길이를 쓴다. 응답이
             // 최신 300건 상한이라 그 이상은 300 으로 포화 (dev 규모에선 무의미).
             const likes = await getReceivedLikes(acc.user_id);
-            if (!cancelled) setLikesByAccount((prev) => ({ ...prev, [acc.user_id]: likes.length }));
+            const count = likes.filter((c) => !devIds.has(c.id)).length;
+            if (!cancelled) setLikesByAccount((prev) => ({ ...prev, [acc.user_id]: count }));
           } catch {
             // 위와 동일 — 다음 회차에 재시도.
           }
@@ -393,7 +398,7 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [accounts]);
+  }, [accounts, devIds]);
 
   useEffect(() => {
     const total = Object.values(unreadByAccount).reduce((a, b) => a + b, 0);
@@ -592,7 +597,11 @@ function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                 <DiscoverPane key={selectedAccount.user_id} account={selectedAccount} />
               )}
               {tab === 'likes' && (
-                <LikesPane key={selectedAccount.user_id} account={selectedAccount} />
+                <LikesPane
+                  key={selectedAccount.user_id}
+                  account={selectedAccount}
+                  hiddenIds={devIds}
+                />
               )}
               {tab === 'profile' && (
                 <ProfilePane key={selectedAccount.user_id} account={selectedAccount} />
@@ -1865,7 +1874,13 @@ function DiscoverRow({
 //   - 빈 상태: "받은 좋아요 없음"
 //   - 같은 풀의 like 는 항상 즉시 매치 (상대가 이미 like 한 상태이므로) — alert 메시지 강조
 
-function LikesPane({ account }: { account: DevAccount }) {
+function LikesPane({
+  account,
+  hiddenIds,
+}: {
+  account: DevAccount;
+  hiddenIds: Set<string>;
+}) {
   const [cards, setCards] = useState<DiscoverCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1877,10 +1892,11 @@ function LikesPane({ account }: { account: DevAccount }) {
     setError(null);
     setActionMsg(null);
     getReceivedLikes(account.user_id)
-      .then(setCards)
+      // 내 담당 dev 계정끼리의 like 는 숨김 (사이드바 ♥ 뱃지와 같은 기준)
+      .then((cs) => setCards(cs.filter((c) => !hiddenIds.has(c.id))))
       .catch((err) => setError(err instanceof Error ? err.message : '알 수 없는 오류'))
       .finally(() => setLoading(false));
-  }, [account.user_id]);
+  }, [account.user_id, hiddenIds]);
 
   useEffect(() => {
     refresh();
