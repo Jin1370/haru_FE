@@ -99,7 +99,6 @@ export function ChatBubble({
     }
   };
   const showTranslation =
-    !isMine &&
     !!message.translated_text &&
     message.translated_text !== message.original_text;
 
@@ -302,7 +301,9 @@ export function ChatBubble({
       </Text>
 
       {showTranslation && (
-        <Text style={styles.translation}>{message.translated_text}</Text>
+        <Text style={[styles.translation, isMine && styles.mineTranslation]}>
+          {message.translated_text}
+        </Text>
       )}
 
       <View style={styles.footer}>
@@ -516,6 +517,9 @@ const styles = StyleSheet.create({
     marginTop: 5,
     lineHeight: 16,
     fontFamily: fonts.regular,
+  },
+  mineTranslation: {
+    color: 'rgba(255,255,255,0.8)',
   },
   footer: {
     flexDirection: 'row',
