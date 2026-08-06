@@ -1233,7 +1233,11 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
       {personaOpen && <PersonaNote account={account} onClose={() => setPersonaOpen(false)} />}
 
       {photosOpen && (
-        <PartnerPhotosModal match={match} onClose={() => setPhotosOpen(false)} />
+        <PartnerPhotosModal
+          match={match}
+          interests={partnerDetail?.interests ?? []}
+          onClose={() => setPhotosOpen(false)}
+        />
       )}
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
@@ -1380,9 +1384,12 @@ function PersonaNote({ account, onClose }: { account: DevAccount; onClose: () =>
 // 보여주고, 잠긴 경우에만 안내 문구를 덧붙인다.
 function PartnerPhotosModal({
   match,
+  interests,
   onClose,
 }: {
   match: MatchSummary;
+  // ChatPane 이 이미 받아둔 partnerDetail.interests (GET /:matchId/partner) 재사용.
+  interests: string[];
   onClose: () => void;
 }) {
   const photos = match.partner?.photos ?? [];
@@ -1443,6 +1450,25 @@ function PartnerPhotosModal({
                 </span>
               </a>
             ))}
+          </div>
+        )}
+
+        {interests.length > 0 && (
+          <div className="mt-5">
+            <div className="mb-2 text-sm font-semibold" style={{ color: C.textSecondary }}>
+              관심사 ({interests.length})
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {interests.map((id) => (
+                <span
+                  key={id}
+                  className="rounded-full border px-3 py-1 text-sm"
+                  style={{ borderColor: C.border, color: C.text, background: C.surface }}
+                >
+                  {interestLabel(id)}
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
