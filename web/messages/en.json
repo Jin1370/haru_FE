@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "haru - Meet global friends & partners through voice",
-    "description": "Global dating through voice. Messages auto-translate and play back in your own voice—meet friends and partners with no language barrier."
+    "title": "haru - Meet friends around the world through voice",
+    "description": "Make friends around the world through voice. Messages auto-translate and play back in your own voice—connect with people you click with, no language barrier."
   },
   "hero": {
     "eyebrow": "Voice preview",
@@ -63,7 +63,7 @@
     "items": [
       {
         "q": "What is haru?",
-        "a": "haru is a voice-first global dating app. Swipe through profiles and listen to each person's voice intro, so you can feel their real vibe and tone instead of judging by photos alone."
+        "a": "haru is a voice-first app for making friends around the world and language exchange. Swipe through profiles and listen to each person's voice intro, so you can feel their real vibe and tone instead of judging by photos alone. If you click, it can naturally grow into dating and matching too."
       },
       {
         "q": "Is haru free?",
