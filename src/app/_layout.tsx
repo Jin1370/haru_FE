@@ -265,6 +265,7 @@ function RootLayout() {
   // 스치지 않고 스플래시에서 바로 채팅방으로 보인다 (아래 splash hide effect).
   const [coldChecked, setColdChecked] = useState(false);
   const [laidOut, setLaidOut] = useState(false);
+  const [deepLinkDeadline, setDeepLinkDeadline] = useState(false);
   useEffect(() => {
     const capture = (
       response: Notifications.NotificationResponse | null | undefined,
@@ -272,6 +273,9 @@ function RootLayout() {
       const link = extractDeepLink(response);
       if (link) {
         pendingDeepLink = link;
+        // 안전망은 링크 단위 — 한 번 발동한 데드라인이 true 로 남아 다음 탭의
+        // onTabs 게이트까지 무력화하지 않게 새 링크마다 되돌린다.
+        setDeepLinkDeadline(false);
         setDeepLinkTick((t) => t + 1);
       }
     };
@@ -298,14 +302,25 @@ function RootLayout() {
   // 타이머가 발동하기 전에 취소되므로 영향이 없다. 데드라인 발동 시 뒤늦은
   // discover 리다이렉트가 chat 을 덮어 사용자가 discover 로 떨어질 수 있으나,
   // 영구 스플래시 행보다는 복구 가능한 상태라 허용한다.
-  const [deepLinkDeadline, setDeepLinkDeadline] = useState(false);
+  //
+  // 회귀 재발(2026-08-08): 위 "허용한다" 가 실제로 터지고 있었다. 옵티미스틱 인증
+  // 부팅이 들어오면서 isAuthenticated 가 SecureStore 읽기(~50ms)만으로 true 가 돼,
+  // 4초 타이머가 네비게이터 마운트 전부터 돌기 시작했다. 콜드 스타트가 4초를
+  // 넘기면 onTabs 도달 전에 데드라인이 터지고, best-effort 로 push 한 chat 을
+  // 뒤늦은 index.tsx 의 discover Redirect 가 덮어써 사용자가 탐색 화면에 떨어졌다.
+  //
+  // 데드라인은 "네비게이션이 막혔을 때" 의 안전망이지 "아직 시작도 안 했을 때" 의
+  // 것이 아니다 → 루트 레이아웃이 실제로 그려진(laidOut) 뒤부터 센다. laidOut 은
+  // appReady 일 때만 렌더되는 GestureHandlerRootView 의 onLayout 이라 appReady 를
+  // 함의하고, 그 뒤 index 의 Redirect 는 몇 프레임 안에 끝나므로 4초는 충분한 여유다.
   useEffect(() => {
     if (!pendingDeepLink) return;
     if (!coldChecked) return;
+    if (!laidOut) return;
     if (!isAuthenticated || !hasProfile) return;
     const id = setTimeout(() => setDeepLinkDeadline(true), 4000);
     return () => clearTimeout(id);
-  }, [coldChecked, isAuthenticated, hasProfile, deepLinkTick]);
+  }, [coldChecked, laidOut, isAuthenticated, hasProfile, deepLinkTick]);
 
   // pending deep link flush — 네비게이션 트리가 마운트(appReady)되고 인증/프로필
   // 이 확정된 뒤에만 router.push 한다. 이 조건 전에는 (main) 가드가 로그인으로
