@@ -137,7 +137,7 @@ export const TRANSLATE_BUBBLE: Record<Locale, TranslateThreadData> = {
       { original: '안녕하세요~ 반가워요!', translated: 'こんにちは〜 お会いできて嬉しいです！', audio: '/cards/translate-partner1-ja.mp3' },
     ],
     partnerTime: '午後 4:48',
-    mine: [{ text: '私もうれしいです！同い年ですね☺️', audio: '/cards/translate-mine1-ja.mp3' }],
+    mine: [{ text: 'こちらこそ！同い年ですね☺️', audio: '/cards/translate-mine1-ja.mp3' }],
     mineTime: '午後 4:49',
     avatar: '/cards/translate-avatar-ja.jpg',
     partnerFirst: true,
