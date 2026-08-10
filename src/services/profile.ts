@@ -34,6 +34,12 @@ export async function recordConsent(): Promise<ConsentResponse> {
   return api.post<ConsentResponse>('/api/profile/consent');
 }
 
+// 유입 경로 기록 (mig 051). BE 가 write-once 라 최초 1회만 반영되고, 이후 호출은
+// 멱등하게 무시된다. 게이트 해제는 이 호출 뒤 loadProfile() 재조회로 이뤄진다.
+export async function recordAcquisition(source: string, detail?: string): Promise<void> {
+  await api.post('/api/profile/acquisition', detail ? { source, detail } : { source });
+}
+
 const MIME_MAP: Record<string, string> = {
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',

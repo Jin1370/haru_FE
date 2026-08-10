@@ -75,6 +75,19 @@ export default {
         appleNoToken: "Apple 인증 토큰을 받지 못했어요. 다시 시도해주세요.",
     },
 
+    acquisition: {
+        title: "haru를 어떻게 알게 되셨나요?",
+        options: {
+            friend: "친구 또는 가족",
+            sns: "SNS",
+            app_store: "앱 스토어 검색",
+            web_search: "웹 검색",
+            other: "직접 입력",
+        },
+        directPlaceholder: "어떻게 알게 되셨나요?",
+        skip: "건너뛰기",
+        failed: "저장에 실패했어요. 다시 선택해 주세요.",
+    },
     consent: {
         modalTitle: "약관동의",
         agreeAll: "약관에 전체 동의",

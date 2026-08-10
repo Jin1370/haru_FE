@@ -77,6 +77,19 @@ export default {
     appleNoToken: 'Could not get an identity token from Apple. Please try again.',
   },
 
+  acquisition: {
+    title: 'How did you hear about haru?',
+    options: {
+      friend: 'Friend or family',
+      sns: 'Social media',
+      app_store: 'App store search',
+      web_search: 'Web search',
+      other: 'Type it in',
+    },
+    directPlaceholder: 'How did you find us?',
+    skip: 'Skip',
+    failed: "Couldn't save. Please pick again.",
+  },
   consent: {
     modalTitle: 'Terms Agreement',
     agreeAll: 'Agree to all',

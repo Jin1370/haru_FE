@@ -13,7 +13,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CountryFlag from 'react-native-country-flag';
 import { useTranslation } from 'react-i18next';
@@ -52,6 +52,7 @@ import { DEFAULT_EMOTION } from '@/constants/emotions';
 import * as matchService from '@/services/matches';
 import { CHAT_PROMPTS_SEEN_KEY_PREFIX } from '@/constants/chatPrompts';
 import { calculateAge } from '@/utils/age';
+import { genderIconName, genderLabelKey } from '@/utils/gender';
 import { userFacingError } from '@/utils/errors';
 import { fromRoundTrips } from '@/constants/photoAccess';
 import { photoAccessStore } from '@/stores/photoAccess';
@@ -113,6 +114,7 @@ export default function ChatScreen() {
   const [partnerInterests, setPartnerInterests] = useState<string[]>([]);
   const [partnerBioAudio, setPartnerBioAudio] = useState<string | null>(null);
   const [partnerBirthDate, setPartnerBirthDate] = useState<string | null>(null);
+  const [partnerGender, setPartnerGender] = useState<string | null>(null);
   const [partnerNationality, setPartnerNationality] = useState<string | null>(null);
   // Tombstone markers:
   //   * partnerDeleted (mig 012) — partner removed their account
@@ -216,6 +218,7 @@ export default function ChatScreen() {
         setPartnerInterests(detail.interests);
         setPartnerBioAudio(detail.voice_intro_audio_url);
         setPartnerBirthDate(detail.birth_date || null);
+        setPartnerGender(detail.gender ?? null);
       } catch {
         // silent — partner details are best-effort
       }
@@ -924,6 +927,20 @@ export default function ChatScreen() {
                     </Text>
                   </View>
                 )}
+                {partnerGender && (
+                  <View style={styles.sheetRow}>
+                    <Text style={styles.sheetLabel}>
+                      {t('profile.infoLabels.gender')}
+                    </Text>
+                    <FontAwesome
+                      name={genderIconName(partnerGender)}
+                      size={14}
+                      color={colors.text}
+                      style={styles.sheetValueIcon}
+                      accessibilityLabel={t(genderLabelKey(partnerGender))}
+                    />
+                  </View>
+                )}
                 {partnerNationality && (
                   <View style={styles.sheetRow}>
                     <Text style={styles.sheetLabel}>
@@ -1272,6 +1289,9 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fonts.medium,
     letterSpacing: 0.3,
+    paddingTop: 2,
+  },
+  sheetValueIcon: {
     paddingTop: 2,
   },
   sheetValueInline: {

@@ -75,6 +75,19 @@ export default {
         appleNoToken: "Apple認証トークンを取得できませんでした。もう一度お試しください。",
     },
 
+    acquisition: {
+        title: "haruをどこで知りましたか？",
+        options: {
+            friend: "友だち・家族",
+            sns: "SNS",
+            app_store: "アプリストアで検索",
+            web_search: "ウェブ検索",
+            other: "自由入力",
+        },
+        directPlaceholder: "どこで知りましたか？",
+        skip: "スキップ",
+        failed: "保存できませんでした。もう一度選んでください。",
+    },
     consent: {
         modalTitle: "規約同意",
         agreeAll: "規約にすべて同意",

@@ -31,6 +31,7 @@ import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { validateDisplayName, validateBirthDate, DISPLAY_NAME_MAX } from '@/utils/validators';
 import { userFacingError } from '@/utils/errors';
+import { genderLabelKey } from '@/utils/gender';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
 
@@ -149,11 +150,7 @@ export default function EditProfileScreen() {
     }
   };
 
-  const genderLabel = (g: typeof GENDER_OPTIONS[number]) => {
-    if (g === 'male') return t('setupProfile.genderMale');
-    if (g === 'female') return t('setupProfile.genderFemale');
-    return t('setupProfile.genderOther');
-  };
+  const genderLabel = (g: typeof GENDER_OPTIONS[number]) => t(genderLabelKey(g));
 
   return (
     <View style={styles.container}>

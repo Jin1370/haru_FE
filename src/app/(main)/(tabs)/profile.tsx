@@ -35,6 +35,7 @@ import { usePendingPhotoUploadsStore } from '@/stores/pendingPhotoUploadsStore';
 import { colors, gradients, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { calculateAge } from '@/utils/age';
+import { genderLabelKey } from '@/utils/gender';
 import { userFacingError } from '@/utils/errors';
 
 const BIO_AUDIO_POLL_INTERVAL_MS = 3000;
@@ -752,13 +753,7 @@ export default function ProfileScreen() {
         <View style={styles.infoRow}>
           <Text style={infoLabelStyle}>{t('profile.infoLabels.gender')}</Text>
           <Text style={styles.infoValue} numberOfLines={1}>
-            {t(
-              profile.gender === 'male'
-                ? 'setupProfile.genderMale'
-                : profile.gender === 'female'
-                  ? 'setupProfile.genderFemale'
-                  : 'setupProfile.genderOther',
-            )}
+            {t(genderLabelKey(profile.gender))}
           </Text>
         </View>
         {profile.nationality ? (

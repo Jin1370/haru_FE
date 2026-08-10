@@ -7,7 +7,7 @@ import {
     Pressable,
     Animated,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import CountryFlag from "react-native-country-flag";
 import { useTranslation } from "react-i18next";
@@ -22,6 +22,7 @@ import { ReportModal } from "@/components/moderation/ReportModal";
 import { colors, gradients, radii, shadows } from "@/constants/colors";
 import { fonts } from "@/constants/fonts";
 import { calculateAge } from "@/utils/age";
+import { genderIconName, genderLabelKey } from "@/utils/gender";
 import type { DiscoverCandidate } from "@/types";
 
 const ROTATION_RANGE = 14;
@@ -360,6 +361,15 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
                         <Text style={styles.detail} numberOfLines={1}>
                             {t("common.ageSuffix", { age })}
                         </Text>
+                        <Text style={styles.detailSep}>•</Text>
+                        <FontAwesome
+                            name={genderIconName(candidate.gender)}
+                            size={14}
+                            color="rgba(255,255,255,0.75)"
+                            accessibilityLabel={t(
+                                genderLabelKey(candidate.gender),
+                            )}
+                        />
                         <Text style={styles.detailSep}>•</Text>
                         {candidate.nationality ? (
                             <CountryFlag

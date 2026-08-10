@@ -74,6 +74,9 @@ export interface Profile {
   // 재동의 게이트(ReconsentGate)가 voice_consent_at NULL 을 보고 동의 모달을 띄운다.
   terms_accepted_at?: string | null;
   voice_consent_at?: string | null;
+  // 유입 경로 (mig 051). null = 아직 미응답 → 앱 진입 시 AcquisitionGate 1회 노출.
+  // mig 미적용 환경은 키 부재(undefined) → 게이트 OFF (앱 브릭 방지).
+  acquisition_source?: string | null;
   // 이메일+비밀번호 로그인 수단 보유 여부 (GET /profile/me 만 채운다). 구글/애플
   // 전용 계정은 false → 설정 화면에서 '비밀번호 변경' 메뉴를 감춘다. 옛 BE 응답
   // 호환을 위해 optional — undefined 면 노출(기존 동작).
@@ -231,6 +234,7 @@ export interface MatchPartner {
 
 export interface PartnerDetail {
   birth_date: string;
+  gender: 'male' | 'female' | 'other' | null;
   interests: string[];
   voice_intro_audio_url: string | null;
 }

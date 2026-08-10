@@ -16,6 +16,7 @@ import { getActiveChatMatchId, isMatchesTabActive } from '@/lib/activeChat';
 import { AlertHost } from '@/components/ui/AlertHost';
 import { PhotoEditorHost } from '@/components/photo/PhotoEditorHost';
 import { ReconsentGate } from '@/components/setup/ReconsentGate';
+import { AcquisitionGate } from '@/components/setup/AcquisitionGate';
 import { UpdateRequiredScreen } from '@/components/UpdateRequiredScreen';
 import { useForceUpdate } from '@/hooks/useForceUpdate';
 import { showAlert } from '@/stores/alertStore';
@@ -180,6 +181,10 @@ function RootShell() {
         {/* LAUNCH_CHECKLIST #5 — mig 039 이전 가입 회원 재동의 게이트. 동의
             미기록자에게 약관동의 화면(ConsentForm)을 전체화면으로 띄운다(소급 간주 금지). */}
         <ReconsentGate />
+        {/* 유입 경로 게이트 (mig 051). 사용자당 1회, 건너뛰기 없음. 순서는 렌더
+            순서가 아니라 AcquisitionGate 내부의 voice_consent_at 조건이 보장한다
+            (동의 미기록이면 이쪽이 뜨지 않는다). */}
+        <AcquisitionGate />
       </SWRConfigProvider>
     </SafeAreaProvider>
   );
