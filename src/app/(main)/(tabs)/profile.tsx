@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -86,6 +86,7 @@ export default function ProfileScreen() {
     return pollPhotoConversions();
   }, [pollPhotoConversions]);
 
+
   // Supabase storage uses upsert so the public URL is identical across uploads
   // to the same slot — React Image caches by URL and won't refetch. Bumping a
   // suffix forces a fresh request after every mutation so the new photo shows
@@ -98,6 +99,36 @@ export default function ProfileScreen() {
   // state 방식은 photos 의 로컬 URI 가 전달 안 돼 가입 직후 blur 가 안 떴다).
   const photoPreviews = usePhotoPreviewStore((s) => s.previews);
   const setPhotoPreview = usePhotoPreviewStore((s) => s.setPreview);
+
+  // 모더레이션 거부 감지. BE 는 거부 시 profile_photos row 를 삭제하므로
+  // (services/photoConversion.ts) 거부는 "슬롯이 조용히 사라짐" 으로 나타난다 —
+  // 슬롯을 점유한 채 빨간 X 로 남기지 않기 위한 설계라, 사라짐 자체가 유일한 신호다.
+  //
+  // 비교 대상은 **이 화면이 직접 변환 중(pending/processing)으로 관측한 id** 뿐이다.
+  // 변환 중 슬롯은 Pressable 이 아니라 사용자가 지우거나 교체할 진입점이 없으므로,
+  // 그 id 가 ready 도 안 되고 사라졌다면 거부 외의 원인이 없다 — 오탐 불가.
+  //
+  // 세션 업로드 기록(photoPreviewStore)을 비교 대상에 넣는 방식은 쓰지 않는다.
+  // 그 스토어는 전역 + append-only 라 화면 재마운트에도 살아있고 정리되지 않는데,
+  // "이미 처리함" 표시는 컴포넌트 로컬이라 수명이 어긋난다. 결과적으로 사용자가
+  // 직접 지운 사진까지 매 마운트마다 거부로 재판정되어, 프로필 사진과 무관한
+  // 동작에서도 모달이 반복 노출되는 회귀가 났다.
+  const inflightIdsRef = useRef<string[]>([]);
+  useEffect(() => {
+    const statuses = profile?.photo_statuses;
+    if (!statuses) return;
+    const present = new Set(statuses.map((s) => s.id));
+    const vanished = inflightIdsRef.current.filter((id) => !present.has(id));
+    inflightIdsRef.current = statuses
+      .filter((s) => s.status === 'pending' || s.status === 'processing')
+      .map((s) => s.id);
+    if (vanished.length === 0) return;
+    showAlert({
+      variant: 'error',
+      title: t('moderation.blocked.title'),
+      message: t('profile.photoBlocked'),
+    });
+  }, [profile?.photo_statuses, t]);
 
   // 회원가입 photos 백그라운드 업로드에서 재시도까지 소진하고 최종 실패한 사진의
   // 로컬 URI 들. 비어있지 않으면 그리드 아래 회복 배너로 "다시 시도" 동선을 연다.
@@ -309,7 +340,16 @@ export default function ProfileScreen() {
     // invisible on every other user's discover/match screen, and we already
     // gate the discover tab on `hasPhoto` — letting the user delete down to
     // zero would trap them in the photo-required gate. Surface this as a modal.
-    if ((profile?.photos.length ?? 0) <= 1) {
+    //
+    // 단, 비-ready 슬롯(변환 실패/모더레이션 거부)은 이 가드 대상이 아니다.
+    // `profile.photos` 는 ready 사진만 담으므로 "ready 1장 + rejected 1장" 상태에서
+    // rejected 를 지우려 하면 length<=1 로 잡혀 영구 삭제 불가 슬롯이 된다.
+    // 애초에 노출되지 않는 사진이라 지워도 디스커버 가시성이 줄지 않는다.
+    const statuses = profile?.photo_statuses;
+    const targetIsReady = statuses
+      ? statuses.some((s) => s.position === index && s.status === 'ready')
+      : true; // legacy 응답(photo_statuses 부재) = 전부 ready
+    if (targetIsReady && (profile?.photos.length ?? 0) <= 1) {
       showAlert({
         variant: 'info',
         title: t('profile.lastPhotoLockedTitle'),
@@ -392,13 +432,6 @@ export default function ProfileScreen() {
   };
 
   // 사진 슬롯 오버레이 핸들러 — 조기 반환보다 반드시 위에서 선언 (훅 순서 고정).
-  const handleRejectedTap = useCallback(() => {
-    showAlert({
-      variant: 'error',
-      title: t('moderation.blocked.title'),
-      message: t('profile.photoBlocked'),
-    });
-  }, [t]);
   const handleRetryTap = useCallback(
     async (photoId: string) => {
       try {
@@ -481,10 +514,15 @@ export default function ProfileScreen() {
   //   - pending  : 자동 백필 row 처리 대기. processing 과 동일 UI (ActivityIndicator
   //     + dim) — 사용자 결정 #2 (자동 백필 ON).
   //   - processing: gpt-image-2 호출 진행 중. ActivityIndicator + dim.
-  //   - failed   : 빨간 retry 아이콘 + onPress → retryPhotoConversion. 자동 재시도
-  //     sweep 이 BE 측에서 진행되지만 사용자가 즉시 트리거할 수 있는 affordance.
-  //   - rejected : 모더레이션 거부. 빨간 X 아이콘 + 토스트로 재업로드 유도. retry
-  //     불가 — 같은 사진은 영구 차단되므로 사용자가 슬롯을 삭제·다른 사진 업로드.
+  //   - failed   : 빨간 retry 아이콘. 자동 재시도 sweep 이 BE 측에서 진행되지만
+  //     액션시트의 "재시도" 로 사용자가 즉시 트리거할 수 있다.
+  //   - rejected : 모더레이션 거부. 빨간 X 아이콘. retry 불가 — 같은 사진은 영구
+  //     차단이라 사용자가 슬롯을 삭제하거나 다른 사진으로 변경해야 한다.
+  //
+  //   failed / rejected 는 둘 다 tap → 액션시트를 연다. 옛 동작은 rejected tap 이
+  //   같은 안내 토스트만 재출력하고 끝나서, 거부된 슬롯이 5칸 중 하나를 영구
+  //   점유하는데 삭제·변경 진입점이 아예 없는 막힌 상태였다 (failed 도 retry_count
+  //   캡 도달 후 동일). 모든 슬롯이 "tap → 액션시트" 단일 모델로 통일된다.
   //   (두 핸들러는 아래 `if (!profile)` 조기 반환 위에서 선언한다 — 훅은 조건부로
   //    호출될 수 없다. 프로필 하이드레이트 전후로 훅 개수가 달라지면 React 가
   //    "Rendered more hooks than during the previous render" 로 크래시한다.)
@@ -511,6 +549,7 @@ export default function ProfileScreen() {
     status: PhotoConversionStatus,
     photoId: string | undefined,
     slotStyle: any,
+    position: number,
     originalPreviewUrl?: string,
   ) => {
     if (status === 'pending' || status === 'processing') {
@@ -534,9 +573,9 @@ export default function ProfileScreen() {
             originalPreviewUrl && styles.statusBlurSlot,
             pressed && styles.sheetBtnPressed,
           ]}
-          onPress={() => photoId && handleRetryTap(photoId)}
+          onPress={() => handlePhotoPress(position)}
           accessibilityRole="button"
-          accessibilityLabel={t('profile.photoRetry')}
+          accessibilityLabel={t('profile.photoActionsTitle')}
         >
           {originalPreviewUrl
             ? renderBlurBackground(originalPreviewUrl, styles.inflightFailedScrim)
@@ -560,9 +599,9 @@ export default function ProfileScreen() {
           styles.statusRejectedSlot,
           pressed && styles.sheetBtnPressed,
         ]}
-        onPress={handleRejectedTap}
+        onPress={() => handlePhotoPress(position)}
         accessibilityRole="button"
-        accessibilityLabel={t('profile.photoBlocked')}
+        accessibilityLabel={t('profile.photoActionsTitle')}
       >
         <Ionicons name="close-circle" size={32} color={colors.like} />
         <Text style={styles.statusOverlayText} numberOfLines={2}>
@@ -573,6 +612,16 @@ export default function ProfileScreen() {
   };
 
   const mainSlot = slotAt(0);
+
+  // 액션시트가 겨냥한 슬롯의 상태 — 버튼 구성 분기용.
+  //   * ready 아님 → "메인으로 설정" 숨김 (BE 가 422 main_photo_not_ready 로 거부).
+  //   * failed → "재시도" 노출 (rejected 는 영구 거부라 재시도 없음).
+  const activeSlotStatus =
+    activePhotoIndex !== null ? statusByPosition.get(activePhotoIndex) : undefined;
+  const activeSlotIsReady =
+    activePhotoIndex !== null && readyUrlByPosition.has(activePhotoIndex);
+  const showRetryAction = activeSlotStatus?.status === 'failed';
+  const showSetMainAction = activeSlotIsReady && activePhotoIndex !== 0;
 
   // 워터컬러 변환 진행 중인 슬롯이 하나라도 있으면 그리드 아래 배너로 안내.
   // 업로드 전송(photoBusy)이 끝난 뒤 더 긴 변환 구간에 사용자가 진행 상태를
@@ -618,6 +667,7 @@ export default function ProfileScreen() {
             mainSlot.status,
             mainSlot.photoId,
             [styles.mainPhotoSlot, { width: MAIN_PHOTO_WIDTH, height: MAIN_PHOTO_HEIGHT }],
+            0,
             mainSlot.originalPreviewUrl,
           )
         ) : (
@@ -669,6 +719,7 @@ export default function ProfileScreen() {
                       slot.status,
                       slot.photoId,
                       [styles.thumbSlot, { width: THUMB_WIDTH, height: THUMB_HEIGHT }],
+                      photoIndex,
                       slot.originalPreviewUrl,
                     )}
                   </View>
@@ -889,9 +940,25 @@ export default function ProfileScreen() {
               </View>
             ) : null}
             <View style={styles.sheet}>
-              {activePhotoIndex !== null && activePhotoIndex !== 0 && (
+              {showRetryAction && (
                 <Pressable
                   style={({ pressed }) => [styles.sheetBtn, pressed && styles.sheetBtnPressed]}
+                  onPress={() => {
+                    const photoId = activeSlotStatus?.id;
+                    closeSheet();
+                    if (photoId) handleRetryTap(photoId);
+                  }}
+                >
+                  <Text style={styles.sheetBtnText}>{t('profile.photoRetry')}</Text>
+                </Pressable>
+              )}
+              {showSetMainAction && (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.sheetBtn,
+                    showRetryAction && styles.sheetBtnBordered,
+                    pressed && styles.sheetBtnPressed,
+                  ]}
                   onPress={() => runSheetAction(handleSetMain)}
                 >
                   <Text style={styles.sheetBtnText}>{t('profile.setAsMain')}</Text>
@@ -900,7 +967,7 @@ export default function ProfileScreen() {
               <Pressable
                 style={({ pressed }) => [
                   styles.sheetBtn,
-                  activePhotoIndex !== 0 && styles.sheetBtnBordered,
+                  (showRetryAction || showSetMainAction) && styles.sheetBtnBordered,
                   pressed && styles.sheetBtnPressed,
                 ]}
                 onPress={() => runSheetAction(handleEditPhoto)}

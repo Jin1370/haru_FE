@@ -270,7 +270,8 @@ export default {
     // generic ("photo") so no AI provenance leaks through the UI.
     photoConverting: 'Converting your photo...',
     photoConversionFailed: 'Conversion failed. Please try again.',
-    photoBlocked: "This photo can't be used. Please choose another.",
+    photoBlocked:
+      "This photo can't be used — copyrighted or inappropriate content, for example. Please choose another.",
     photoRetry: 'Retry',
     // Profile-tab recovery banner for photos that failed to upload during signup
     // due to a transient network error. Uses {{n}} (not i18next's plural `count`)

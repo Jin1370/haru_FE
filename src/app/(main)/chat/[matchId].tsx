@@ -13,7 +13,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CountryFlag from 'react-native-country-flag';
 import { useTranslation } from 'react-i18next';
@@ -52,7 +52,7 @@ import { DEFAULT_EMOTION } from '@/constants/emotions';
 import * as matchService from '@/services/matches';
 import { CHAT_PROMPTS_SEEN_KEY_PREFIX } from '@/constants/chatPrompts';
 import { calculateAge } from '@/utils/age';
-import { genderIconName, genderLabelKey } from '@/utils/gender';
+import { genderLabelKey } from '@/utils/gender';
 import { userFacingError } from '@/utils/errors';
 import { fromRoundTrips } from '@/constants/photoAccess';
 import { photoAccessStore } from '@/stores/photoAccess';
@@ -515,8 +515,12 @@ export default function ChatScreen() {
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const prev = inverseMessages[index + 1] ?? null;
     const isMine = item.sender_id === userId;
-    const showAvatar = !isMine && (!prev || prev.sender_id !== item.sender_id);
     const showDateSeparator = !prev || !isSameDay(prev.created_at, item.created_at);
+    // 아바타는 상대가 연속으로 보낸 묶음의 첫 줄에만 붙는다. 날짜가 바뀌면 발신자가
+    // 같아도 다시 붙인다 — 날짜 구분선 아래 첫 메시지가 아바타 없이 시작하면 앞선
+    // 묶음의 연장처럼 보인다.
+    const showAvatar =
+      !isMine && (showDateSeparator || prev?.sender_id !== item.sender_id);
     // Inverted FlatList applies scaleY(-1) to each cell, so JSX order within
     // a cell is visually flipped. Render the bubble first and the separator
     // last so that, after the cell flip, the separator ends up above the
@@ -932,13 +936,9 @@ export default function ChatScreen() {
                     <Text style={styles.sheetLabel}>
                       {t('profile.infoLabels.gender')}
                     </Text>
-                    <FontAwesome
-                      name={genderIconName(partnerGender)}
-                      size={14}
-                      color={colors.text}
-                      style={styles.sheetValueIcon}
-                      accessibilityLabel={t(genderLabelKey(partnerGender))}
-                    />
+                    <Text style={styles.sheetValueText} numberOfLines={1}>
+                      {t(genderLabelKey(partnerGender))}
+                    </Text>
                   </View>
                 )}
                 {partnerNationality && (
@@ -1289,9 +1289,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: fonts.medium,
     letterSpacing: 0.3,
-    paddingTop: 2,
-  },
-  sheetValueIcon: {
     paddingTop: 2,
   },
   sheetValueInline: {
