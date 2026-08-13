@@ -26,6 +26,8 @@ export default {
         options: "オプション",
         ageSuffix: "{{age}}歳",
         deletedUser: "退会したユーザー",
+        // キャンペーンボット（ハチワレ）— 年齢/性別/国籍がすべて空で返るときの代替表記。
+        identityUnknown: "???",
     },
 
     photoEditor: {
@@ -287,6 +289,9 @@ export default {
         typeMessage: "メッセージを入力…",
         partnerDeletedNotice: "相手が退会したため、これ以上メッセージを送信できません。",
         matchEndedNotice: "マッチが終了したため、これ以上メッセージを送信できません。",
+        // キャンペーンボット（ハチワレ）専用 — 返信不可の案内 + 初回メッセージ合成待ち。
+        noReplyNotice: "逃げちゃったので、お返事はできません。",
+        botWritingNotice: "{{name}}がメッセージを書いています…",
         messagePreparing: "メッセージ準備中…",
         tapToListen: "タップして再生",
         playing: "再生中…",
@@ -483,6 +488,14 @@ export default {
         rock: "ロック",
         rnb: "R&B",
         jazz: "ジャズ",
+        singing: "歌うこと",
+        guitar: "ギター",
+        piano: "ピアノ",
+        ukulele: "ウクレレ",
+        drums: "ドラム",
+        bass: "ベース",
+        violin: "バイオリン",
+        composing: "作曲",
         photography: "写真",
         pets: "ペット",
         wine: "ワイン",

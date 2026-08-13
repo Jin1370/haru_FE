@@ -110,7 +110,26 @@ export function ChatBubble({
   //     렌더 (기존 inner).
   const isReady = message.audio_status === 'ready' && !!message.audio_url;
   const isListened = !!message.listened_at;
-  const showGate = !isMine && !isListened;
+  // 정상 INSERT 됐지만 음성이 없는 메시지 — TTS 스킵 경로(예: "ㅠㅠ" 처럼
+  // strip 후 읽을 내용이 안 남는 메시지)와 캠페인 봇의 텍스트 전용 안내.
+  // 청취할 대상이 자체가 없으므로 게이트를 걸면 "메시지 준비 중.." 편지
+  // 카드에서 영구히 못 빠져나온다 (listened_at 이 채워질 경로가 없음).
+  // pending/failed 는 여기 해당 안 됨 — 그건 진짜로 아직/영영 못 듣는 상태라
+  // 기존대로 게이트를 유지한다 (수신자 목록엔 원래 안 들어오지만 방어적으로).
+  const textOnlyReady = message.audio_status === 'ready' && !message.audio_url;
+  const showGate = !isMine && !isListened && !textOnlyReady;
+
+  // 음성 없는 수신 메시지는 "본 시점 = 청취 완료" 로 간주해 1회 마킹한다.
+  // 이걸 안 하면 채팅 목록의 안 읽음 배지(get_match_summaries_v4 의 unread =
+  // audio_status='ready' AND listened_at IS NULL)와 미리보기 마스킹이 영영
+  // 안 풀린다. ref 가드로 네트워크 실패 시 반복 호출을 막는다 (markListened 는
+  // 낙관 업데이트라 성공하면 isListened 가 true 로 바뀌어 어차피 재진입 안 함).
+  const autoListenedRef = useRef(false);
+  useEffect(() => {
+    if (isMine || isListened || !textOnlyReady || autoListenedRef.current) return;
+    autoListenedRef.current = true;
+    onListened?.(message.id);
+  }, [isMine, isListened, textOnlyReady, message.id, onListened]);
 
   // 재생 완료(transition) 자체 감지. sharedAudioPlayer 의 status update 에서
   //   * wasPlaying === true && nowPlaying === false  → stop transition

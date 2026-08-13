@@ -358,29 +358,41 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
                         {candidate.display_name}
                     </Text>
                     <View style={styles.detailRow}>
-                        <Text style={styles.detail} numberOfLines={1}>
-                            {t("common.ageSuffix", { age })}
-                        </Text>
-                        <Text style={styles.detailSep}>•</Text>
-                        <FontAwesome
-                            name={genderIconName(candidate.gender)}
-                            size={14}
-                            color="rgba(255,255,255,0.75)"
-                            accessibilityLabel={t(
-                                genderLabelKey(candidate.gender),
-                            )}
-                        />
-                        <Text style={styles.detailSep}>•</Text>
-                        {candidate.nationality ? (
-                            <CountryFlag
-                                isoCode={candidate.nationality}
-                                size={11}
-                                style={styles.flag}
-                            />
-                        ) : null}
-                        <Text style={styles.detail} numberOfLines={1}>
-                            {candidate.nationality}
-                        </Text>
+                        {/* 캠페인 봇(하치와레)은 신원 미상으로 내려온다 — BE 가
+                            birth_date 를 빈 문자열로 비우고 gender/nationality 도
+                            비운다. 셋을 따로 판정하면 '? • ? • ?' 처럼 깨져 보이므로
+                            birth_date 하나로 묶어 한 줄로 대체한다. */}
+                        {candidate.birth_date ? (
+                            <>
+                                <Text style={styles.detail} numberOfLines={1}>
+                                    {t("common.ageSuffix", { age })}
+                                </Text>
+                                <Text style={styles.detailSep}>•</Text>
+                                <FontAwesome
+                                    name={genderIconName(candidate.gender)}
+                                    size={14}
+                                    color="rgba(255,255,255,0.75)"
+                                    accessibilityLabel={t(
+                                        genderLabelKey(candidate.gender),
+                                    )}
+                                />
+                                <Text style={styles.detailSep}>•</Text>
+                                {candidate.nationality ? (
+                                    <CountryFlag
+                                        isoCode={candidate.nationality}
+                                        size={11}
+                                        style={styles.flag}
+                                    />
+                                ) : null}
+                                <Text style={styles.detail} numberOfLines={1}>
+                                    {candidate.nationality}
+                                </Text>
+                            </>
+                        ) : (
+                            <Text style={styles.detail} numberOfLines={1}>
+                                {t("common.identityUnknown")}
+                            </Text>
+                        )}
                     </View>
                 </View>
 

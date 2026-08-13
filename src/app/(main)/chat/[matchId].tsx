@@ -123,6 +123,9 @@ export default function ChatScreen() {
   // partnerDeleted also rewrites the header label to "탈퇴한 사용자".
   const [partnerDeleted, setPartnerDeleted] = useState(false);
   const [matchUnmatched, setMatchUnmatched] = useState(false);
+  // 캠페인 봇(하치와레) 처럼 답장을 받지 않는 상대. BE 의 GET /partner 가
+  // can_reply=false 로 알려준다. 옛 BE 응답(필드 없음)은 답장 가능으로 취급.
+  const [partnerReadOnly, setPartnerReadOnly] = useState(false);
   // mig 022: 채팅 헤더 ⋯ 메뉴에서도 동일 MatchActionsSheet 를 쓰므로 muted
   // 상태를 동기화해 토글 라벨/아이콘이 일치하도록 한다. matches list 응답에
   // 이미 포함된 값을 그대로 사용 — 별도 fetch 없음.
@@ -215,6 +218,7 @@ export default function ChatScreen() {
         setPartnerPhotos(partner.photos ?? []);
         setPartnerNationality(partner.nationality ?? null);
         if (!detail) return;
+        setPartnerReadOnly(detail.can_reply === false);
         setPartnerInterests(detail.interests);
         setPartnerBioAudio(detail.voice_intro_audio_url);
         setPartnerBirthDate(detail.birth_date || null);
@@ -739,16 +743,36 @@ export default function ChatScreen() {
           </Animated.View>
         )}
 
+        {/* 캠페인 봇은 매치 직후 TTS 합성이 끝나야 첫 메시지가 도착한다(5~10초).
+            그동안 빈 화면이면 렉으로 오해하므로, 날짜 구분선과 같은 모양의 안내
+            줄을 띄운다. 메시지가 하나라도 들어오면 사라진다 — BE 는 TTS 가
+            실패해도 텍스트 메시지를 반드시 INSERT 하므로 영구 로딩은 없다.
+            입력창이 잠긴 상태라 키보드가 안 뜨고, 따라서 badgeAnimStyle 같은
+            키보드 동기화가 필요 없다. */}
+        {partnerReadOnly && messages.length === 0 && (
+          <View style={[styles.pendingNotice, { bottom: badgeBottomBase }]}>
+            <View style={styles.dateLine} />
+            <Text style={styles.dateText}>
+              {t('chat.botWritingNotice', { name: partnerName ?? '' })}
+            </Text>
+            <View style={styles.dateLine} />
+          </View>
+        )}
+
         <Animated.View
           onLayout={(e) => setInputDockHeight(e.nativeEvent.layout.height)}
           style={[styles.inputDock, dockAnimStyle]}
         >
-          {(partnerDeleted || matchUnmatched) ? (
+          {(partnerDeleted || matchUnmatched || partnerReadOnly) ? (
             // Tombstone match — either the partner is gone (mig 012) or the
             // match itself ended via block/report (mig 013). Either way the
             // composer is replaced with a static notice. The history above
             // remains scrollable. Partner-deletion takes precedence in the
             // copy because that's the more terminal state.
+            //
+            // A read-only partner (the campaign bot) reuses the same static
+            // notice slot — it is not a tombstone, so it sorts last in the
+            // copy chain and the match stays otherwise normal.
             <View
               style={[
                 styles.tombstoneNotice,
@@ -763,7 +787,9 @@ export default function ChatScreen() {
               <Text style={styles.tombstoneNoticeText}>
                 {partnerDeleted
                   ? t('chat.partnerDeletedNotice')
-                  : t('chat.matchEndedNotice')}
+                  : matchUnmatched
+                    ? t('chat.matchEndedNotice')
+                    : t('chat.noReplyNotice')}
               </Text>
             </View>
           ) : (
@@ -1192,6 +1218,18 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: {
     opacity: 0.4,
+  },
+  // 날짜 구분선(dateSeparator)과 같은 모양이되, 리스트 셀이 아니라 dock 바로
+  // 위에 절대 배치된다 (inverted 리스트의 header/footer 는 뒤집혀 렌더되므로
+  // 리스트 안에 넣지 않는다).
+  pendingNotice: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 10,
   },
   newMessagesBadge: {
     position: 'absolute',

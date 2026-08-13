@@ -26,6 +26,8 @@ export default {
     options: 'Options',
     ageSuffix: '{{age}} y/o',
     deletedUser: 'Former member',
+    // Campaign bot (Hachiware) — shown when age/gender/nationality all come back empty.
+    identityUnknown: '???',
   },
 
   photoEditor: {
@@ -292,6 +294,9 @@ export default {
     typeMessage: 'Type a message...',
     partnerDeletedNotice: 'This person has left the app — you can no longer send messages.',
     matchEndedNotice: 'This match has ended — you can no longer send messages.',
+    // Campaign bot (Hachiware) only — reply-disabled notice + first-message wait.
+    noReplyNotice: 'They ran off, so replies are not possible.',
+    botWritingNotice: '{{name}} is writing a message…',
     messagePreparing: 'Preparing message…',
     tapToListen: 'Tap to listen',
     playing: 'Playing…',
@@ -488,6 +493,14 @@ export default {
     rock: 'Rock',
     rnb: 'R&B',
     jazz: 'Jazz',
+    singing: 'Singing',
+    guitar: 'Guitar',
+    piano: 'Piano',
+    ukulele: 'Ukulele',
+    drums: 'Drums',
+    bass: 'Bass',
+    violin: 'Violin',
+    composing: 'Songwriting',
     photography: 'Photography',
     pets: 'Pets',
     wine: 'Wine',

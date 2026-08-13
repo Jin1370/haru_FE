@@ -26,6 +26,8 @@ export default {
         options: "옵션",
         ageSuffix: "{{age}}세",
         deletedUser: "탈퇴한 사용자",
+        // 캠페인 봇(하치와레) — 나이/성별/국적이 모두 비어 내려올 때의 대체 표기.
+        identityUnknown: "???",
     },
 
     photoEditor: {
@@ -290,6 +292,9 @@ export default {
         typeMessage: "메시지를 입력하세요...",
         partnerDeletedNotice: "상대방이 탈퇴해 더 이상 메시지를 보낼 수 없어요.",
         matchEndedNotice: "매치가 종료되어 더 이상 메시지를 보낼 수 없어요.",
+        // 캠페인 봇(하치와레) 전용 — 답장 불가 안내 + 첫 메시지 합성 대기 표시.
+        noReplyNotice: "도망가서 답장은 받을 수 없어요.",
+        botWritingNotice: "{{name}}가 메시지 작성 중…",
         messagePreparing: "메시지 준비 중..",
         tapToListen: "탭해서 듣기",
         playing: "재생 중..",
@@ -486,6 +491,14 @@ export default {
         rock: "록",
         rnb: "R&B",
         jazz: "재즈",
+        singing: "노래",
+        guitar: "기타",
+        piano: "피아노",
+        ukulele: "우쿨렐레",
+        drums: "드럼",
+        bass: "베이스",
+        violin: "바이올린",
+        composing: "작곡",
         photography: "사진",
         pets: "반려동물",
         wine: "와인",

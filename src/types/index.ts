@@ -237,6 +237,10 @@ export interface PartnerDetail {
   gender: 'male' | 'female' | 'other' | null;
   interests: string[];
   voice_intro_audio_url: string | null;
+  // false 면 답장 불가 상대(캠페인 봇). 입력창이 안내문으로 대체되고, 상대
+  // 메시지가 아직 도착하지 않았으면 "작성 중" 인디케이터를 띄운다. 옛 BE 는
+  // 이 필드를 안 내려주므로 undefined = 답장 가능으로 취급한다.
+  can_reply?: boolean;
 }
 
 export interface MatchListItem {
