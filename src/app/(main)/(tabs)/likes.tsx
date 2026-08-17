@@ -135,6 +135,7 @@ export default function LikesScreen() {
               loading={resetting}
               disabled={resetting}
               style={styles.resetBtn}
+              textStyle={styles.resetBtnText}
             />
           ) : null}
         </EmptyState>
@@ -147,5 +148,9 @@ const styles = StyleSheet.create({
   resetBtn: {
     marginTop: 12,
     borderRadius: radii.pill,
+  },
+  // discover.tsx 와 동일 — 16px 기본값이면 en/ja 카피가 두 줄로 접힌다.
+  resetBtnText: {
+    fontSize: 14,
   },
 });

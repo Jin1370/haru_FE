@@ -161,6 +161,7 @@ export default function DiscoverScreen() {
               loading={resetting}
               disabled={resetting}
               style={styles.resetBtn}
+              textStyle={styles.resetBtnText}
             />
           ) : null}
         </EmptyState>
@@ -173,5 +174,10 @@ const styles = StyleSheet.create({
   resetBtn: {
     marginTop: 28,
     borderRadius: radii.pill,
+  },
+  // 16px 기본값이면 en "See skipped people again" / ja "スキップした人をもう一度見る"
+  // 가 EmptyState 의 좌우 여백(32×2) 안에서 두 줄로 접힌다.
+  resetBtnText: {
+    fontSize: 14,
   },
 });
