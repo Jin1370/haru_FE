@@ -17,6 +17,8 @@ import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { RequiredLabel } from '@/components/ui/RequiredLabel';
 import { useProfile } from '@/hooks/useProfile';
+import { ApiRequestError } from '@/services/api';
+import { DISPLAY_NAME_TAKEN_CODE } from '@/services/profile';
 import { showAlert } from '@/stores/alertStore';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
@@ -146,6 +148,12 @@ export default function EditProfileScreen() {
       });
       router.back();
     } catch (e: any) {
+      // mig 053: 닉네임 중복은 해당 필드 인라인 에러로 (일반 알림은 어느 값이
+      // 문제인지 안 알려준다).
+      if (e instanceof ApiRequestError && e.code === DISPLAY_NAME_TAKEN_CODE) {
+        setErrors({ display_name: t('validation.displayNameTaken') });
+        return;
+      }
       showAlert({ variant: 'error', title: t('common.error'), message: userFacingError(e, t) });
     }
   };

@@ -217,11 +217,19 @@ export default function SetupPhotos() {
             await upsertProfile(draft.buildProfilePayload());
         } catch (e: any) {
             setSubmitting(false);
+            // 1단계에서 사전 조회로 걸러지지만, 그 사이에 남이 먼저 쓰면 여기서
+            // 409 로 온다. 어느 값이 문제인지 알려주고 1단계로 돌려보낸다.
+            const taken =
+                e instanceof ApiRequestError &&
+                e.code === profileService.DISPLAY_NAME_TAKEN_CODE;
             showAlert({
                 variant: "error",
                 title: t("common.error"),
-                message: userFacingError(e, t, t('signupWizard.registerFailed')),
+                message: taken
+                    ? t('validation.displayNameTaken')
+                    : userFacingError(e, t, t('signupWizard.registerFailed')),
             });
+            if (taken) router.back();
             return;
         }
 

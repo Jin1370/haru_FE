@@ -130,6 +130,7 @@ export default {
     passwordMismatch: 'New passwords do not match',
     displayNameRequired: 'Required',
     displayNameInvalidChars: 'Contains characters that are not allowed',
+    displayNameTaken: 'That nickname is already taken',
     birthDateInvalid: 'Birth date must be YYYY-MM-DD',
     birthDateAdult: 'You must be at least 18 years old to sign up',
     voiceIntroTooLong: 'Voice intro must be 500 characters or fewer',

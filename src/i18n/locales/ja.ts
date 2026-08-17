@@ -128,6 +128,7 @@ export default {
         passwordMismatch: "新しいパスワードが一致しません",
         displayNameRequired: "必須項目です。",
         displayNameInvalidChars: "使用できない文字が含まれています",
+        displayNameTaken: "このニックネームはすでに使われています",
         birthDateInvalid: "生年月日を YYYY-MM-DD の形式で入力してください",
         birthDateAdult: "18歳以上のみご登録いただけます",
         voiceIntroTooLong: "ボイスひとことは500文字以内で入力してください",

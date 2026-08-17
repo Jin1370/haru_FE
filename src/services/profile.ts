@@ -22,6 +22,17 @@ export async function upsertProfile(data: ProfileUpsertRequest): Promise<Profile
   return api.put<Profile>('/api/profile/me', data);
 }
 
+// 닉네임 중복(mig 053 UNIQUE). 최종 판정은 PUT /api/profile/me 의 409 이고,
+// 아래 사전 조회는 가입 wizard 1단계에서 미리 인라인 에러를 띄우기 위한 것.
+export const DISPLAY_NAME_TAKEN_CODE = 'display_name_taken' as const;
+
+export async function isDisplayNameAvailable(name: string): Promise<boolean> {
+  const res = await api.get<{ available: boolean }>(
+    `/api/profile/name-check?name=${encodeURIComponent(name)}`,
+  );
+  return res.available;
+}
+
 // LAUNCH_CHECKLIST #5 — 재동의 기록. mig 039 이전 가입 회원이 앱 진입 시 동의
 // 모달에서 동의하면 호출되어 동의 시각·버전을 서버에 기록한다 (소급 간주 금지).
 export interface ConsentResponse {

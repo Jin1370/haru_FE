@@ -30,6 +30,7 @@ import { InterestSelector } from '@/components/profile/InterestSelector';
 import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { validateDisplayName, validateBirthDate, DISPLAY_NAME_MAX } from '@/utils/validators';
+import { isDisplayNameAvailable } from '@/services/profile';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
 
@@ -75,6 +76,7 @@ export default function SetupProfile() {
     nationality: draft.nationality,
   });
   const [nationalityOpen, setNationalityOpen] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [interests, setInterests] = useState<string[]>(draft.interests);
   const [referralCode, setReferralCode] = useState(draft.referralCode);
   // Inline validation errors, keyed by field. Populated on Next, surfaced as
@@ -123,7 +125,7 @@ export default function SetupProfile() {
   // under each invalid one, instead of leaving a silently-disabled button (which
   // App Review flagged as "tapped Next, nothing happened" on iPad — Guideline
   // 2.1(a)). Only advances once all fields are valid.
-  const handleNext = () => {
+  const handleNext = async () => {
     Keyboard.dismiss();
     const next: typeof errors = {};
 
@@ -137,6 +139,22 @@ export default function SetupProfile() {
 
     setErrors(next);
     if (Object.keys(next).length > 0) return;
+
+    // 닉네임 중복은 여기서 미리 잡는다 — BE INSERT 는 사진 단계에서야 일어나므로
+    // 이 확인이 없으면 사진을 다 고른 뒤에 409 로 튕긴다. 조회 자체가 실패하면
+    // 통과시킨다(최종 판정은 어차피 서버 UNIQUE 인덱스).
+    setChecking(true);
+    try {
+      const available = await isDisplayNameAvailable(form.display_name.trim());
+      if (!available) {
+        setErrors({ display_name: t('validation.displayNameTaken') });
+        return;
+      }
+    } catch {
+      // 통과
+    } finally {
+      setChecking(false);
+    }
 
     draft.setStep1({
       display_name: form.display_name.trim(),
@@ -324,7 +342,7 @@ export default function SetupProfile() {
           behind the keyboard while typing. KeyboardAwareScrollView scrolls the
           focused FormField above the keyboard line. */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        <Button title={t('common.next')} onPress={handleNext} />
+        <Button title={t('common.next')} onPress={handleNext} loading={checking} />
       </View>
     </View>
   );
