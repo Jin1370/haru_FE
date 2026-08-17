@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Animated,
   Easing,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +20,27 @@ import {
   useSharedAudioState,
 } from './sharedAudioPlayer';
 import type { Message } from '@/types';
+
+// 본문 안의 URL 만 탭 가능한 조각으로 쪼갠다. 캡처 그룹이 있는 split 이라 URL 도
+// 결과 배열에 남는다. `dataDetectorType` 은 Android 전용이라 못 쓰고, 링크 감지
+// 라이브러리를 추가할 만한 일도 아니다.
+function renderWithLinks(text: string) {
+  return text.split(/(https?:\/\/\S+)/g).map((part, i) =>
+    part.startsWith('http') ? (
+      <Text
+        key={i}
+        style={styles.link}
+        onPress={() => {
+          Linking.openURL(part).catch(() => {});
+        }}
+      >
+        {part}
+      </Text>
+    ) : (
+      part
+    ),
+  );
+}
 
 interface ChatBubbleProps {
   message: Message;
@@ -41,6 +63,10 @@ interface ChatBubbleProps {
   sendState?: 'sending' | 'failed';
   // 실패 말풍선 탭 → 같은 client id 로 재전송 (BE 멱등).
   onRetry?: (messageId: string) => void;
+  // 본문의 URL 을 탭하면 브라우저로 열리게 한다. 캠페인 봇처럼 본문을 서버가
+  // 만드는 메시지에만 켠다 — 일반 사용자 메시지의 링크를 탭 가능하게 하면
+  // 피싱/외부 유도 표면이 그대로 열린다.
+  linkify?: boolean;
 }
 
 const AVATAR_SIZE = 36;
@@ -56,6 +82,7 @@ export function ChatBubble({
   onRegenerateAudio,
   sendState,
   onRetry,
+  linkify = false,
 }: ChatBubbleProps) {
   const { t, i18n } = useTranslation();
   // idempotent-send sprint: 낙관 stub 3-상태. isMine 전용이라 수신자 게이팅
@@ -316,7 +343,7 @@ export function ChatBubble({
   const inner = (
     <>
       <Text style={[styles.text, isMine && styles.mineText]}>
-        {message.original_text}
+        {linkify ? renderWithLinks(message.original_text) : message.original_text}
       </Text>
 
       {showTranslation && (
@@ -529,6 +556,11 @@ const styles = StyleSheet.create({
   },
   mineText: {
     color: colors.white,
+  },
+  // linkify 는 봇 메시지(수신자 측 말풍선)에만 켜지므로 mine 대비는 불필요.
+  link: {
+    color: colors.primary,
+    textDecorationLine: 'underline',
   },
   translation: {
     fontSize: 11,

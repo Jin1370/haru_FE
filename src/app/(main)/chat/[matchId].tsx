@@ -540,6 +540,10 @@ export default function ChatScreen() {
           // idempotent-send sprint: 이 메시지의 송신 상태 (없으면 undefined
           // → 기존 동선). 'sending'/'failed' 일 때만 3-상태 시각 발동.
           sendState={sendState[item.id]}
+          // 캠페인 봇(답장 불가 파트너)의 메시지에서만 URL 을 탭 가능하게 한다.
+          // 본문을 서버가 만드는 메시지라 링크를 신뢰할 수 있다 — 일반 사용자
+          // 메시지는 그대로 두어 피싱 유도 표면을 만들지 않는다.
+          linkify={!isMine && partnerReadOnly}
           onRetry={retry}
           onListened={markListened}
           onRegenerateAudio={regenerateAudio}
@@ -676,6 +680,21 @@ export default function ChatScreen() {
           </View>
         </View>
         <IntimacyGauge roundTrips={roundTrips} />
+
+        {/* 캠페인 봇은 매치 직후 TTS 합성이 끝나야 첫 메시지가 도착한다(5~10초).
+            그동안 빈 화면이면 렉으로 오해하므로, 친밀도 게이지 바로 아래(메시지
+            영역 최상단)에 안내 줄을 띄운다. 메시지가 하나라도 들어오면 사라진다
+            — BE 는 TTS 가 실패해도 텍스트 메시지를 반드시 INSERT 하므로 영구
+            로딩은 없다. */}
+        {partnerReadOnly && messages.length === 0 && (
+          <View style={styles.pendingNotice}>
+            <View style={styles.dateLine} />
+            <Text style={styles.pendingNoticeText}>
+              {t('chat.botWritingNotice', { name: partnerName ?? '' })}
+            </Text>
+            <View style={styles.dateLine} />
+          </View>
+        )}
         <FlatList
           ref={flatListRef}
           data={inverseMessages}
@@ -741,22 +760,6 @@ export default function ChatScreen() {
               </LinearGradient>
             </Pressable>
           </Animated.View>
-        )}
-
-        {/* 캠페인 봇은 매치 직후 TTS 합성이 끝나야 첫 메시지가 도착한다(5~10초).
-            그동안 빈 화면이면 렉으로 오해하므로, 날짜 구분선과 같은 모양의 안내
-            줄을 띄운다. 메시지가 하나라도 들어오면 사라진다 — BE 는 TTS 가
-            실패해도 텍스트 메시지를 반드시 INSERT 하므로 영구 로딩은 없다.
-            입력창이 잠긴 상태라 키보드가 안 뜨고, 따라서 badgeAnimStyle 같은
-            키보드 동기화가 필요 없다. */}
-        {partnerReadOnly && messages.length === 0 && (
-          <View style={[styles.pendingNotice, { bottom: badgeBottomBase }]}>
-            <View style={styles.dateLine} />
-            <Text style={styles.dateText}>
-              {t('chat.botWritingNotice', { name: partnerName ?? '' })}
-            </Text>
-            <View style={styles.dateLine} />
-          </View>
         )}
 
         <Animated.View
@@ -1219,17 +1222,30 @@ const styles = StyleSheet.create({
   sendBtnDisabled: {
     opacity: 0.4,
   },
-  // 날짜 구분선(dateSeparator)과 같은 모양이되, 리스트 셀이 아니라 dock 바로
-  // 위에 절대 배치된다 (inverted 리스트의 header/footer 는 뒤집혀 렌더되므로
-  // 리스트 안에 넣지 않는다).
+  // 날짜 구분선(dateSeparator)과 같은 모양이되, 친밀도 게이지 바로 아래 —
+  // 메시지 영역 최상단에 일반 흐름으로 놓인다 (inverted 리스트의 header/footer
+  // 는 뒤집혀 렌더되므로 리스트 안에 넣지 않는다).
   pendingNotice: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
+    paddingTop: 14,
+    paddingBottom: 4,
     gap: 10,
+  },
+  // dateText 보다 크고 진하게 — 봇 첫 메시지를 기다리는 동안 화면에 이 줄
+  // 하나뿐이라 날짜 구분선 톤이면 안 읽힌다. 색은 회원가입 사진 등록 단계의
+  // 안내 박스(setup/photos.tsx warnBox/warnText)와 같은 조합.
+  pendingNoticeText: {
+    fontSize: 14,
+    color: colors.primaryDark,
+    fontFamily: fonts.bold,
+    letterSpacing: 0.2,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: radii.pill,
+    overflow: 'hidden', // Android 에서 borderRadius 가 Text 배경에 먹으려면 필요
   },
   newMessagesBadge: {
     position: 'absolute',
