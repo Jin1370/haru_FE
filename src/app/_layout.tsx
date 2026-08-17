@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet } from 'react-native';
-import { router, Stack, useSegments } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -13,6 +13,12 @@ import { useAuthStore } from '@/stores/authStore';
 import { registerOnSessionExpired, registerOnAccountFrozen } from '@/services/api';
 import { requestAndRegisterPushToken } from '@/hooks/usePushToken';
 import { getActiveChatMatchId, isMatchesTabActive } from '@/lib/activeChat';
+import {
+  hrefForDeepLink,
+  isBootDecided,
+  setPendingDeepLink,
+  type DeepLink,
+} from '@/lib/pendingDeepLink';
 import { AlertHost } from '@/components/ui/AlertHost';
 import { PhotoEditorHost } from '@/components/photo/PhotoEditorHost';
 import { ReconsentGate } from '@/components/setup/ReconsentGate';
@@ -105,24 +111,10 @@ Notifications.setNotificationHandler({
 
 // 알림 탭 → deep link.
 //
-// 콜드 스타트(앱 종료 상태에서 알림 탭)에서는 getLastNotificationResponseAsync
-// 가 폰트 로딩·auto-login 완료 전에 resolve 된다. 그 시점엔 (i) appReady=false
-// 라 Stack 네비게이터가 아직 마운트되지 않았고 (ii) isAuthenticated 가 아직
-// false 라 (main) 가드가 로그인으로 리다이렉트한다 → 이 상태에서 router.push 를
-// 호출하면 네비게이션이 유실되고, auto-login 완료 후 index.tsx 가 discover 로
-// 보내버려 채팅방으로 이동하지 못한다.
-//
-// 해결: 탭 응답을 pending 으로 저장만 하고, 실제 router.push 는 RootLayout 이
-// "네비게이션 마운트 + 인증/프로필 확정" 상태가 됐을 때 flush 한다. 아래
-// pendingDeepLink 은 모듈 스코프에 두고, 컴포넌트의 flush effect 가 소비한다.
-type DeepLink =
-  | { type: 'message'; match_id: string }
-  | { type: 'match' }
-  | { type: 'like' }
-  | { type: 'voice_reminder' };
-
-let pendingDeepLink: DeepLink | null = null;
-
+// 부팅 목적지 결정권은 index.tsx 단독 (lib/pendingDeepLink 주석 참고). 여기서는
+// (1) 알림 응답을 그 보관소에 넣고 (2) index 가 이미 목적지를 정한 뒤 도착한
+// 링크만 직접 push 한다. 예전의 "탐색 replace vs 채팅 push" 순서 경합 + 4초
+// 데드라인 안전망은 목적지 결정이 한 곳으로 모이면서 필요 없어졌다.
 function extractDeepLink(
   response: Notifications.NotificationResponse | null | undefined,
 ): DeepLink | null {
@@ -144,18 +136,6 @@ function extractDeepLink(
     return { type: 'voice_reminder' };
   }
   return null;
-}
-
-function navigateToDeepLink(link: DeepLink) {
-  if (link.type === 'message') {
-    router.push(`/chat/${link.match_id}`);
-  } else if (link.type === 'like') {
-    router.push('/(main)/(tabs)/likes');
-  } else if (link.type === 'voice_reminder') {
-    router.push('/(main)/settings/voice');
-  } else {
-    router.push('/(main)/(tabs)/matches');
-  }
 }
 
 // 전역 기본 글꼴은 Text/TextInput 의 defaultProps 로 주입했었으나, React 19 가
@@ -256,110 +236,30 @@ function RootLayout() {
     }
   }, []);
 
-  // push-notifications sprint: 알림 탭 deep link.
-  //   * addNotificationResponseReceivedListener — 앱이 background/foreground 일 때 탭.
-  //   * getLastNotificationResponseAsync — cold start (앱 종료 상태에서 알림 탭).
-  //
-  // 두 경로 모두 즉시 router.push 하지 않고 pendingDeepLink 에 저장 + tick 을
-  // 올려 아래 flush effect 를 깨운다 (콜드 스타트 유실 방지 — 위 주석 참고).
-  const [deepLinkTick, setDeepLinkTick] = useState(0);
-  // 콜드 스타트에서 getLastNotificationResponseAsync 는 비동기라, index.tsx 가
-  // 이미 discover 로 리다이렉트한 뒤에 딥링크가 도착한다. 그래서 딥링크 판정이
-  // 끝났는지(coldChecked) + 첫 레이아웃 완료(laidOut) 를 추적해, 딥링크가 있으면
-  // chat 이 얹힐 때까지 네이티브 스플래시를 유지한다 → 사용자에겐 discover 가
-  // 스치지 않고 스플래시에서 바로 채팅방으로 보인다 (아래 splash hide effect).
-  const [coldChecked, setColdChecked] = useState(false);
   const [laidOut, setLaidOut] = useState(false);
-  const [deepLinkDeadline, setDeepLinkDeadline] = useState(false);
-  useEffect(() => {
-    const capture = (
-      response: Notifications.NotificationResponse | null | undefined,
-    ) => {
-      const link = extractDeepLink(response);
-      if (link) {
-        pendingDeepLink = link;
-        // 안전망은 링크 단위 — 한 번 발동한 데드라인이 true 로 남아 다음 탭의
-        // onTabs 게이트까지 무력화하지 않게 새 링크마다 되돌린다.
-        setDeepLinkDeadline(false);
-        setDeepLinkTick((t) => t + 1);
-      }
-    };
-    const sub = Notifications.addNotificationResponseReceivedListener(capture);
-    Notifications.getLastNotificationResponseAsync()
-      .then(capture)
-      .catch(() => undefined)
-      .finally(() => setColdChecked(true));
-    return () => sub.remove();
-  }, []);
 
-  // 딥링크 flush 안전망 — 스플래시 무한 홀드 방지.
+  // push-notifications sprint: 알림 탭 deep link.
   //
-  // 관측된 버그: 앱을 오래 방치한 뒤 알림을 탭해 콜드 스타트하면, 만료된 토큰
-  // 갱신으로 auto-login(tryAutoLogin) 이 느려져 인증 settle · coldChecked ·
-  // 세그먼트 안착(onTabs) 의 비동기 게이트가 어긋난다. 한 번 어긋나면 아래
-  // flush effect 가 끝내 돌지 못하고, splash hide effect 는 pendingDeepLink 이
-  // 남아있는 한 스플래시를 계속 유지한다 → 사용자는 분홍 스플래시에 갇혀
-  // 강제 종료 후 수동으로 채팅방을 찾아가야 했다.
-  //
-  // 해결: 인증이 확정(canHonor)된 뒤에도 일정 시간 flush 가 안 되면 데드라인을
-  // 올려 (a) flush 를 best-effort 로 강행하고(onTabs 미충족이라도 이동) (b)
-  // 스플래시를 내린다. 정상 흐름은 canHonor 직후 프레임 안에 flush 되어 이
-  // 타이머가 발동하기 전에 취소되므로 영향이 없다. 데드라인 발동 시 뒤늦은
-  // discover 리다이렉트가 chat 을 덮어 사용자가 discover 로 떨어질 수 있으나,
-  // 영구 스플래시 행보다는 복구 가능한 상태라 허용한다.
-  //
-  // 회귀 재발(2026-08-08): 위 "허용한다" 가 실제로 터지고 있었다. 옵티미스틱 인증
-  // 부팅이 들어오면서 isAuthenticated 가 SecureStore 읽기(~50ms)만으로 true 가 돼,
-  // 4초 타이머가 네비게이터 마운트 전부터 돌기 시작했다. 콜드 스타트가 4초를
-  // 넘기면 onTabs 도달 전에 데드라인이 터지고, best-effort 로 push 한 chat 을
-  // 뒤늦은 index.tsx 의 discover Redirect 가 덮어써 사용자가 탐색 화면에 떨어졌다.
-  //
-  // 데드라인은 "네비게이션이 막혔을 때" 의 안전망이지 "아직 시작도 안 했을 때" 의
-  // 것이 아니다 → 루트 레이아웃이 실제로 그려진(laidOut) 뒤부터 센다. laidOut 은
-  // appReady 일 때만 렌더되는 GestureHandlerRootView 의 onLayout 이라 appReady 를
-  // 함의하고, 그 뒤 index 의 Redirect 는 몇 프레임 안에 끝나므로 4초는 충분한 여유다.
+  // useLastNotificationResponse 는 (a) 네이티브가 부팅 시 이미 들고 있던 응답을
+  // 동기로 읽고 (b) 이후 도착하는 탭도 구독으로 계속 반영한다. 옛 코드는
+  // getLastNotificationResponseAsync 를 부팅 시 딱 한 번 호출해, 그 시점에 응답이
+  // 준비되지 않았으면 링크를 영구 유실했다(관측: `capture(cold) none` 뒤 탐색 착지).
+  const lastResponse = Notifications.useLastNotificationResponse();
   useEffect(() => {
-    if (!pendingDeepLink) return;
-    if (!coldChecked) return;
-    if (!laidOut) return;
-    if (!isAuthenticated || !hasProfile) return;
-    const id = setTimeout(() => setDeepLinkDeadline(true), 4000);
-    return () => clearTimeout(id);
-  }, [coldChecked, laidOut, isAuthenticated, hasProfile, deepLinkTick]);
-
-  // pending deep link flush — 네비게이션 트리가 마운트(appReady)되고 인증/프로필
-  // 이 확정된 뒤에만 router.push 한다. 이 조건 전에는 (main) 가드가 로그인으로
-  // 튕기거나 Stack 자체가 없어서 push 가 유실되기 때문. auto-login 이 늦게
-  // 끝나도 isAuthenticated/hasProfile 이 true 로 바뀌는 순간 이 effect 가 다시
-  // 돌며 저장해둔 딥링크로 이동한다.
-  //
-  // 추가로 "탭 화면에 실제로 안착(segments 가 (main)/(tabs))했는지" 를 게이트로
-  // 건다. 콜드 스타트에서 index.tsx 의 discover 리다이렉트(replace)가 아직
-  // 처리되지 않은 시점에 chat 을 push 하면, 뒤늦게 도착한 리다이렉트가 chat 을
-  // 덮어써 사용자가 discover 로 떨어진다(관측된 회귀). 리다이렉트가 끝나 탭에
-  // 안착한 뒤에 push 하면 chat 이 탭 위에 얹혀 back 도 앱으로 정상 복귀한다.
-  const segments = useSegments() as string[];
-  useEffect(() => {
-    if (!pendingDeepLink) return;
-    if (!fontsLoaded || isLoading) return;
-    if (!isAuthenticated || !hasProfile) return;
-    // onTabs 미충족이어도 데드라인이 지났으면 best-effort 로 강행한다(안전망).
-    const onTabs = segments[0] === '(main)' && segments[1] === '(tabs)';
-    if (!onTabs && !deepLinkDeadline) return;
-    const link = pendingDeepLink;
-    pendingDeepLink = null;
-    navigateToDeepLink(link);
-    // chat push 완료 → splash hide effect 가 재평가하도록 tick 을 올린다.
-    setDeepLinkTick((t) => t + 1);
-  }, [
-    segments,
-    deepLinkTick,
-    fontsLoaded,
-    isLoading,
-    isAuthenticated,
-    hasProfile,
-    deepLinkDeadline,
-  ]);
+    const link = extractDeepLink(lastResponse);
+    if (!link) return;
+    if (!isBootDecided()) {
+      // 아직 index.tsx 가 부팅 목적지를 정하기 전 → 보관만. index 가 이 링크를
+      // 꺼내 처음부터 그 화면으로 Redirect 한다 (탐색을 안 거치므로 경합 없음).
+      if (__DEV__) console.log('[deeplink] pending for boot', JSON.stringify(link));
+      setPendingDeepLink(link);
+      return;
+    }
+    // 목적지가 이미 정해진 뒤 도착 — 앱이 살아있는 동안의 탭이거나, 콜드 응답이
+    // index 렌더보다 늦게 온 경우. 화면이 안착한 상태라 그 자리에서 얹으면 된다.
+    if (__DEV__) console.log('[deeplink] push now', JSON.stringify(link));
+    router.push(hrefForDeepLink(link));
+  }, [lastResponse]);
 
   // push-notifications sprint follow-up: 인증·프로필 보유 사용자 자동 토큰 재등록.
   // setup photos 에만 권한 트리거를 두면 dev build 적용 이전에 회원가입을 끝낸
@@ -376,37 +276,15 @@ function RootLayout() {
 
   const appReady = fontsLoaded && !isLoading;
 
-  // 네이티브 스플래시 hide 제어. onLayout(첫 레이아웃) 이후에 내려 안드로이드
-  // 기본 회색 윈도우가 비치는 것을 막는 기존 의도는 유지하되(laidOut), 콜드
-  // 스타트 딥링크가 있으면 chat 이 얹힐 때까지 스플래시를 유지해 discover 가
-  // 스치지 않게 한다.
-  //   * updateBlocked: 앱 트리(RootShell)가 안 뜨므로 딥링크와 무관하게 내림.
-  //   * 딥링크 있고 인증/프로필 확정: flush 가 chat push 후 tick 을 올릴 때까지
-  //     대기 → 그 사이 전환이 스플래시 뒤에서 일어난다.
-  //   * 딥링크 있고 인증 불가(로그아웃 등): 이행 불가하므로 폐기하고 내림.
+  // 네이티브 스플래시 hide 제어 — onLayout(첫 레이아웃) 이후에 내려 안드로이드
+  // 기본 회색 윈도우가 비치는 것을 막는다.
+  //
+  // 딥링크용 홀드는 없앴다: index.tsx 가 처음부터 채팅방으로 Redirect 하므로
+  // 첫 페인트가 곧 목적지 화면이고, 탐색이 스칠 구간 자체가 사라졌다.
   useEffect(() => {
     if (!appReady || !laidOut) return;
-    if (updateBlocked) {
-      SplashScreen.hideAsync().catch(() => {});
-      return;
-    }
-    if (!coldChecked) return;
-    const canHonor = isAuthenticated && hasProfile;
-    // 데드라인 전까지만 chat push 를 기다리며 스플래시를 유지한다. 데드라인이
-    // 지나면(flush 가 어긋난 경우) 홀드를 풀어 스플래시를 내린다 — 무한 행 방지.
-    if (pendingDeepLink && canHonor && !deepLinkDeadline) return;
-    if (pendingDeepLink && !canHonor) pendingDeepLink = null;
     SplashScreen.hideAsync().catch(() => {});
-  }, [
-    appReady,
-    laidOut,
-    updateBlocked,
-    coldChecked,
-    deepLinkTick,
-    isAuthenticated,
-    hasProfile,
-    deepLinkDeadline,
-  ]);
+  }, [appReady, laidOut]);
 
   if (!appReady) return null;
 
