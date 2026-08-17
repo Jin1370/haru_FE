@@ -16,6 +16,8 @@ import { getActiveChatMatchId, isMatchesTabActive } from '@/lib/activeChat';
 import {
   hrefForDeepLink,
   isBootDecided,
+  isResponseHandled,
+  markResponseHandled,
   setPendingDeepLink,
   type DeepLink,
 } from '@/lib/pendingDeepLink';
@@ -246,8 +248,16 @@ function RootLayout() {
   // 준비되지 않았으면 링크를 영구 유실했다(관측: `capture(cold) none` 뒤 탐색 착지).
   const lastResponse = Notifications.useLastNotificationResponse();
   useEffect(() => {
+    if (!lastResponse) return;
+    // 같은 응답 재처리 차단 — 훅은 세션 내내 같은 값을 돌려주므로 루트 리마운트
+    // 마다 다시 push 하면 무한 루프가 된다.
+    const responseId = lastResponse.notification.request.identifier;
+    if (isResponseHandled(responseId)) return;
     const link = extractDeepLink(lastResponse);
     if (!link) return;
+    markResponseHandled(responseId);
+    // 네이티브 보유값도 비운다 (expo-notifications 가 이 용도로 제공하는 API).
+    Notifications.clearLastNotificationResponse();
     if (!isBootDecided()) {
       // 아직 index.tsx 가 부팅 목적지를 정하기 전 → 보관만. index 가 이 링크를
       // 꺼내 처음부터 그 화면으로 Redirect 한다 (탐색을 안 거치므로 경합 없음).

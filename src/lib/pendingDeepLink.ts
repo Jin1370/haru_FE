@@ -39,6 +39,20 @@ export function isBootDecided(): boolean {
   return bootDecided;
 }
 
+// useLastNotificationResponse 는 세션 내내 같은 응답을 계속 돌려준다. 루트가
+// 리마운트되면 effect 가 같은 응답으로 또 push 해 무한 루프가 된다(관측: `push
+// now` 수십 줄 → Maximum update depth exceeded). 처리한 알림 id 를 모듈 스코프에
+// 남겨 리마운트를 견딘다.
+let handledResponseId: string | null = null;
+
+export function isResponseHandled(id: string): boolean {
+  return handledResponseId === id;
+}
+
+export function markResponseHandled(id: string): void {
+  handledResponseId = id;
+}
+
 export function hrefForDeepLink(link: DeepLink): string {
   switch (link.type) {
     case 'message':
@@ -49,5 +63,23 @@ export function hrefForDeepLink(link: DeepLink): string {
       return '/(main)/settings/voice';
     case 'match':
       return '/(main)/(tabs)/matches';
+  }
+}
+
+/**
+ * 딥링크 화면 아래에 먼저 깔 화면. 콜드 스타트에서 목적지만 띄우면 스택에 화면이
+ * 하나뿐이라 **뒤로가기가 앱을 종료**시킨다(관측). null 이면 목적지 자체가 탭이라
+ * 밑에 깔 것이 없다 (탭에서 뒤로가기 = 앱 종료는 정상 동작).
+ */
+export function baseHrefForDeepLink(link: DeepLink): string | null {
+  switch (link.type) {
+    case 'message':
+      // 뒤로가기 → 채팅 목록. 카톡/라인/iMessage 공통 동작.
+      return '/(main)/(tabs)/matches';
+    case 'voice_reminder':
+      // 설정 화면은 프로필 탭 하위 흐름.
+      return '/(main)/(tabs)/profile';
+    default:
+      return null;
   }
 }
