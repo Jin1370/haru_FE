@@ -105,6 +105,13 @@ export function ChatBubble({
     message.audio_status === 'ready' &&
     !message.audio_url &&
     !!message.audio_purged_at;
+  // 번역/합성 파이프라인이 실패한 본인 메시지 — 수신자에겐 아예 안 보인다
+  // (GET/Realtime 의 sender_id=viewer OR audio_status='ready' 필터). 지금까지
+  // 송신자 화면에도 아무 표시가 없어 "잘 갔는데 상대가 안 들었네" 로 읽혔다.
+  // sendState='failed'(POST 자체 실패) 와 같은 UI 를 쓰되 탭 동작이 다르다 —
+  // 이 row 는 이미 그 id 로 커밋돼 있어 같은 id 재전송은 BE 멱등 처리에 걸려
+  // no-op 이 된다. 재합성 라우트로 파이프라인을 다시 돌려야 한다.
+  const isAudioFailed = isMine && message.audio_status === 'failed';
   const handlePlayPress = () => {
     if (regenerating) return;
     if (isPurged && onRegenerateAudio) {
@@ -124,6 +131,19 @@ export function ChatBubble({
     } else {
       playSharedAudio(message.audio_url);
     }
+  };
+  // 실패 말풍선 탭. POST 실패(sendState)는 같은 client id 재전송, 파이프라인
+  // 실패(audio_status)는 재합성 라우트로 파이프라인 재실행 — 성공하면 row 가
+  // 'ready' 로 올라가 재생 버튼이 생기고 수신자에게도 그때 보인다. 본인 메시지라
+  // 자동 재생은 하지 않는다 (폐기 재합성 분기와 다른 점).
+  const handleRetryPress = () => {
+    if (isFailed) {
+      onRetry?.(message.id);
+      return;
+    }
+    if (regenerating || !onRegenerateAudio) return;
+    setRegenerating(true);
+    onRegenerateAudio(message.id).finally(() => setRegenerating(false));
   };
   const showTranslation =
     !!message.translated_text &&
@@ -408,9 +428,9 @@ export function ChatBubble({
         {/* idempotent-send sprint: 'failed' — 네트워크/타임아웃/5xx. 탭하면 같은
             client id 로 재전송(BE 멱등). muted 톤(붉은 경고 지양, haru 따뜻한 톤)
             + 재시도 라벨 + 넉넉한 탭 영역(hitSlop). */}
-        {isFailed && (
+        {(isFailed || isAudioFailed) && !regenerating && (
           <Pressable
-            onPress={() => onRetry?.(message.id)}
+            onPress={handleRetryPress}
             style={styles.retryBtn}
             hitSlop={10}
             accessibilityRole="button"
@@ -431,7 +451,7 @@ export function ChatBubble({
             (사용자 결정 2026-07-12). 상대는 stub 을 받지 않아 분기 도달 불가지만
             isMine 가드로 명시. sending/failed 인 동안엔 위 인디케이터가 대신하므로
             가드. ready 로 전이하면 위 재생 버튼이 playFade 로 스르륵 등장. */}
-        {!isSending && !isFailed && message.audio_status === 'pending' && isMine && (
+        {!isSending && !isFailed && (message.audio_status === 'pending' || regenerating) && isMine && (
           <View style={styles.audioSlot}>
             <Ionicons
               name="hourglass-outline"
@@ -486,7 +506,7 @@ export function ChatBubble({
             // idempotent-send sprint: 실패 시에만 dim — 재시도 필요 신호.
             // 전송중(sending)은 일반 말풍선과 동일 색(dim 안 함, 사용자 결정
             // 2026-07-12) — 모래시계만으로 진행을 표시하고 색은 그대로 유지.
-            isFailed && styles.bubbleUnsent,
+            (isFailed || (isAudioFailed && !regenerating)) && styles.bubbleUnsent,
           ]}
         >
           {showGate ? gateInner : inner}
