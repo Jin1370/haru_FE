@@ -617,6 +617,8 @@ export default function ChatScreen() {
   const headerTitle = partnerDeleted
     ? t('common.deletedUser')
     : (partnerName ?? t('chat.title'));
+  // 말풍선 아바타 탭과 같은 규칙 — 탈퇴/언매치 상대는 프로필을 열지 않는다.
+  const profileTapDisabled = partnerDeleted || matchUnmatched;
 
   return (
     <>
@@ -633,13 +635,30 @@ export default function ChatScreen() {
           <View style={{ height: insets.top }} />
           {/* 제목은 절대중앙 정렬 — 좌/우 버튼 폭과 무관하게 시각적 정중앙
               (네이티브 headerTitleAlign:'center' 와 동일한 결과). */}
+          {/* 프로필 진입로 — 상대가 아직 한 통도 안 보냈으면 말풍선 아바타가
+              없어 프로필 모달로 갈 길이 없었다. 카톡/LINE/Tinder 관례대로
+              헤더의 이름+원형 사진 자체를 탭 대상으로 만든다. 래퍼는
+              box-none 이라 좌우 버튼 영역 터치는 그대로 통과. */}
           <View
             style={[styles.headerTitleWrap, { top: insets.top }]}
-            pointerEvents="none"
+            pointerEvents={profileTapDisabled ? 'none' : 'box-none'}
           >
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {headerTitle}
-            </Text>
+            <Pressable
+              onPress={() => setPartnerModalOpen(true)}
+              disabled={profileTapDisabled}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={headerTitle}
+              style={({ pressed }) => [
+                styles.headerTitleBtn,
+                pressed && { opacity: 0.6 },
+              ]}
+            >
+              <ProfilePhoto uri={partnerPhoto} size={28} variant="avatar" />
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {headerTitle}
+              </Text>
+            </Pressable>
           </View>
           <View style={styles.headerRow}>
             <Pressable
@@ -1071,10 +1090,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 72,
   },
+  headerTitleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    maxWidth: '100%',
+  },
   headerTitle: {
     fontFamily: fonts.bold,
     fontSize: 19,
     color: colors.text,
+    flexShrink: 1,
   },
   headerBackBtn: {
     width: 38,
