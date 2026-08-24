@@ -1514,8 +1514,8 @@ function MessageBubble({
         <div className="whitespace-pre-wrap break-words text-[0.9375rem] leading-normal">
           {message.original_text}
         </div>
-        {/* 번역 — 받은 메시지에 한해 번역이 있으면 작게 아래로. */}
-        {message.translated_text && !isOwn && (
+        {/* 번역 — 앱 ChatBubble 과 동일: 원문과 다르면 송/수신 모두 아래로. */}
+        {message.translated_text && message.translated_text !== message.original_text && (
           <div
             className="mt-1.5 text-[0.9375rem] leading-normal"
             style={{ color: C.textLight }}
