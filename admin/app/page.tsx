@@ -1317,6 +1317,20 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
 // 내용은 PERSONAS 상수(이메일 키)에서 온다. 미정의 계정은 '아직 없음'.
 function PersonaNote({ account, onClose }: { account: DevAccount; onClose: () => void }) {
   const persona = account.email ? PERSONAS[account.email] : undefined;
+  // 페르소나 메모(상수)와 달리 내 관심사는 DB 값이라 열 때 한 번 받아온다.
+  const [interests, setInterests] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getMyProfile(account.user_id)
+      .then((p) => {
+        if (!cancelled) setInterests(p.interests ?? []);
+      })
+      .catch((err) => console.error('[PersonaNote getMyProfile]', err));
+    return () => {
+      cancelled = true;
+    };
+  }, [account.user_id]);
 
   return (
     <div
@@ -1371,6 +1385,25 @@ function PersonaNote({ account, onClose }: { account: DevAccount; onClose: () =>
                 <li key={n}>{n}</li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {interests && interests.length > 0 && (
+          <div className="mt-4">
+            <div className="mb-2 text-sm font-semibold" style={{ color: C.textSecondary }}>
+              내 관심사 ({interests.length})
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {interests.map((id) => (
+                <span
+                  key={id}
+                  className="rounded-full border px-3 py-1 text-sm"
+                  style={{ borderColor: C.border, color: C.text, background: C.card }}
+                >
+                  {interestLabel(id)}
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
