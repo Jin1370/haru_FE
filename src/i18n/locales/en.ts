@@ -308,6 +308,9 @@ export default {
     send: {
       failed: 'Failed to send',
       retry: 'Tap to retry',
+      voiceRequiredTitle: 'Voice setup required',
+      voiceRequiredMessage: 'haru is built around your voice. Record yours to start sending messages.',
+      voiceRequiredCta: 'Set up voice',
     },
     intimacy: 'Intimacy',
     intimacyUntilAll: '{{count}} more for all photos',

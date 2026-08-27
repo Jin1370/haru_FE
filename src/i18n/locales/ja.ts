@@ -303,6 +303,9 @@ export default {
         send: {
             failed: "送信できませんでした",
             retry: "タップして再送信",
+            voiceRequiredTitle: "ボイスの登録が必要です",
+            voiceRequiredMessage: "haru は声で会話するアプリです。ボイスを登録するとメッセージを送れます。",
+            voiceRequiredCta: "登録する",
         },
         intimacy: "親密度",
         intimacyUntilAll: "すべての写真公開まであと{{count}}回",

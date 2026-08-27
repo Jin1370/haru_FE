@@ -430,6 +430,21 @@ export default function ChatScreen() {
         setText(trimmed);
         // 감정도 복원 — 사용자가 같은 메시지를 살짝 수정해 재송신할 가능성.
         setSelectedEmotion(emotionForSend);
+      } else if (e instanceof ApiRequestError && e.code === 'voice_clone_required') {
+        // BE 는 voice clone 없는 발신자를 409 로 막는다 — 그렇게 저장된 메시지는
+        // audio_status='pending' 으로 굳어 수신자에게 영원히 안 보이기 때문. 지금은
+        // 도달 경로가 없지만(가입이 클론을 요구), 생기더라도 재시도를 유도하는 대신
+        // 등록 화면으로 보낸다.
+        showAlert({
+          variant: 'info',
+          title: t('chat.send.voiceRequiredTitle'),
+          message: t('chat.send.voiceRequiredMessage'),
+          confirmText: t('chat.send.voiceRequiredCta'),
+          cancelText: t('common.cancel'),
+          onConfirm: () => router.push('/(main)/settings/voice'),
+        });
+        setText(trimmed);
+        setSelectedEmotion(emotionForSend);
       } else {
         // 재시도 무의미한 send-side 실패(403 unmatch·block / 409 위조 등)만
         // 여기 도달. 네트워크/5xx 는 send 가 stub 을 failed 로 남기고 throw 하지
