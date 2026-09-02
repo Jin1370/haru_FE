@@ -48,6 +48,21 @@ module.exports = ({ config }) => {
         backgroundColor: '#6C5CE7',
       },
     },
+    // dev 변종에서만 평문(HTTP) 통신 허용.
+    // preview 프로필도 APP_VARIANT=development 라 이 분기를 탄다. preview 는 release
+    // 빌드(R8/minify 검증용)인데, release 는 cleartext 가 기본 차단이라 로컬 dev BE
+    // (http://<LAN IP>:3000) 에 붙지 못한다. prod 빌드(app.json 그대로)는 무영향.
+    plugins: config.plugins.map((plugin) =>
+      Array.isArray(plugin) && plugin[0] === 'expo-build-properties'
+        ? [
+            plugin[0],
+            {
+              ...plugin[1],
+              android: { ...plugin[1].android, usesCleartextTraffic: true },
+            },
+          ]
+        : plugin
+    ),
     // iOS 는 Android 전용 동시설치 정책상 변종 분기하지 않음 (prod bundle 유지).
     // 나중에 iOS 동시설치가 필요해지면 여기서 ios.bundleIdentifier 도 분기.
   };
