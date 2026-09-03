@@ -213,9 +213,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             () => undefined,
           );
         } else {
-          // 401 (user deleted / token invalid) or network error → session
-          // cannot be recovered. Wipe tokens and drop to login.
-          await clearTokens();
+          // 토큰을 지우는 건 401 뿐이다 — api.ts 가 이미 refresh 까지 시도한 뒤라
+          // 401 이면 세션이 실제로 죽은 것(계정 삭제/무효 토큰).
+          //
+          // 네트워크 오류·5xx 는 "지금 확인을 못 했다" 일 뿐 토큰은 멀쩡하다. 이걸
+          // 401 과 같이 취급해 지워버리면 몇 초짜리 순단이 영구 로그아웃이 된다
+          // (BE 가 인증 도달 실패를 401 아닌 503 으로 내리는 것과 같은 이유 —
+          // Sentry HARU-BACKEND-X). 토큰을 남겨두면 로그인 화면을 한 번 보더라도
+          // 앱을 다시 켰을 때 이 경로가 재시도해 저절로 복구된다.
+          if (e instanceof ApiRequestError && e.status === 401) {
+            await clearTokens();
+          }
           set({
             isAuthenticated: false,
             profile: null,
