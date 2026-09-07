@@ -362,12 +362,14 @@ export function ChatBubble({
 
   const inner = (
     <>
-      <Text style={[styles.text, isMine && styles.mineText]}>
+      {/* 길게 눌러 복사. 일반 사용자 메시지의 URL 은 탭 가능하게 하지 않는다
+          (피싱 표면) — 대신 복사해서 붙여넣게 한다. */}
+      <Text selectable style={[styles.text, isMine && styles.mineText]}>
         {linkify ? renderWithLinks(message.original_text) : message.original_text}
       </Text>
 
       {showTranslation && (
-        <Text style={[styles.translation, isMine && styles.mineTranslation]}>
+        <Text selectable style={[styles.translation, isMine && styles.mineTranslation]}>
           {message.translated_text}
         </Text>
       )}
