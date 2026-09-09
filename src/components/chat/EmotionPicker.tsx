@@ -1,11 +1,10 @@
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { colors, gradients, radii, shadows } from '@/constants/colors';
+import { colors, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import {
-  EMOTION_OPTIONS,
+  SELECTABLE_EMOTIONS,
   getEmotionMeta,
 } from '@/constants/emotions';
 import type { Emotion } from '@/types';
@@ -58,68 +57,67 @@ export function EmotionPicker({
 
 interface EmotionChipRowProps {
   value: Emotion;
+  /** Tapping the selected chip again is a deselect — the caller resets to neutral. */
   onSelect: (emotion: Emotion) => void;
 }
 
 /**
- * The row of emotion chips, rendered separately so the chat screen can absolutely
- * position it directly above the input bar (above the keyboard).
+ * The "voice tone" header + row of emotion chips, rendered separately so the chat
+ * screen can absolutely position it directly above the input bar (above the
+ * keyboard). The header exists because the picked emotion is a TTS-only property
+ * (it becomes an audio tag on the cloned-voice line) - nothing about it shows up
+ * on the sent bubble, so without a word here it reads as a no-op.
  */
 export function EmotionChipRow({ value, onSelect }: EmotionChipRowProps) {
   const { t } = useTranslation();
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.chipRow}
-      keyboardShouldPersistTaps="always"
-    >
-      {EMOTION_OPTIONS.map((meta) => {
-        const selected = meta.value === value;
-        return (
-          <Pressable
-            key={meta.value}
-            onPress={() => onSelect(meta.value)}
-            accessibilityRole="button"
-            accessibilityLabel={t(meta.labelKey)}
-            accessibilityState={{ selected }}
-            style={({ pressed }) => [
-              styles.chip,
-              !selected && styles.chipUnselected,
-              pressed && { transform: [{ scale: 0.96 }] },
-            ]}
-          >
-            {selected ? (
-              <LinearGradient
-                colors={[...gradients.primary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.chipInner}
-              >
-                <Text style={styles.chipEmoji}>{meta.emoji}</Text>
-                <Text style={[styles.chipLabel, styles.chipLabelSelected]}>
-                  {t(meta.labelKey)}
-                </Text>
-              </LinearGradient>
-            ) : (
+    <View>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>{t('chat.emotionPicker.header')}</Text>
+        <Ionicons name="pulse-outline" size={16} color={colors.primary} />
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipRow}
+        keyboardShouldPersistTaps="always"
+      >
+        {SELECTABLE_EMOTIONS.map((meta) => {
+          const selected = meta.value === value;
+          return (
+            <Pressable
+              key={meta.value}
+              onPress={() => onSelect(meta.value)}
+              accessibilityRole="button"
+              accessibilityLabel={t(meta.labelKey)}
+              accessibilityState={{ selected }}
+              style={({ pressed }) => [
+                styles.chip,
+                selected ? styles.chipSelected : styles.chipUnselected,
+                pressed && { transform: [{ scale: 0.96 }] },
+              ]}
+            >
               <View style={styles.chipInner}>
                 <Text style={styles.chipEmoji}>{meta.emoji}</Text>
-                <Text style={styles.chipLabel}>{t(meta.labelKey)}</Text>
+                <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                  {t(meta.labelKey)}
+                </Text>
               </View>
-            )}
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
 /**
- * Approximate vertical space the chip row consumes once expanded (chip height
- * + vertical padding). Consumers add this to `listBottomPad` to keep the last
- * message visible.
+ * Approximate vertical space the header + chip row consume once expanded
+ * (header 33 + chip 28 + padding 12). Consumers add this to `listBottomPad` to
+ * keep the last message visible. Only a pre-measurement fallback - the dock's
+ * onLayout replaces it with the real measured height.
  */
-export const EMOTION_PICKER_ROW_HEIGHT = 56;
+export const EMOTION_PICKER_ROW_HEIGHT = 74;
 
 const styles = StyleSheet.create({
   toggle: {
@@ -137,15 +135,32 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
   },
   toggleEmoji: {
-    fontSize: 20,
-    lineHeight: 22,
+    fontSize: 17,
+    lineHeight: 19,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  headerText: {
+    fontSize: 13,
+    lineHeight: 16,
+    color: colors.text,
+    fontFamily: fonts.medium,
+    letterSpacing: 0.3,
   },
   chipRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   chip: {
     borderRadius: radii.pill,
@@ -157,20 +172,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSoft,
   },
+  // 선택 칩도 같은 1px 테두리를 둬 선택/해제 시 높이가 튀지 않게 한다.
+  chipSelected: {
+    backgroundColor: colors.primary,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
   chipInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: radii.pill,
   },
   chipEmoji: {
-    fontSize: 16,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 16,
   },
   chipLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.text,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,

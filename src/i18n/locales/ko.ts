@@ -315,7 +315,6 @@ export default {
         intimacyAllUnlocked: "모든 사진 공개",
         newMessagesBadge: "새 메시지 {{count}}개",
         emotion: {
-            neutral: "기본",
             happy: "기쁨",
             sad: "슬픔",
             angry: "화남",
@@ -325,7 +324,8 @@ export default {
             laughing: "웃음",
         },
         emotionPicker: {
-            toggleLabel: "감정 선택",
+            header: "목소리 톤",
+            toggleLabel: "목소리 톤 선택",
         },
         profileSheet: {
             age: "나이",

@@ -456,9 +456,11 @@ export default function ChatScreen() {
     }
   };
 
+  // 'neutral' 칩 자체는 행에 없고, "아무것도 선택 안 한 상태" 가 곧 기본 톤이다.
+  // 같은 칩을 다시 누르면 선택 해제(= neutral). 행은 닫지 않는다 - 여러 톤을
+  // 눌러보다 마음을 바꾸는 게 자연스럽고, 닫는 건 왼쪽 토글 버튼의 몫이다.
   const handleEmotionSelect = (emotion: Emotion) => {
-    setSelectedEmotion(emotion);
-    setEmotionPickerOpen(false);
+    setSelectedEmotion((prev) => (prev === emotion ? DEFAULT_EMOTION : emotion));
   };
 
   // mig 014 match-roundtrip-realtime: photoAccessStore 입력 경로.

@@ -312,7 +312,6 @@ export default {
         intimacyAllUnlocked: "すべての写真が公開されました",
         newMessagesBadge: "新着メッセージ {{count}}件",
         emotion: {
-            neutral: "ふつう",
             happy: "うれしい",
             sad: "悲しい",
             angry: "怒り",
@@ -322,7 +321,8 @@ export default {
             laughing: "笑い",
         },
         emotionPicker: {
-            toggleLabel: "感情を選ぶ",
+            header: "声のトーン",
+            toggleLabel: "声のトーンを選ぶ",
         },
         profileSheet: {
             age: "年齢",

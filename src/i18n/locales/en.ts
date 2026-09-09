@@ -317,7 +317,6 @@ export default {
     intimacyAllUnlocked: 'All photos unlocked',
     newMessagesBadge: '{{count}} new messages',
     emotion: {
-      neutral: 'Neutral',
       happy: 'Happy',
       sad: 'Sad',
       angry: 'Angry',
@@ -327,7 +326,8 @@ export default {
       laughing: 'Laughing',
     },
     emotionPicker: {
-      toggleLabel: 'Choose emotion',
+      header: 'Voice tone',
+      toggleLabel: 'Choose voice tone',
     },
     profileSheet: {
       age: 'Age',

@@ -8,8 +8,9 @@ export interface EmotionMeta {
 }
 
 /**
- * Display order for the chip row. `neutral` is the default and is shown first
- * so users can re-select "no tone" without hunting.
+ * All emotion values, in display order. `neutral` lives here only so
+ * `getEmotionMeta` can resolve it — it is not offered as a chip (see
+ * SELECTABLE_EMOTIONS): "no tone" is the state you get by selecting nothing.
  *
  * The 8 values mirror the BE Zod enum (`emotionSchema` in
  * `haru_BE/src/schemas/message.ts`). v3 ElevenLabs audio tags only
@@ -39,3 +40,16 @@ export function getEmotionMeta(value: Emotion): EmotionMeta {
 }
 
 export const DEFAULT_EMOTION: Emotion = 'neutral';
+
+/**
+ * Values that get no chip: `neutral` (that is the "nothing selected" state) plus
+ * tones we retired from the picker. They stay in EMOTION_OPTIONS on purpose —
+ * messages sent before the retirement still carry them, and `getEmotionMeta`
+ * returning undefined would crash the bubble badge.
+ */
+const UNLISTED_EMOTIONS: readonly Emotion[] = [DEFAULT_EMOTION, 'excited', 'laughing'];
+
+/** Chips offered in the picker. */
+export const SELECTABLE_EMOTIONS = EMOTION_OPTIONS.filter(
+  (meta) => !UNLISTED_EMOTIONS.includes(meta.value),
+);
