@@ -13,7 +13,6 @@ import { useTranslation } from 'react-i18next';
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
 import { colors, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
-import { getEmotionMeta } from '@/constants/emotions';
 import {
   playSharedAudio,
   pauseSharedAudio,
@@ -513,21 +512,9 @@ export function ChatBubble({
         >
           {showGate ? gateInner : inner}
         </View>
-        {/* voice-first-message-gate sprint: 청취 전에는 emotion 뱃지도 노출
-            안 함 — 음성 청취 전에 단서를 흘리지 않도록. 청취 완료(또는 본인
-            송신) 시점부터 자연 노출. */}
-        {!showGate && message.emotion && message.emotion !== 'neutral' && (
-          <View
-            style={[
-              styles.emotionBadge,
-              isMine ? styles.emotionBadgeMine : styles.emotionBadgeTheirs,
-            ]}
-          >
-            <Text style={styles.emotionBadgeText}>
-              {getEmotionMeta(message.emotion).emoji}
-            </Text>
-          </View>
-        )}
+        {/* 발신 시 고른 감정은 TTS 오디오 태그로만 쓰고 말풍선에는 표시하지
+            않는다 — 톤은 목소리로 전해지는 것이고(차별점 2), 안 듣고도 톤을
+            알게 해주는 표시는 리액션 뱃지가 들어갈 자리와도 겹친다. */}
       </View>
     </View>
   );
@@ -642,29 +629,6 @@ const styles = StyleSheet.create({
   },
   mineTime: {
     color: 'rgba(255,255,255,0.8)',
-  },
-  emotionBadge: {
-    position: 'absolute',
-    top: -8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    ...shadows.soft,
-  },
-  emotionBadgeMine: {
-    left: -6,
-  },
-  emotionBadgeTheirs: {
-    right: -6,
-  },
-  emotionBadgeText: {
-    fontSize: 12,
-    lineHeight: 14,
   },
   // voice-first-message-gate sprint: 편지 카드(수신자 게이팅). 기존
   // theirsBubble 안에 들어가는 children 이므로 배경/보더는 부모가 담당,
