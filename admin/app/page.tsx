@@ -10,7 +10,7 @@
 // 가독성 위해 본문 텍스트는 진한 그레이, 보조 텍스트는 중간 그레이, border 는 옅은 그레이.
 // unread 뱃지는 semantic notification — 시인성 위해 red 유지 (pink 아님).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AdminApiError,
   type DevAccount,
@@ -102,6 +102,35 @@ const FONT_STACK =
 // 생년월일 → 만 나이(연도 차 기준, 기존 카드 계산과 동일).
 function ageFromBirthDate(birthDate: string): number {
   return new Date().getFullYear() - new Date(birthDate).getFullYear();
+}
+
+// 로컬 날짜 키 (YYYY-M-D) — 날짜 구분선/상대 표기의 "같은 날" 판정용.
+function dayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+// 매치 목록의 마지막 메시지 시각 — 오늘은 시:분, 어제는 '어제', 그 외 날짜.
+function fmtListTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (dayKey(iso) === dayKey(now.toISOString())) {
+    return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  }
+  if (dayKey(iso) === dayKey(yesterday.toISOString())) return '어제';
+  return d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+}
+
+// 채팅 날짜 구분선 라벨.
+function fmtDayLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  });
 }
 
 // 계정 목록처럼 좁은 자리용 축약 성별 표기 (폼 라벨은 남성/여성 전체 표기 유지).
@@ -956,14 +985,25 @@ function MatchesPane({
                   >
                     {m.partner?.display_name ?? '(deleted)'}
                   </span>
-                  {m.unread_count > 0 && (
-                    <span
-                      className="ml-2 shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-bold text-white"
-                      style={{ background: C.like }}
-                    >
-                      {m.unread_count}
-                    </span>
-                  )}
+                  <span className="ml-2 flex shrink-0 items-center gap-1.5">
+                    {m.last_message && (
+                      <span
+                        className="text-[0.625rem]"
+                        style={{ color: C.textLight }}
+                        title={new Date(m.last_message.created_at).toLocaleString('ko-KR')}
+                      >
+                        {fmtListTime(m.last_message.created_at)}
+                      </span>
+                    )}
+                    {m.unread_count > 0 && (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[0.625rem] font-bold text-white"
+                        style={{ background: C.like }}
+                      >
+                        {m.unread_count}
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div
                   className="mt-0.5 truncate text-xs"
@@ -1252,15 +1292,26 @@ function ChatView({ account, match }: { account: DevAccount; match: MatchSummary
           </div>
         )}
         <div className="flex flex-col gap-2">
-          {messages.map((m) => (
-            <MessageBubble
-              key={m.id}
-              message={m}
-              isOwn={m.sender_id === account.user_id}
-              failed={failedIds.has(m.id)}
-              retrying={retryingIds.has(m.id)}
-              onRetry={() => postMessage(m.id, m.original_text)}
-            />
+          {messages.map((m, i) => (
+            <Fragment key={m.id}>
+              {/* 날짜가 바뀌는 지점마다 구분선 (messages 는 ASC 정렬). */}
+              {(i === 0 || dayKey(messages[i - 1].created_at) !== dayKey(m.created_at)) && (
+                <div className="my-2 flex items-center gap-3">
+                  <div className="h-px flex-1" style={{ background: C.borderSoft }} />
+                  <span className="text-[0.6875rem]" style={{ color: C.textLight }}>
+                    {fmtDayLabel(m.created_at)}
+                  </span>
+                  <div className="h-px flex-1" style={{ background: C.borderSoft }} />
+                </div>
+              )}
+              <MessageBubble
+                message={m}
+                isOwn={m.sender_id === account.user_id}
+                failed={failedIds.has(m.id)}
+                retrying={retryingIds.has(m.id)}
+                onRetry={() => postMessage(m.id, m.original_text)}
+              />
+            </Fragment>
           ))}
         </div>
       </div>
@@ -1578,6 +1629,12 @@ function MessageBubble({
             </button>
           ) : (
             <>
+              {/* 읽음 표시 — 내 메시지만. listened_at 이 "읽음" 단일 진실원(mig 018). */}
+              {isOwn && (
+                <span style={{ color: message.listened_at ? C.textSecondary : C.like }}>
+                  {message.listened_at ? '· 읽음' : '· 안읽음'}
+                </span>
+              )}
               {message.audio_status === 'pending' && <span>· 음성 대기 중</span>}
               {message.audio_status === 'processing' && <span>· 음성 합성 중</span>}
               {message.audio_status === 'failed' && (
