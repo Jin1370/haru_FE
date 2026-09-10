@@ -1633,7 +1633,7 @@ function MessageBubble({
             <>
               {/* 읽음 표시 — 내 메시지만. listened_at 이 "읽음" 단일 진실원(mig 018). */}
               {isOwn && (
-                <span style={{ color: message.listened_at ? C.textSecondary : C.like }}>
+                <span style={{ color: C.textSecondary }}>
                   {message.listened_at ? '· 읽음' : '· 안읽음'}
                 </span>
               )}
