@@ -311,6 +311,7 @@ export default {
         intimacyUntilAll: "すべての写真公開まであと{{count}}回",
         intimacyAllUnlocked: "すべての写真が公開されました",
         newMessagesBadge: "新着メッセージ {{count}}件",
+        backToLatest: "最新メッセージへ",
         emotion: {
             happy: "うれしい",
             sad: "悲しい",
@@ -323,6 +324,17 @@ export default {
         emotionPicker: {
             header: "声のトーン",
             toggleLabel: "声のトーンを選ぶ",
+        },
+        reaction: {
+            heart: "ハート",
+            thumbsup: "いいね",
+            laugh: "笑い",
+            wow: "びっくり",
+            sad: "悲しい",
+        },
+        reply: {
+            action: "返信する",
+            you: "自分",
         },
         profileSheet: {
             age: "年齢",

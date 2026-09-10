@@ -13,7 +13,13 @@ import { matchesKey } from '@/lib/swr';
 import { computeBackoffDelay } from '@/utils/backoff';
 import { describeError } from '@/utils/errors';
 import { ApiRequestError } from '@/services/api';
-import type { Emotion, MatchAfter, MatchListItem, Message } from '@/types';
+import type {
+  Emotion,
+  MatchAfter,
+  MatchListItem,
+  Message,
+  MessageReaction,
+} from '@/types';
 
 // mig 014 match-roundtrip-realtime: useChat 이 노출하는 BE-sourced
 // 친밀도/사진 잠금 상태. 클라이언트 윈도우 재계산(countRoundTrips) 대신
@@ -48,6 +54,17 @@ export function useChat(matchId: string) {
   // synchronously without relying on async state propagation.
   const [loadingOlder, setLoadingOlder] = useState(false);
   const loadingOlderRef = useRef(false);
+  // message-reply(점프): 인용 원본으로 점프하면 목록이 그 구간으로 교체되어
+  // 최신 메시지가 화면에서 빠진다. 그 상태를 "점프 모드" 로 부르고, 새로 도착한
+  // 메시지를 배열 끝에 붙이지 않는다 (3주 전 메시지 바로 아래 오늘 메시지가
+  // 붙어버린다). 복귀는 "최신으로" 버튼(backToLatest) 하나뿐 —
+  // 아래 방향 페이지네이션은 아래 loadNewer 주석 참조.
+  // ref 는 realtime 콜백이 최신 값을 봐야 해서 state 와 병행.
+  const [jumped, setJumped] = useState(false);
+  const jumpedRef = useRef(false);
+  const [hasNewer, setHasNewer] = useState(false);
+  const [loadingNewer, setLoadingNewer] = useState(false);
+  const loadingNewerRef = useRef(false);
 
   // useMatches 가 이미 채워둔 SWR 캐시에서 본 매치 row 를 selector 로 추출.
   // fetcher null + revalidate off — useChat 이 추가 네트워크 호출을 하지 않고
@@ -126,6 +143,74 @@ export function useChat(matchId: string) {
     }
   }, [matchId, messages, hasMore]);
 
+  // message-reply(점프): 인용 원본을 가운데 둔 구간으로 목록을 통째로 교체한다.
+  // 교체이므로 배열은 항상 연속 — 구멍이 없다. 위로는 기존 loadOlder, 아래로는
+  // loadNewer 가 이어받는다.
+  const jumpToMessage = useCallback(
+    async (messageId: string): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await messageService.getMessagesAround(matchId, messageId);
+        if (data.length === 0) return false;
+        setMessages([...data].reverse());
+        setHasMore(true);
+        jumpedRef.current = true;
+        setJumped(true);
+        setHasNewer(true);
+        return true;
+      } catch (e) {
+        setError(describeError(e));
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [matchId],
+  );
+
+  // 아래(더 최신) 방향 한 페이지. 두 가지가 같이 갖춰져야 동작한다:
+  //   * 위치 밀림 — inverted 리스트에서 최신 쪽은 data[0] 이라 이어붙이면
+  //     보고 있던 내용이 통째로 밀린다. FlatList 의
+  //     maintainVisibleContentPosition 이 삽입분만큼 스크롤을 보정한다.
+  //   * 반복 발화 — "바닥 근처" 는 그 근처를 읽는 내내 참이라 스크롤마다
+  //     발화한다. 호출처가 "닿는 순간" 전이에서만 부른다.
+  // 서버가 limit 미만을 주면 최신과 이어진 것이라 점프 모드를 해제한다.
+  const loadNewer = useCallback(async () => {
+    if (loadingNewerRef.current || !hasNewer || messages.length === 0) return;
+    loadingNewerRef.current = true;
+    setLoadingNewer(true);
+    try {
+      const newest = messages[messages.length - 1];
+      const data = await messageService.getMessagesAfter(matchId, newest.created_at);
+      if (data.length > 0) {
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          return [...prev, ...[...data].reverse().filter((m) => !seen.has(m.id))];
+        });
+      }
+      if (data.length < 50) {
+        setHasNewer(false);
+        jumpedRef.current = false;
+        setJumped(false);
+      }
+    } catch (e) {
+      setError(describeError(e));
+    } finally {
+      loadingNewerRef.current = false;
+      setLoadingNewer(false);
+    }
+  }, [matchId, messages, hasNewer]);
+
+  // "최신으로" — 스크롤이 아니라 1페이지 재로드다. 점프 중에는 최신 메시지가
+  // 배열에 아예 없어서 스크롤만으로는 갈 곳이 없다.
+  const backToLatest = useCallback(async () => {
+    jumpedRef.current = false;
+    setJumped(false);
+    setHasNewer(false);
+    await loadMessages();
+  }, [loadMessages]);
+
   // idempotent-send sprint: 낙관 stub + 멱등 재시도.
   //   1) clientId(없으면 Crypto.randomUUID) 로 낙관 stub 을 messages 에 즉시
   //      upsert-by-id 삽입 → 입력 즉시 에코. sendState[clientId]='sending'.
@@ -147,6 +232,8 @@ export function useChat(matchId: string) {
       text: string,
       emotion?: Emotion,
       clientId?: string,
+      // message-reply: 답장 대상 id. 재시도는 같은 값을 다시 실어 보낸다.
+      replyToId?: string,
     ): Promise<Message | null> => {
       setError(null);
       const id = clientId ?? Crypto.randomUUID();
@@ -169,6 +256,8 @@ export function useChat(matchId: string) {
           listened_at: null,
           audio_purged_at: null,
           audio_refreshed_at: null,
+          reaction: null,
+          reply_to_id: replyToId ?? null,
           created_at: new Date().toISOString(),
         };
         return [...prev, stub];
@@ -182,7 +271,7 @@ export function useChat(matchId: string) {
           return next;
         });
       try {
-        const msg = await messageService.sendMessage(matchId, text, emotion, id);
+        const msg = await messageService.sendMessage(matchId, text, emotion, id, replyToId);
         setMessages((prev) => {
           const idx = prev.findIndex((m) => m.id === msg.id);
           if (idx >= 0) {
@@ -226,7 +315,12 @@ export function useChat(matchId: string) {
     (clientId: string) => {
       const stub = messages.find((m) => m.id === clientId);
       if (!stub) return;
-      void send(stub.original_text, stub.emotion ?? undefined, clientId);
+      void send(
+        stub.original_text,
+        stub.emotion ?? undefined,
+        clientId,
+        stub.reply_to_id ?? undefined,
+      );
     },
     [messages, send],
   );
@@ -256,6 +350,31 @@ export function useChat(matchId: string) {
         await messageService.markMessageListened(matchId, messageId);
       } catch {
         // silent — realtime UPDATE 가 NULL 그대로 도착하면 게이팅 회귀 후 자동 복구.
+      }
+    },
+    [matchId],
+  );
+
+  // message-reactions: 상대 메시지에 리액션을 남기거나 해제한다. 낙관 업데이트
+  // 후 실패 시 이전 값으로 롤백 — 성공 경로는 realtime UPDATE 가 같은 row 를
+  // 덮어 서버 진실로 수렴하지만, 실패했다면 그 UPDATE 자체가 없어서 낙관 값이
+  // 화면에 그대로 남는다.
+  const setReaction = useCallback(
+    async (messageId: string, reaction: MessageReaction | null) => {
+      let previous: MessageReaction | null = null;
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== messageId) return m;
+          previous = m.reaction ?? null;
+          return { ...m, reaction };
+        }),
+      );
+      try {
+        await messageService.setMessageReaction(matchId, messageId, reaction);
+      } catch {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === messageId ? { ...m, reaction: previous } : m)),
+        );
       }
     },
     [matchId],
@@ -331,6 +450,10 @@ export function useChat(matchId: string) {
               next[idx] = newMsg;
               return next;
             }
+            // message-reply(점프): 옛 구간을 보고 있는 동안 도착한 메시지를
+            // 끝에 붙이면 3주 전 메시지 바로 아래 오늘 메시지가 붙는다.
+            // 사용자가 "최신으로" 를 누르면 1페이지 재로드로 자연 합류한다.
+            if (jumpedRef.current) return prev;
             return [...prev, newMsg];
           });
         },
@@ -430,7 +553,16 @@ export function useChat(matchId: string) {
       : null,
     loadMessages,
     loadOlder,
+    // message-reply(점프): 인용 원본으로 이동 / 아래로 더 / 최신으로 복귀.
+    jumpToMessage,
+    loadNewer,
+    loadingNewer,
+    backToLatest,
+    jumped,
+    hasNewer,
     send,
+    // message-reactions: 말풍선 롱프레스 시트에서 호출. null = 해제.
+    setReaction,
     // idempotent-send sprint: client id → 송신 상태. ChatBubble 에
     // sendState[item.id] 로 전달해 3-상태(sending/failed) 시각을 구동한다.
     sendState,

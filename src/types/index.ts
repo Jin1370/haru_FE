@@ -299,6 +299,22 @@ export type Emotion =
 
 export type AudioStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
+// message-reactions (mig 054): 상대 메시지에 남기는 리액션 슬러그. BE
+// `schemas/message.ts` 의 messageReactionValues + mig CHECK 제약과 동일한 5개.
+// 표시 이모지는 `constants/messageReactions.ts` 소유.
+export type MessageReaction = 'heart' | 'thumbsup' | 'laugh' | 'wow' | 'sad';
+
+// message-reply (mig 055): 답장 인용 요약. GET 목록 응답에만 실린다 (Realtime
+// payload 는 raw row 라 없음 → FE 가 로컬 목록에서 원본을 찾아 같은 규칙으로
+// 만든다). 텍스트가 둘 다 null 이면 아직 청취 안 한 상대 메시지 — BE 가 지운
+// 것이므로 화면엔 "새 메시지" 로 마스킹한다.
+export interface ReplyQuote {
+  id: string;
+  sender_id: string;
+  original_text: string | null;
+  translated_text: string | null;
+}
+
 export interface Message {
   id: string;
   match_id: string;
@@ -324,6 +340,15 @@ export interface Message {
   // audio-expiry sprint (mig 025): 가장 최근 재합성 시각. FE 직접 사용처는
   // 없으나 (sweep eligibility 판단은 BE 단독) 타입 정합성 유지를 위해 노출.
   audio_refreshed_at: string | null;
+  // message-reactions (mig 054): 이 메시지에 남겨진 리액션. 1:1 대화라 주체는
+  // 항상 발신자의 반대편 한 명이고 메시지당 0 또는 1개다 — 카운트도, 작성자
+  // 목록도 없다. null = 리액션 없음.
+  reaction: MessageReaction | null;
+  // message-reply (mig 055): 답장 대상 원본 id. 인용문은 본문에 합성하지 않는다.
+  reply_to_id: string | null;
+  // GET 목록에서만 채워진다. undefined = 서버가 안 내려준 경로(Realtime/낙관 stub)
+  // → 호출처가 로컬 목록에서 원본을 찾는다. null = 원본을 못 보는 메시지.
+  reply_to?: ReplyQuote | null;
   created_at: string;
 }
 

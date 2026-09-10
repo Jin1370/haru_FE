@@ -314,6 +314,7 @@ export default {
         intimacyUntilAll: "모든 사진 공개까지 {{count}}회",
         intimacyAllUnlocked: "모든 사진 공개",
         newMessagesBadge: "새 메시지 {{count}}개",
+        backToLatest: "최신 메시지로",
         emotion: {
             happy: "기쁨",
             sad: "슬픔",
@@ -326,6 +327,17 @@ export default {
         emotionPicker: {
             header: "목소리 톤",
             toggleLabel: "목소리 톤 선택",
+        },
+        reaction: {
+            heart: "하트",
+            thumbsup: "좋아요",
+            laugh: "웃음",
+            wow: "놀람",
+            sad: "슬픔",
+        },
+        reply: {
+            action: "답장하기",
+            you: "나",
         },
         profileSheet: {
             age: "나이",

@@ -2,6 +2,7 @@ import { api } from './api';
 import type {
   Emotion,
   Message,
+  MessageReaction,
   SendMessageResponse,
 } from '@/types';
 
@@ -15,11 +16,37 @@ export async function getMessages(
   return api.get<Message[]>(path);
 }
 
+// message-reply(점프): 인용 원본을 가운데 둔 구간을 한 번에. 호출처는 목록을
+// 이 블록으로 **교체**한다 — 기존 목록에 끼워 넣으면 시간이 건너뛴 두 덩어리가
+// 맞붙어 대화에 구멍이 생긴다. 응답 정렬은 getMessages 와 같은 최신 우선.
+export async function getMessagesAround(
+  matchId: string,
+  messageId: string,
+  limit = 50,
+): Promise<Message[]> {
+  return api.get<Message[]>(
+    `/api/matches/${matchId}/messages?limit=${limit}&around=${messageId}`,
+  );
+}
+
+// message-reply(점프): 아래로(더 최신) 한 페이지. 점프한 뒤 사용자가 계속
+// 내리면 이걸로 따라 내려가고, 서버가 limit 미만을 주면 최신과 이어진 것이다.
+export async function getMessagesAfter(
+  matchId: string,
+  after: string,
+  limit = 50,
+): Promise<Message[]> {
+  return api.get<Message[]>(
+    `/api/matches/${matchId}/messages?limit=${limit}&after=${encodeURIComponent(after)}`,
+  );
+}
+
 export async function sendMessage(
   matchId: string,
   text: string,
   emotion?: Emotion,
   clientMessageId?: string,
+  replyToId?: string,
 ): Promise<SendMessageResponse> {
   // BE accepts neutral and stores it as null; omit the field when neutral so
   // the request body stays minimal.
@@ -41,10 +68,13 @@ export async function sendMessage(
     text: string;
     emotion?: Emotion;
     client_message_id?: string;
+    reply_to_id?: string;
   } = {
     text,
     ...(emotion && emotion !== 'neutral' ? { emotion } : {}),
     ...(clientMessageId ? { client_message_id: clientMessageId } : {}),
+    // message-reply: 답장일 때만 동봉 — 평상시 body 는 그대로 유지.
+    ...(replyToId ? { reply_to_id: replyToId } : {}),
   };
   return api.post<SendMessageResponse>(`/api/matches/${matchId}/messages`, body);
 }
@@ -81,5 +111,19 @@ export async function regenerateMessageAudio(
 ): Promise<Message> {
   return api.post<Message>(
     `/api/matches/${matchId}/messages/${messageId}/audio`,
+  );
+}
+
+// message-reactions: 상대 메시지에 리액션을 남기거나(교체) 해제한다.
+// reaction: null 이 해제 — 같은 값을 다시 고르면 호출처가 null 로 바꿔 보낸다.
+// 본인 발신 메시지에 호출하면 403 (리액션 주체는 발신자의 반대편).
+export async function setMessageReaction(
+  matchId: string,
+  messageId: string,
+  reaction: MessageReaction | null,
+): Promise<Message> {
+  return api.put<Message>(
+    `/api/matches/${matchId}/messages/${messageId}/reaction`,
+    { reaction },
   );
 }

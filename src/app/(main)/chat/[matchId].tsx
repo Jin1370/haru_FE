@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,7 @@ import { ChatBubble } from '@/components/chat/ChatBubble';
 import { AudioPlayer } from '@/components/chat/AudioPlayer';
 import { IntimacyGauge } from '@/components/chat/IntimacyGauge';
 import { ChatPromptsModal } from '@/components/chat/ChatPromptsModal';
+import { MessageActionsSheet } from '@/components/chat/MessageActionsSheet';
 import { ChatPromptsToggleButton } from '@/components/chat/ChatPromptsToggleButton';
 import { MatchActionsSheet } from '@/components/matches/MatchActionsSheet';
 import { ErrorText } from '@/components/ui/ErrorText';
@@ -38,6 +39,9 @@ import {
   EmotionChipRow,
   EMOTION_PICKER_ROW_HEIGHT,
 } from '@/components/chat/EmotionPicker';
+
+// message-reply: 입력창 위 답장 프리뷰 바의 대략 높이 (onLayout 측정 전 폴백).
+const REPLY_PREVIEW_HEIGHT = 46;
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
 import { ProfilePhotoGallery } from '@/components/ui/ProfilePhotoGallery';
 import { useChat } from '@/hooks/useChat';
@@ -259,7 +263,34 @@ export default function ChatScreen() {
     // purged 분기 (audio_status='ready' + audio_url=null + audio_purged_at) 에서
     // onPress 호출 → 성공 시 audio_url 갱신된 row 반환 → 즉시 재생.
     regenerateAudio,
+    // message-reactions: 말풍선 롱프레스 시트에서 호출. 같은 값 재선택은 시트가
+    // null 로 바꿔 보내 해제된다.
+    setReaction,
+    // message-reply(점프): 인용 원본으로 이동 / 아래로 더 / 최신으로 복귀.
+    jumpToMessage,
+    loadNewer,
+    loadingNewer,
+    backToLatest,
+    jumped,
+    hasNewer,
   } = useChat(matchId!);
+
+  // message-reactions: 롱프레스 대상 메시지. 시트는 화면당 하나만 두고 대상만
+  // 갈아끼운다 — 말풍선마다 Modal 을 달면 대화 길이만큼 모달이 마운트된다.
+  const [actionTarget, setActionTarget] = useState<Message | null>(null);
+  // message-reply: 답장 대상. 입력창 위 프리뷰 바로 표시되고 전송 시 실려 나간다.
+  const [replyTarget, setReplyTarget] = useState<Message | null>(null);
+  // message-reply(점프): 스크롤은 목록이 갱신된 다음 프레임에 해야 해서 대상 id
+  // 를 예약해 두고 effect 에서 처리한다. 도착하면 잠깐 하이라이트.
+  const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  // 점프 직후엔 목록이 교체되며 리스트가 잠깐 "최신 끝" 에 놓인다. 그 순간의
+  // onStartReached 를 그대로 받으면 곧장 다음 페이지를 당겨와 #1 로 가자마자
+  // #51 로 끌려간다. 예약된 스크롤이 실제로 끝난 뒤부터 열어준다.
+  const jumpSettledRef = useRef(true);
+  // isNearBottomRef 는 스크롤 콜백이 동기로 읽는 값이라 렌더에 못 쓴다.
+  // "최신으로" 버튼 노출 판단용으로 같은 값을 state 로도 들고 간다.
+  const [nearBottom, setNearBottom] = useState(true);
 
   // mig 014 match-roundtrip-realtime: 클라이언트 윈도우 재계산 제거.
   // BE 트리거가 single source of truth — useChat 이 노출하는 BE-sourced
@@ -358,7 +389,10 @@ export default function ChatScreen() {
       const appendedNew = !prependedOlder && currLastId !== prevLastIdRef.current;
       // Skip the very first population (prevLen === 0) — inverted list opens
       // at offset 0 already, so no explicit scroll needed and no badge wanted.
-      if (appendedNew && prevLen > 0) {
+      // 점프 중에는 새 메시지를 배열에 안 붙이므로 여기 도달할 일이 거의 없지만,
+      // 본인이 보낸 낙관 stub 은 realtime 이 아니라 send() 가 직접 넣는다 —
+      // 옛 구간을 읽는 중에 화면이 최신으로 튀지 않게 한 번 더 막는다.
+      if (appendedNew && prevLen > 0 && !jumped) {
         const isMine = lastMessage?.sender_id === userId;
         if (isMine || isNearBottomRef.current) {
           flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
@@ -381,6 +415,7 @@ export default function ChatScreen() {
     const { contentOffset } = e.nativeEvent;
     const nearBottom = contentOffset.y < NEAR_BOTTOM_THRESHOLD;
     isNearBottomRef.current = nearBottom;
+    setNearBottom((prev) => (prev === nearBottom ? prev : nearBottom));
     if (nearBottom && newMessagesCount > 0) {
       setNewMessagesCount(0);
     }
@@ -388,6 +423,19 @@ export default function ChatScreen() {
 
   const handleNewMessagesBadgePress = () => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    setNewMessagesCount(0);
+  };
+
+  // 점프 상태의 "최신으로" — 목록을 1페이지로 갈아끼우는 것만으로는 부족하다.
+  // 스크롤 위치는 그대로 남고, maintainVisibleContentPosition 이 "보던 위치
+  // 유지" 를 하려 들어서 새 목록 중간에 멈춘다. 교체가 렌더된 뒤 바닥으로
+  // 보내야 하고, mVCP 가 레이아웃 후 한 번 더 보정할 수 있어 두 번 부른다.
+  const handleBackToLatest = async () => {
+    await backToLatest();
+    const toBottom = () =>
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    requestAnimationFrame(toBottom);
+    setTimeout(toBottom, 250);
     setNewMessagesCount(0);
   };
 
@@ -402,9 +450,16 @@ export default function ChatScreen() {
     }
     setComposerError(null);
     const trimmed = text.trim();
+    // 옛 구간을 보는 중에 보내면 그 메시지가 어디로 갔는지 안 보인다. 먼저
+    // 최신으로 돌아온 뒤 보낸다 (카톡/라인과 같은 동선).
+    if (jumped) await backToLatest();
     setSending(true);
     setText('');
     const emotionForSend = selectedEmotion;
+    // message-reply: 감정과 같은 규칙 — 전송과 동시에 해제하고, 재편집이 필요한
+    // 실패(422/409)에서만 복원한다.
+    const replyForSend = replyTarget;
+    setReplyTarget(null);
     // Reset emotion immediately so the user opts in for each message — avoids
     // accidentally sending a follow-up with the previous tone.
     setSelectedEmotion(DEFAULT_EMOTION);
@@ -415,7 +470,7 @@ export default function ChatScreen() {
       // send 가 throw 하지 않고 stub 을 화면에 'failed' 로 남기므로 (인라인 재시도
       // 말풍선) 여기서 모달을 띄우지 않는다 → 모달 스팸 제거. throw 되는 케이스는
       // 재시도 무의미한 것들뿐 (422 모더레이션 / 403 unmatch·block / 409 위조).
-      await send(trimmed, emotionForSend);
+      await send(trimmed, emotionForSend, undefined, replyForSend?.id);
     } catch (e: any) {
       // message-moderation-v1 (PR1): BE 422 + code='message_blocked' →
       // 안전 카피 토스트 + 입력 텍스트 복원 (재편집 가능). send 가 낙관 stub 을
@@ -430,6 +485,7 @@ export default function ChatScreen() {
         setText(trimmed);
         // 감정도 복원 — 사용자가 같은 메시지를 살짝 수정해 재송신할 가능성.
         setSelectedEmotion(emotionForSend);
+        setReplyTarget(replyForSend);
       } else if (e instanceof ApiRequestError && e.code === 'voice_clone_required') {
         // BE 는 voice clone 없는 발신자를 409 로 막는다 — 그렇게 저장된 메시지는
         // audio_status='pending' 으로 굳어 수신자에게 영원히 안 보이기 때문. 지금은
@@ -445,6 +501,7 @@ export default function ChatScreen() {
         });
         setText(trimmed);
         setSelectedEmotion(emotionForSend);
+        setReplyTarget(replyForSend);
       } else {
         // 재시도 무의미한 send-side 실패(403 unmatch·block / 409 위조 등)만
         // 여기 도달. 네트워크/5xx 는 send 가 stub 을 failed 로 남기고 throw 하지
@@ -533,6 +590,88 @@ export default function ChatScreen() {
   // chronological message of inverseMessages[index] is inverseMessages[index + 1].
   const inverseMessages = useMemo(() => [...messages].reverse(), [messages]);
 
+  // message-reply: 원본을 id 로 찾기 위한 인덱스. Realtime 으로 도착한 메시지는
+  // reply_to 가 안 실려오므로(raw row) 로컬 목록에서 원본을 찾아야 한다.
+  const messagesById = useMemo(
+    () => new Map(messages.map((m) => [m.id, m])),
+    [messages],
+  );
+
+  // 인용에 쓸 이름 + 본문 한 줄. 두 가지를 여기서 끝낸다.
+  //   * 언어 — 뷰어가 읽을 수 있는 쪽만 쓴다 (내 메시지면 원문, 상대 메시지면
+  //     번역문). 본문처럼 원문+번역 두 줄을 넣으면 인용이 본문보다 두꺼워진다.
+  //   * 게이트 — 아직 안 들은 상대 메시지는 "새 메시지" 로 가린다. 서버가 이미
+  //     텍스트를 지워 보내지만(reply_to), 로컬 폴백 경로도 같은 규칙을 쓴다.
+  const buildQuote = useCallback(
+    (message: Message): { name: string; text: string } | null => {
+      if (!message.reply_to_id) return null;
+
+      let source: { sender_id: string; original_text: string | null; translated_text: string | null } | null =
+        message.reply_to ?? null;
+      if (message.reply_to === undefined) {
+        const local = messagesById.get(message.reply_to_id);
+        if (local) {
+          const mine = local.sender_id === userId;
+          const hidden = !mine && !local.listened_at;
+          source = {
+            sender_id: local.sender_id,
+            original_text: hidden ? null : local.original_text,
+            translated_text: hidden ? null : local.translated_text,
+          };
+        }
+      }
+      if (!source) return null;
+
+      const mine = source.sender_id === userId;
+      const text = mine
+        ? source.original_text
+        : (source.translated_text ?? source.original_text);
+      return {
+        name: mine ? t('chat.reply.you') : (partnerName ?? t('matches.unknown')),
+        text: text ?? t('matches.preview.newMessage'),
+      };
+    },
+    [messagesById, userId, partnerName, t],
+  );
+
+  // 인용 탭 → 원본으로. 이미 로드돼 있으면 네트워크 없이 스크롤만 하고,
+  // 범위 밖이면 그 구간을 서버에서 받아 목록을 교체한다 (jumpToMessage).
+  const handleQuotePress = useCallback(
+    async (messageId: string) => {
+      if (messagesById.has(messageId)) {
+        setPendingScrollId(messageId);
+        return;
+      }
+      jumpSettledRef.current = false;
+      const ok = await jumpToMessage(messageId);
+      if (ok) setPendingScrollId(messageId);
+      else jumpSettledRef.current = true;
+    },
+    [messagesById, jumpToMessage],
+  );
+
+  // 예약된 점프 대상이 목록에 나타나면 그 위치로 스크롤. 말풍선 높이가
+  // 제각각이라 FlatList 가 아직 안 그린 항목의 위치를 몰라 scrollToIndex 가
+  // 실패할 수 있다 — onScrollToIndexFailed 에서 근처로 보낸 뒤 재시도한다.
+  useEffect(() => {
+    if (!pendingScrollId) return;
+    const index = inverseMessages.findIndex((m) => m.id === pendingScrollId);
+    if (index < 0) return;
+    flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+    setHighlightId(pendingScrollId);
+    setPendingScrollId(null);
+    // 스크롤 애니메이션이 끝날 때까지는 최신 방향 로드를 막아둔다.
+    setTimeout(() => {
+      jumpSettledRef.current = true;
+    }, 600);
+  }, [pendingScrollId, inverseMessages]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const timer = setTimeout(() => setHighlightId(null), 1600);
+    return () => clearTimeout(timer);
+  }, [highlightId]);
+
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const prev = inverseMessages[index + 1] ?? null;
     const isMine = item.sender_id === userId;
@@ -562,6 +701,14 @@ export default function ChatScreen() {
           // 메시지는 그대로 두어 피싱 유도 표면을 만들지 않는다.
           linkify={!isMine && partnerReadOnly}
           onRetry={retry}
+          onLongPress={setActionTarget}
+          quote={buildQuote(item)}
+          onQuotePress={
+            item.reply_to_id
+              ? () => handleQuotePress(item.reply_to_id!)
+              : undefined
+          }
+          highlighted={highlightId === item.id}
           onListened={markListened}
           onRegenerateAudio={regenerateAudio}
           onAvatarPress={() => {
@@ -602,7 +749,11 @@ export default function ChatScreen() {
   // last message is never occluded, plus EXTRA_BUBBLE_GAP for breathing
   // room. inputDockHeight is measured by onLayout and falls back to a
   // conservative estimate before the first measurement.
-  const dockHeightFallback = 54 + bottomSafePad + (emotionPickerOpen ? EMOTION_PICKER_ROW_HEIGHT : 0);
+  const dockHeightFallback =
+    54 +
+    bottomSafePad +
+    (emotionPickerOpen ? EMOTION_PICKER_ROW_HEIGHT : 0) +
+    (replyTarget ? REPLY_PREVIEW_HEIGHT : 0);
   // Rest-state (keyboard-closed) reservations. The live keyboard height is
   // added on top of these via the animated styles below so the three elements
   // that must move with the keyboard — the dock, the inverted list's visual
@@ -735,6 +886,25 @@ export default function ChatScreen() {
           ref={flatListRef}
           data={inverseMessages}
           renderItem={renderMessage}
+          // 최신 쪽(data[0])에 페이지가 붙어도 보던 위치가 안 밀리게 스크롤을
+          // 보정한다. 네이티브 리스트가 기본으로 해주는 일의 RN 대체품 —
+          // 이게 없으면 아래로 한 페이지 받을 때마다 화면이 튄다.
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          // 말풍선 높이가 제각각이라 아직 안 그린 항목으로는 바로 못 간다.
+          // 평균 높이로 근처까지 보낸 뒤 다음 프레임에 다시 시도.
+          onScrollToIndexFailed={(info) => {
+            flatListRef.current?.scrollToOffset({
+              offset: info.averageItemLength * info.index,
+              animated: false,
+            });
+            setTimeout(() => {
+              flatListRef.current?.scrollToIndex({
+                index: info.index,
+                animated: true,
+                viewPosition: 0.5,
+              });
+            }, 80);
+          }}
           // chat-audio-async-insert sprint: keyExtractor 는 item.id 단순 형태로
           // 복귀. BE 가 mid-session UPDATE 패턴을 폐기하면서 audio_status 전이가
           // 같은 row 위에서 일어나지 않게 됨 — voice clone 발신자의 stub(pending)
@@ -753,13 +923,34 @@ export default function ChatScreen() {
           // calculation routinely missed fire. 0.5 gives the user a half-
           // viewport of slack and matches the RN default for prefetching.
           onEndReachedThreshold={0.5}
+          // inverted 리스트에서 start = 시각적 바닥 = 최신 쪽. 직접 오프셋으로
+          // "닿는 순간" 을 판정하는 것보다 확실하다 — FlatList 가 한 번 발화 후
+          // 다시 멀어질 때까지 재발화를 스스로 막는다.
+          onStartReached={
+            jumped && hasNewer
+              ? () => {
+                  if (!jumpSettledRef.current) return;
+                  void loadNewer();
+                }
+              : undefined
+          }
+          onStartReachedThreshold={0.3}
           onScroll={handleScroll}
           scrollEventThrottle={16}
           contentContainerStyle={styles.messageList}
           style={styles.list}
           // Inverted: ListHeaderComponent renders at the visual BOTTOM (above
           // the input dock), ListFooterComponent renders at the visual TOP.
-          ListHeaderComponent={<Animated.View style={listSpacerStyle} />}
+          ListHeaderComponent={
+            <>
+              {/* 최신 방향 페이지를 받는 동안 시각적 바닥(= 사용자가 내려가는
+                  방향)에 스피너. 없으면 스크롤이 그냥 막힌 것처럼 보인다. */}
+              {loadingNewer && (
+                <ActivityIndicator color={colors.primary} style={{ padding: 12 }} />
+              )}
+              <Animated.View style={listSpacerStyle} />
+            </>
+          }
           ListFooterComponent={
             // chat-flatlist-pagination sprint: also surface the spinner while
             // older pages are being fetched. In an inverted list the footer
@@ -771,29 +962,55 @@ export default function ChatScreen() {
           }
         />
 
-        {newMessagesCount > 0 && (
+        {/* 새 메시지 개수가 있으면 그 pill 이 우선, 아니면 바닥에서 멀어졌을 때
+            "최신으로" 화살표. 점프 모드가 풀린 뒤에도 위쪽에 있으면 계속 필요하다. */}
+        {(newMessagesCount > 0 || jumped || !nearBottom) && (
           // Outer Animated.View owns the absolute positioning + keyboard-synced
           // `bottom`; the inner Pressable keeps the press-scale transform so the
           // two don't collide on the same `transform`/`bottom` style keys.
-          <Animated.View style={[styles.newMessagesBadge, badgeAnimStyle]}>
+          <Animated.View
+            style={[
+              styles.newMessagesBadge,
+              // 화살표만 있는 원형 버튼은 우측으로. 개수가 적힌 pill 은 읽어야
+              // 하는 정보라 가운데 유지.
+              newMessagesCount === 0 && styles.newMessagesBadgeRight,
+              // 그림자는 바깥 컨테이너에만 걸 수 있다 — overflow:'hidden' 이라
+              // 안쪽 버튼에 준 그림자는 잘려 안 보인다.
+              jumped && styles.newMessagesBadgeJumped,
+              badgeAnimStyle,
+            ]}
+          >
             <Pressable
-              onPress={handleNewMessagesBadgePress}
+              onPress={jumped ? handleBackToLatest : handleNewMessagesBadgePress}
               accessibilityRole="button"
-              accessibilityLabel={t('chat.newMessagesBadge', { count: newMessagesCount })}
+              accessibilityLabel={
+                newMessagesCount > 0
+                  ? t('chat.newMessagesBadge', { count: newMessagesCount })
+                  : t('chat.backToLatest')
+              }
               hitSlop={8}
               style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]}
             >
-              <LinearGradient
-                colors={[...gradients.primary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.newMessagesBadgeInner}
-              >
-                <Text style={styles.newMessagesBadgeText}>
-                  {t('chat.newMessagesBadge', { count: newMessagesCount })}
-                </Text>
-                <Ionicons name="arrow-down" size={14} color={colors.white} />
-              </LinearGradient>
+              {/* 점프 상태에서는 카피 없이 화살표만 있는 흰 원형 버튼 —
+                  "최신으로 내려간다" 는 방향 자체가 의미라 글자가 필요 없다.
+                  새 메시지 배지는 개수를 알려야 하므로 기존 pill 유지. */}
+              {newMessagesCount === 0 ? (
+                <View style={styles.backToLatestButton}>
+                  <Ionicons name="arrow-down" size={26} color={colors.primary} />
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={[...gradients.primary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.newMessagesBadgeInner}
+                >
+                  <Text style={styles.newMessagesBadgeText}>
+                    {t('chat.newMessagesBadge', { count: newMessagesCount })}
+                  </Text>
+                  <Ionicons name="arrow-down" size={14} color={colors.white} />
+                </LinearGradient>
+              )}
             </Pressable>
           </Animated.View>
         )}
@@ -833,6 +1050,31 @@ export default function ChatScreen() {
             </View>
           ) : (
             <>
+              {replyTarget && (
+                <View style={styles.replyPreview}>
+                  <View style={styles.replyPreviewBar} />
+                  <View style={styles.replyPreviewBody}>
+                    <Text style={styles.replyPreviewName} numberOfLines={1}>
+                      {replyTarget.sender_id === userId
+                        ? t('chat.reply.you')
+                        : (partnerName ?? t('matches.unknown'))}
+                    </Text>
+                    <Text style={styles.replyPreviewText} numberOfLines={1}>
+                      {replyTarget.sender_id === userId
+                        ? replyTarget.original_text
+                        : (replyTarget.translated_text ?? replyTarget.original_text)}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setReplyTarget(null)}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('common.cancel')}
+                  >
+                    <Ionicons name="close" size={18} color={colors.textSecondary} />
+                  </Pressable>
+                </View>
+              )}
               {emotionPickerOpen && (
                 <View style={styles.emotionRowWrapper}>
                   <EmotionChipRow
@@ -1048,6 +1290,15 @@ export default function ChatScreen() {
         onClose={() => setPromptsModalOpen(false)}
       />
 
+      <MessageActionsSheet
+        visible={!!actionTarget}
+        message={actionTarget}
+        onClose={() => setActionTarget(null)}
+        onReact={setReaction}
+        canReact={!!actionTarget && actionTarget.sender_id !== userId}
+        onReply={setReplyTarget}
+      />
+
       <MatchActionsSheet
         visible={menuOpen}
         matchId={matchId ?? null}
@@ -1175,6 +1426,38 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     gap: 8,
   },
+  replyPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: colors.card,
+    borderTopWidth: 0.5,
+    borderTopColor: colors.borderSoft,
+  },
+  replyPreviewBar: {
+    width: 2,
+    alignSelf: 'stretch',
+    borderRadius: 1,
+    backgroundColor: colors.primary,
+  },
+  replyPreviewBody: {
+    flex: 1,
+  },
+  replyPreviewName: {
+    fontSize: 10,
+    lineHeight: 13,
+    color: colors.primary,
+    fontFamily: fonts.medium,
+    letterSpacing: 0.2,
+  },
+  replyPreviewText: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+  },
   emotionRowWrapper: {
     backgroundColor: colors.card,
     borderTopWidth: 0.5,
@@ -1289,6 +1572,31 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: radii.pill,
     overflow: 'hidden', // Android 에서 borderRadius 가 Text 배경에 먹으려면 필요
+  },
+  // position:absolute 라 right 를 주면 alignSelf 대신 그쪽이 위치를 정한다.
+  newMessagesBadgeRight: {
+    right: 20,
+    // bottom 은 키보드 동기 애니메이션이 잡고 있어서, 위로 올리는 건
+    // marginBottom 으로 얹는다.
+    marginBottom: 10,
+  },
+  // 흰 버튼은 분홍 glow 로는 배경과 잘 안 갈린다 — 어두운 자주색으로 진하게.
+  newMessagesBadgeJumped: {
+    shadowColor: '#3A2340',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.38,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  backToLatestButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    // 살짝 비쳐서 아래 말풍선을 완전히 가리지 않게. 컨테이너에 opacity 를 주면
+    // 그림자까지 흐려지므로 배경색의 알파로만 조절한다.
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   newMessagesBadge: {
     position: 'absolute',

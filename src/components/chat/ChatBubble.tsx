@@ -12,12 +12,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
 import { colors, radii, shadows } from '@/constants/colors';
+import { reactionEmoji } from '@/constants/messageReactions';
 import { fonts } from '@/constants/fonts';
 import {
   playSharedAudio,
+  playLocalAudio,
   pauseSharedAudio,
   useSharedAudioState,
 } from './sharedAudioPlayer';
+import { cachedUriForMessage } from './audioCache';
 import type { Message } from '@/types';
 
 // 본문 안의 URL 만 탭 가능한 조각으로 쪼갠다. 캡처 그룹이 있는 split 이라 URL 도
@@ -66,6 +69,19 @@ interface ChatBubbleProps {
   // 만드는 메시지에만 켠다 — 일반 사용자 메시지의 링크를 탭 가능하게 하면
   // 피싱/외부 유도 표면이 그대로 열린다.
   linkify?: boolean;
+  // message-reactions: 말풍선 롱프레스 → 화면 하나짜리 액션 시트를 연다.
+  // 시트는 채팅 화면이 소유하고 대상 메시지만 갈아끼운다 (말풍선마다 Modal 을
+  // 달면 대화 길이만큼 모달이 마운트된다).
+  onLongPress?: (message: Message) => void;
+  // message-reply: 인용 블록에 그릴 이름/본문. 언어 선택(뷰어가 읽을 수 있는
+  // 쪽)과 미청취 마스킹은 호출처가 끝내고 완성된 문자열만 넘긴다.
+  quote?: { name: string; text: string } | null;
+  // 인용 블록 탭 → 원본으로 이동. 원본이 어디 있는지 모를 때(로드 범위 밖)도
+  // 호출처가 서버에서 그 구간을 받아오므로 항상 눌린다.
+  onQuotePress?: () => void;
+  // 점프해서 도착한 말풍선 — 잠깐 분홍 halo. 어디로 갔는지 못 알아채면
+  // 점프 자체가 무의미하다.
+  highlighted?: boolean;
 }
 
 const AVATAR_SIZE = 36;
@@ -82,6 +98,10 @@ export function ChatBubble({
   sendState,
   onRetry,
   linkify = false,
+  onLongPress,
+  quote,
+  onQuotePress,
+  highlighted = false,
 }: ChatBubbleProps) {
   const { t, i18n } = useTranslation();
   // idempotent-send sprint: 낙관 stub 3-상태. isMine 전용이라 수신자 게이팅
@@ -115,7 +135,15 @@ export function ChatBubble({
     if (regenerating) return;
     if (isPurged && onRegenerateAudio) {
       setRegenerating(true);
-      onRegenerateAudio(message.id)
+      // 서버에서 폐기됐어도 이 기기에 받아둔 파일이 있으면 재합성 없이 재생.
+      cachedUriForMessage(message.id)
+        .then((local) => {
+          if (local) {
+            playLocalAudio(local);
+            return null;
+          }
+          return onRegenerateAudio(message.id);
+        })
         .then((updated) => {
           if (updated?.audio_url) {
             playSharedAudio(updated.audio_url);
@@ -361,14 +389,33 @@ export function ChatBubble({
 
   const inner = (
     <>
-      {/* 길게 눌러 복사. 일반 사용자 메시지의 URL 은 탭 가능하게 하지 않는다
-          (피싱 표면) — 대신 복사해서 붙여넣게 한다. */}
-      <Text selectable style={[styles.text, isMine && styles.mineText]}>
+      {/* message-reply: 인용은 본문 위에 한 줄. 원본 텍스트를 본문에 합성하지
+          않기 때문에 TTS/번역 파이프라인과 완전히 분리돼 있다. */}
+      {quote && (
+        <Pressable
+          onPress={onQuotePress}
+          disabled={!onQuotePress}
+          style={({ pressed }) => [styles.quoteBox, pressed && styles.quoteBoxPressed]}
+          accessibilityRole={onQuotePress ? 'button' : undefined}
+        >
+          <Text style={styles.quoteName} numberOfLines={1}>
+            {quote.name}
+          </Text>
+          <Text style={styles.quoteText} numberOfLines={2}>
+            {quote.text}
+          </Text>
+        </Pressable>
+      )}
+
+      {/* 롱프레스는 액션 시트가 가져갔다 (selectable 은 OS 선택 메뉴가 먼저
+          잡아버려 공존 불가). 일반 사용자 메시지의 URL 은 여전히 탭 가능하게
+          하지 않는다 — 피싱 표면이라 복사해서 붙여넣게 한다. */}
+      <Text style={[styles.text, isMine && styles.mineText]}>
         {linkify ? renderWithLinks(message.original_text) : message.original_text}
       </Text>
 
       {showTranslation && (
-        <Text selectable style={[styles.translation, isMine && styles.mineTranslation]}>
+        <Text style={[styles.translation, isMine && styles.mineTranslation]}>
           {message.translated_text}
         </Text>
       )}
@@ -477,8 +524,43 @@ export function ChatBubble({
     </>
   );
 
+  // 롱프레스로 액션 시트를 연다. 미청취(showGate) 메시지는 차단 — 안 듣고
+  // 리액션만 남기는 동선이 열리면 "들어야 안다" 정책에 구멍이 난다. 본인
+  // 메시지는 리액션 행 없이 답장만 열린다 (시트가 canReact 로 분기).
+  // 점프 도착 표시 — 말풍선 자체가 두 번 깜박인다. backgroundColor 는 native
+  // driver 로 못 돌려서, 말풍선 모양 그대로인 색 레이어를 안쪽에 깔고 opacity
+  // 만 움직인다 (JS 스레드·sharedAudioPlayer 와 무관).
+  const flash = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!highlighted) {
+      flash.setValue(0);
+      return;
+    }
+    const seq = Animated.sequence([
+      Animated.timing(flash, { toValue: 1, duration: 240, useNativeDriver: true }),
+      Animated.timing(flash, { toValue: 0.2, duration: 360, useNativeDriver: true }),
+      Animated.timing(flash, { toValue: 1, duration: 240, useNativeDriver: true }),
+      Animated.timing(flash, { toValue: 0, duration: 420, useNativeDriver: true }),
+    ]);
+    seq.start();
+    return () => {
+      seq.stop();
+      flash.setValue(0);
+    };
+  }, [highlighted, flash]);
+
+  const canOpenActions = !!onLongPress && !showGate;
+  const reaction = reactionEmoji(message.reaction);
+
   return (
-    <View style={[styles.container, isMine ? styles.mine : styles.theirs]}>
+    <View
+      style={[
+        styles.container,
+        isMine ? styles.mine : styles.theirs,
+        // 뱃지가 말풍선 아래로 걸쳐 나오므로 다음 줄과 겹치지 않게 여백을 준다.
+        !!reaction && styles.containerWithReaction,
+      ]}
+    >
       {!isMine && (
         <View style={styles.avatarSlot}>
           {showAvatar ? (
@@ -499,7 +581,11 @@ export function ChatBubble({
         </View>
       )}
       <View style={styles.bubbleStack}>
-        <View
+        {/* 항상 Pressable — 핸들러가 없으면 아무 일도 하지 않고, 재생/재시도
+            버튼은 자식이라 부모보다 먼저 터치를 가져간다. */}
+        <Pressable
+          onLongPress={canOpenActions ? () => onLongPress!(message) : undefined}
+          delayLongPress={350}
           style={[
             styles.bubble,
             isMine ? styles.mineBubble : styles.theirsBubble,
@@ -510,11 +596,32 @@ export function ChatBubble({
             (isFailed || (isAudioFailed && !regenerating)) && styles.bubbleUnsent,
           ]}
         >
+          {/* 말풍선 모양 그대로인 색 레이어. 본문보다 먼저 렌더돼 뒤에 깔린다. */}
+          {highlighted && (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                StyleSheet.absoluteFill,
+                isMine ? styles.flashFillMine : styles.flashFillTheirs,
+                { opacity: flash },
+              ]}
+            />
+          )}
           {showGate ? gateInner : inner}
-        </View>
+        </Pressable>
         {/* 발신 시 고른 감정은 TTS 오디오 태그로만 쓰고 말풍선에는 표시하지
-            않는다 — 톤은 목소리로 전해지는 것이고(차별점 2), 안 듣고도 톤을
-            알게 해주는 표시는 리액션 뱃지가 들어갈 자리와도 겹친다. */}
+            않는다 — 톤은 목소리로 전해지는 것이고(차별점 2), 그 자리는 아래
+            리액션 뱃지가 쓴다. */}
+        {reaction && (
+          <View
+            style={[
+              styles.reactionBadge,
+              isMine ? styles.reactionBadgeMine : styles.reactionBadgeTheirs,
+            ]}
+          >
+            <Text style={styles.reactionBadgeText}>{reaction}</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -528,6 +635,9 @@ const styles = StyleSheet.create({
   },
   mine: {
     justifyContent: 'flex-end',
+  },
+  containerWithReaction: {
+    marginBottom: 14,
   },
   theirs: {
     justifyContent: 'flex-start',
@@ -629,6 +739,74 @@ const styles = StyleSheet.create({
   },
   mineTime: {
     color: 'rgba(255,255,255,0.8)',
+  },
+  // message-reply: 본문 위 인용 블록. 연분홍 배경 + 좌측 세로바로 본문과 갈라
+  // 놓는다 (세로바만으로는 내 말풍선처럼 배경이 이미 분홍인 쪽에서 잘 안 보였다).
+  // 내/상대 말풍선 모두 같은 배경이라 글자색도 하나로 통일 — 흰 글씨를 남겨두면
+  // 연분홍 위에서 안 읽힌다.
+  quoteBox: {
+    backgroundColor: colors.primaryLight,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primaryDark,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    marginBottom: 7,
+  },
+  quoteBoxPressed: {
+    opacity: 0.7,
+  },
+  quoteName: {
+    fontSize: 10,
+    lineHeight: 13,
+    color: colors.primaryDark,
+    fontFamily: fonts.medium,
+    letterSpacing: 0.2,
+  },
+  quoteText: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.text,
+    fontFamily: fonts.regular,
+  },
+  // 말풍선 모서리를 그대로 따라가야 색이 네모로 비어져 나오지 않는다.
+  // 내 말풍선(진분홍)은 흰빛으로 밝아지고, 상대 말풍선(거의 흰색)은 분홍으로
+  // 물든다 — 같은 색을 양쪽에 쓰면 한쪽에서 대비가 안 난다.
+  flashFillMine: {
+    borderRadius: radii.lg,
+    borderBottomRightRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
+  },
+  flashFillTheirs: {
+    borderRadius: radii.lg,
+    borderBottomLeftRadius: radii.lg,
+    borderTopLeftRadius: 6,
+    backgroundColor: colors.primaryLight,
+  },
+  // message-reactions: 말풍선 아래 모서리에 걸치는 리액션 뱃지. 대화 중앙 쪽
+  // (내 말풍선이면 왼쪽, 상대 말풍선이면 오른쪽)에 붙어 시선을 가운데로 모은다.
+  // 1:1 이라 항상 0 또는 1개 — 카운트 표기가 필요 없다.
+  reactionBadge: {
+    position: 'absolute',
+    bottom: -10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    ...shadows.soft,
+  },
+  reactionBadgeMine: {
+    left: -6,
+  },
+  reactionBadgeTheirs: {
+    right: -6,
+  },
+  reactionBadgeText: {
+    fontSize: 13,
+    lineHeight: 15,
   },
   // voice-first-message-gate sprint: 편지 카드(수신자 게이팅). 기존
   // theirsBubble 안에 들어가는 children 이므로 배경/보더는 부모가 담당,

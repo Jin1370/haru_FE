@@ -316,6 +316,7 @@ export default {
     intimacyUntilAll: '{{count}} more for all photos',
     intimacyAllUnlocked: 'All photos unlocked',
     newMessagesBadge: '{{count}} new messages',
+    backToLatest: 'Jump to latest',
     emotion: {
       happy: 'Happy',
       sad: 'Sad',
@@ -328,6 +329,17 @@ export default {
     emotionPicker: {
       header: 'Voice tone',
       toggleLabel: 'Choose voice tone',
+    },
+    reaction: {
+      heart: 'Heart',
+      thumbsup: 'Like',
+      laugh: 'Laugh',
+      wow: 'Wow',
+      sad: 'Sad',
+    },
+    reply: {
+      action: 'Reply',
+      you: 'You',
     },
     profileSheet: {
       age: 'Age',
