@@ -22,6 +22,7 @@
 
 import { createAudioPlayer, type AudioPlayer, type AudioStatus } from 'expo-audio';
 import { useSyncExternalStore } from 'react';
+import { cacheAudio, cachedUri } from './audioCache';
 
 export interface SharedAudioState {
   currentUrl: string | null;
@@ -70,8 +71,10 @@ function ensurePlayer(): AudioPlayer {
  */
 export function playSharedAudio(url: string): void {
   const p = ensurePlayer();
+  // 로컬 캐시가 있으면 그 파일로 재생. currentUrl 은 원격 URL 을 유지해야
+  // ChatBubble 의 isActive / 청취 게이트 비교가 깨지지 않는다 (audioCache 주석).
   if (currentUrl !== url) {
-    p.replace({ uri: url });
+    p.replace({ uri: cachedUri(url) ?? url });
     currentUrl = url;
     publish({
       currentUrl: url,
@@ -82,6 +85,18 @@ export function playSharedAudio(url: string): void {
     });
   } else if (state.duration > 0 && state.currentTime >= state.duration) {
     p.seekTo(0).catch(() => {});
+  }
+  p.play();
+  cacheAudio(url); // 다음 재생부터 로컬 (이번 재생은 그대로 스트리밍)
+}
+
+/** 로컬 캐시 파일 직접 재생 (폐기된 메시지 경로). currentUrl 은 로컬 경로. */
+export function playLocalAudio(uri: string): void {
+  const p = ensurePlayer();
+  if (currentUrl !== uri) {
+    p.replace({ uri });
+    currentUrl = uri;
+    publish({ currentUrl: uri, isPlaying: false, duration: 0, currentTime: 0, isLoaded: false });
   }
   p.play();
 }
