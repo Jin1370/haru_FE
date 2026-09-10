@@ -995,21 +995,23 @@ function MatchesPane({
                         {fmtListTime(m.last_message.created_at)}
                       </span>
                     )}
-                    {m.unread_count > 0 && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[0.625rem] font-bold text-white"
-                        style={{ background: C.like }}
-                      >
-                        {m.unread_count}
-                      </span>
-                    )}
                   </span>
                 </div>
-                <div
-                  className="mt-0.5 truncate text-xs"
-                  style={{ color: C.textSecondary }}
-                >
-                  {m.last_message?.original_text || <em>매치 시작</em>}
+                <div className="mt-0.5 flex items-center gap-1.5">
+                  <span
+                    className="min-w-0 flex-1 truncate text-xs"
+                    style={{ color: C.textSecondary }}
+                  >
+                    {m.last_message?.original_text || <em>매치 시작</em>}
+                  </span>
+                  {m.unread_count > 0 && (
+                    <span
+                      className="shrink-0 rounded-full px-2 py-0.5 text-[0.625rem] font-bold text-white"
+                      style={{ background: C.like }}
+                    >
+                      {m.unread_count}
+                    </span>
+                  )}
                 </div>
                 {m.unmatched_at && (
                   <div className="text-[0.625rem]" style={{ color: C.textLight }}>
