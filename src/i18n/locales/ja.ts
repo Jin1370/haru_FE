@@ -11,6 +11,7 @@ export default {
 
     common: {
         cancel: "キャンセル",
+        close: "閉じる",
         confirm: "確認",
         delete: "削除",
         save: "保存",
@@ -335,6 +336,18 @@ export default {
         reply: {
             action: "返信する",
             you: "自分",
+        },
+        photo: {
+            send: "写真を送る",
+            confirmSend: "送信",
+            open: "写真を大きく見る",
+            save: "写真を保存",
+            saved: "写真を保存しました",
+            saveFailed: "写真を保存できませんでした",
+            savePermission: "設定で写真へのアクセスを許可してください。",
+            permissionTitle: "写真へのアクセスが必要です",
+            permissionMessage: "設定で写真へのアクセスを許可すると写真を送れます。",
+            expired: "期限切れの写真",
         },
         profileSheet: {
             age: "年齢",

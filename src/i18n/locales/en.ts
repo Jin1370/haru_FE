@@ -11,6 +11,7 @@ export default {
 
   common: {
     cancel: 'Cancel',
+    close: 'Close',
     confirm: 'OK',
     delete: 'Delete',
     save: 'Save',
@@ -340,6 +341,18 @@ export default {
     reply: {
       action: 'Reply',
       you: 'You',
+    },
+    photo: {
+      send: 'Send a photo',
+      confirmSend: 'Send',
+      open: 'View photo',
+      save: 'Save photo',
+      saved: 'Photo saved',
+      saveFailed: "Couldn't save the photo",
+      savePermission: 'Allow photo access in Settings.',
+      permissionTitle: 'Photo access needed',
+      permissionMessage: 'Allow photo access in Settings to send photos.',
+      expired: 'Photo expired',
     },
     profileSheet: {
       age: 'Age',

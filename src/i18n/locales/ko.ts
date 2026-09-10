@@ -11,6 +11,7 @@ export default {
 
     common: {
         cancel: "취소",
+        close: "닫기",
         confirm: "확인",
         delete: "삭제",
         save: "저장",
@@ -338,6 +339,18 @@ export default {
         reply: {
             action: "답장하기",
             you: "나",
+        },
+        photo: {
+            send: "사진 보내기",
+            confirmSend: "전송",
+            open: "사진 크게 보기",
+            save: "사진 저장",
+            saved: "사진을 저장했어요",
+            saveFailed: "사진을 저장하지 못했어요",
+            savePermission: "설정에서 사진 접근을 허용해주세요.",
+            permissionTitle: "사진 접근이 필요해요",
+            permissionMessage: "설정에서 사진 접근을 허용하면 사진을 보낼 수 있어요.",
+            expired: "만료된 사진",
         },
         profileSheet: {
             age: "나이",

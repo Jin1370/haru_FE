@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   Pressable,
   StyleSheet,
   Animated,
@@ -21,6 +22,7 @@ import {
   useSharedAudioState,
 } from './sharedAudioPlayer';
 import { cachedUriForMessage } from './audioCache';
+import { cachedPhotoUri, cachePhoto } from './photoCache';
 import type { Message } from '@/types';
 
 // 본문 안의 URL 만 탭 가능한 조각으로 쪼갠다. 캡처 그룹이 있는 split 이라 URL 도
@@ -82,6 +84,9 @@ interface ChatBubbleProps {
   // 점프해서 도착한 말풍선 — 잠깐 분홍 halo. 어디로 갔는지 못 알아채면
   // 점프 자체가 무의미하다.
   highlighted?: boolean;
+  // chat-photos: 사진 탭 → 전체 화면 뷰어. 뷰어는 채팅 화면이 하나만 들고
+  // 대상 uri 만 갈아끼운다 (말풍선마다 Modal 을 달지 않기 위해).
+  onPhotoPress?: (uri: string) => void;
 }
 
 const AVATAR_SIZE = 36;
@@ -102,6 +107,7 @@ export function ChatBubble({
   quote,
   onQuotePress,
   highlighted = false,
+  onPhotoPress,
 }: ChatBubbleProps) {
   const { t, i18n } = useTranslation();
   // idempotent-send sprint: 낙관 stub 3-상태. isMine 전용이라 수신자 게이팅
@@ -172,9 +178,27 @@ export function ChatBubble({
     setRegenerating(true);
     onRegenerateAudio(message.id).finally(() => setRegenerating(false));
   };
+  // chat-photos: 사진 메시지 상태.
+  //   * isPhoto — 아직 살아있는 사진. 로컬 캐시가 있으면 그 파일로 그린다
+  //     (서명 URL 은 1시간마다 값이 바뀌어 RN Image 의 HTTP 캐시가 안 먹는다).
+  //   * isPhotoPurged — 전송 30일 sweep 이 지움. 음성과 달리 **복구 경로가
+  //     없어서** 재생성 버튼이 아니라 만료 안내를 띄운다.
+  const isPhotoPurged = !!message.photo_purged_at;
+  const cachedPhoto = cachedPhotoUri(message.id);
+  const photoUri = cachedPhoto ?? message.photo_url ?? null;
+  const isPhoto = !isPhotoPurged && !!photoUri;
+  useEffect(() => {
+    // 다음 마운트부터 로컬 파일을 쓰도록 미리 받아둔다. 이번 표시는 그대로
+    // 원격 URL (audioCache 와 같은 절충 — 완료 시 리렌더는 걸지 않는다).
+    if (!cachedPhoto && message.photo_url) cachePhoto(message.id, message.photo_url);
+  }, [cachedPhoto, message.id, message.photo_url]);
+
   const showTranslation =
     !!message.translated_text &&
-    message.translated_text !== message.original_text;
+    message.translated_text !== message.original_text &&
+    // 사진 메시지의 본문은 폴백 캡션뿐이라 원문/번역을 둘 다 띄울 이유가 없다.
+    !isPhoto &&
+    !isPhotoPurged;
 
   // voice-first-message-gate sprint: 수신자 한정 게이팅 상태.
   //   * isReady — 음성 재생 가능 (audio_status='ready' 이며 url 존재). 편지
@@ -407,12 +431,43 @@ export function ChatBubble({
         </Pressable>
       )}
 
-      {/* 롱프레스는 액션 시트가 가져갔다 (selectable 은 OS 선택 메뉴가 먼저
-          잡아버려 공존 불가). 일반 사용자 메시지의 URL 은 여전히 탭 가능하게
-          하지 않는다 — 피싱 표면이라 복사해서 붙여넣게 한다. */}
-      <Text style={[styles.text, isMine && styles.mineText]}>
-        {linkify ? renderWithLinks(message.original_text) : message.original_text}
-      </Text>
+      {/* chat-photos: 사진이면 본문(폴백 캡션) 대신 이미지를 그린다. 캡션은
+          사진을 모르는 옛 클라이언트를 위해 서버가 채워둔 값이라, 사진을 아는
+          이 화면에서는 띄우지 않는다. */}
+      {isPhoto ? (
+        <Pressable
+          onPress={() => photoUri && onPhotoPress?.(photoUri)}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.photo.open')}
+        >
+          <Image
+            source={{ uri: photoUri! }}
+            style={[
+              styles.photo,
+              // 서버가 보내준 원본 비율로 자리를 미리 잡는다 — 없으면 정사각.
+              message.photo_width && message.photo_height
+                ? { aspectRatio: message.photo_width / message.photo_height }
+                : { aspectRatio: 1 },
+            ]}
+            resizeMode="cover"
+          />
+        </Pressable>
+      ) : isPhotoPurged ? (
+        <View style={styles.photoExpired}>
+          <Ionicons
+            name="image-outline"
+            size={20}
+            color={isMine ? 'rgba(255,255,255,0.8)' : colors.textSecondary}
+          />
+          <Text style={[styles.photoExpiredText, isMine && styles.mineText]}>
+            {t('chat.photo.expired')}
+          </Text>
+        </View>
+      ) : (
+        <Text style={[styles.text, isMine && styles.mineText]}>
+          {linkify ? renderWithLinks(message.original_text) : message.original_text}
+        </Text>
+      )}
 
       {showTranslation && (
         <Text style={[styles.translation, isMine && styles.mineTranslation]}>
@@ -509,7 +564,7 @@ export function ChatBubble({
           </View>
         )}
 
-        <Text style={[styles.time, isMine && styles.mineTime]}>
+        <Text style={[styles.time, isMine && !isPhoto && styles.mineTime]}>
           {timeLabel}
         </Text>
 
@@ -518,7 +573,12 @@ export function ChatBubble({
             의미로 일원화. mig 015 백필로 기존 메시지는 read_at == listened_at
             이라 회귀 없음. */}
         {isMine && message.listened_at && (
-          <Ionicons name="checkmark-done" size={14} color={colors.white} style={{ marginLeft: 4 }} />
+          <Ionicons
+            name="checkmark-done"
+            size={14}
+            color={isPhoto ? colors.primary : colors.white}
+            style={{ marginLeft: 4 }}
+          />
         )}
       </View>
     </>
@@ -589,7 +649,10 @@ export function ChatBubble({
           style={[
             styles.bubble,
             isMine ? styles.mineBubble : styles.theirsBubble,
-            shadows.soft,
+            // chat-photos: 사진은 말풍선 없이 이미지 단독으로 보인다. 배경/패딩/
+            // 테두리를 지워야 사진 아래로 말풍선 색이 삐져나오지 않는다.
+            isPhoto && styles.bubblePhoto,
+            !isPhoto && shadows.soft,
             // idempotent-send sprint: 실패 시에만 dim — 재시도 필요 신호.
             // 전송중(sending)은 일반 말풍선과 동일 색(dim 안 함, 사용자 결정
             // 2026-07-12) — 모래시계만으로 진행을 표시하고 색은 그대로 유지.
@@ -739,6 +802,31 @@ const styles = StyleSheet.create({
   },
   mineTime: {
     color: 'rgba(255,255,255,0.8)',
+  },
+  // chat-photos: 말풍선 없이 단독으로 보이는 이미지. 높이는 서버가 준 원본
+  // 비율(aspectRatio)로 잡아 로드 전에 자리를 확보한다.
+  photo: {
+    width: 220,
+    borderRadius: radii.sm,
+    backgroundColor: colors.surface,
+  },
+  // 말풍선 껍데기를 걷어낸다 — 사진만 남고 시간은 그 아래 채팅 배경 위에 뜬다.
+  bubblePhoto: {
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  photoExpired: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+  },
+  photoExpiredText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
   },
   // message-reply: 본문 위 인용 블록. 연분홍 배경 + 좌측 세로바로 본문과 갈라
   // 놓는다 (세로바만으로는 내 말풍선처럼 배경이 이미 분홍인 쪽에서 잘 안 보였다).

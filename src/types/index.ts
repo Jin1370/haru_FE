@@ -349,6 +349,16 @@ export interface Message {
   // GET 목록에서만 채워진다. undefined = 서버가 안 내려준 경로(Realtime/낙관 stub)
   // → 호출처가 로컬 목록에서 원본을 찾는다. null = 원본을 못 보는 메시지.
   reply_to?: ReplyQuote | null;
+  // chat-photos (mig 056): 사진 메시지. DB 에는 경로만, 응답에는 1시간 TTL
+  // 서명 URL 이 photo_url 로 실린다 (버킷 private).
+  photo_path?: string | null;
+  photo_url?: string | null;
+  // 전송 30일 sweep 이 폐기한 시각. **복구 불가** — 음성과 달리 재합성 경로가
+  // 없어서 "만료된 사진" 플레이스홀더로 렌더한다.
+  photo_purged_at?: string | null;
+  // 이미지 로드 전 자리를 잡아 리스트가 튀는 것을 막는 용도.
+  photo_width?: number | null;
+  photo_height?: number | null;
   created_at: string;
 }
 

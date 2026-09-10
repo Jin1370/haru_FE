@@ -64,7 +64,10 @@
         {
           "photosPermission": "haru needs access to your photo library to manage your profile photos.",
           "savePhotosPermission": "haru saves a photo to your library only when you choose to download it.",
-          "isAccessMediaLocationEnabled": false
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": [
+            "photo"
+          ]
         }
       ],
       [

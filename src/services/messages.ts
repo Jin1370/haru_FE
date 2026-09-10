@@ -1,4 +1,6 @@
-import { api } from './api';
+import * as FileSystem from 'expo-file-system/legacy';
+import { api, ApiRequestError, getAccessToken, refreshSession } from './api';
+import { API_BASE_URL } from '@/constants/config';
 import type {
   Emotion,
   Message,
@@ -126,4 +128,67 @@ export async function setMessageReaction(
     `/api/matches/${matchId}/messages/${messageId}/reaction`,
     { reaction },
   );
+}
+
+// chat-photos: 사진 한 장의 서명 URL. Realtime 으로 도착한 사진 메시지는
+// DB 원본 행이라 photo_path 만 있고 photo_url 이 없어서, 그 한 칸을 이걸로 메운다.
+export async function getPhotoUrl(matchId: string, messageId: string): Promise<string | null> {
+  const res = await api.get<{ photo_url: string }>(
+    `/api/matches/${matchId}/messages/${messageId}/photo-url`,
+  );
+  return res.photo_url ?? null;
+}
+
+// chat-photos: 사진 메시지 전송 (multipart).
+//
+// FileSystem.uploadAsync 는 ApiClient.request 를 안 거쳐 401→refresh→retry 가
+// 없다. 프로필 사진 업로드(services/profile.ts)와 같은 방식으로 401 한 번만
+// 갱신 후 재시도한다.
+export async function sendPhotoMessage(
+  matchId: string,
+  uri: string,
+  opts: {
+    clientMessageId: string;
+    replyToId?: string;
+    width?: number;
+    height?: number;
+  },
+): Promise<Message> {
+  const parameters: Record<string, string> = {
+    client_message_id: opts.clientMessageId,
+  };
+  if (opts.replyToId) parameters.reply_to_id = opts.replyToId;
+  if (opts.width) parameters.width = String(opts.width);
+  if (opts.height) parameters.height = String(opts.height);
+
+  const upload = (token: string | null) =>
+    FileSystem.uploadAsync(`${API_BASE_URL}/api/matches/${matchId}/messages/photo`, uri, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: 'photo',
+      mimeType: 'image/jpeg',
+      parameters,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+  let result = await upload(await getAccessToken());
+  if (result.status === 401) {
+    const newToken = await refreshSession();
+    if (newToken) result = await upload(newToken);
+  }
+
+  if (result.status < 200 || result.status >= 300) {
+    let message = 'Photo upload failed';
+    let code: string | undefined;
+    try {
+      const parsed = JSON.parse(result.body);
+      message = parsed.error ?? message;
+      code = typeof parsed.code === 'string' ? parsed.code : undefined;
+    } catch {
+      /* ignore */
+    }
+    throw new ApiRequestError(result.status, message, code);
+  }
+
+  return JSON.parse(result.body) as Message;
 }

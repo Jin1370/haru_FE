@@ -29,6 +29,10 @@ import { AudioPlayer } from '@/components/chat/AudioPlayer';
 import { IntimacyGauge } from '@/components/chat/IntimacyGauge';
 import { ChatPromptsModal } from '@/components/chat/ChatPromptsModal';
 import { MessageActionsSheet } from '@/components/chat/MessageActionsSheet';
+import { PhotoViewerModal } from '@/components/chat/PhotoViewerModal';
+import { PhotoConfirmModal } from '@/components/chat/PhotoConfirmModal';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { ChatPromptsToggleButton } from '@/components/chat/ChatPromptsToggleButton';
 import { MatchActionsSheet } from '@/components/matches/MatchActionsSheet';
 import { ErrorText } from '@/components/ui/ErrorText';
@@ -39,6 +43,15 @@ import {
   EmotionChipRow,
   EMOTION_PICKER_ROW_HEIGHT,
 } from '@/components/chat/EmotionPicker';
+
+// chat-photos: 전송 전 리사이즈 파라미터.
+//
+// 채팅에서 보기만 한다면 1280 / 0.7 (~300KB) 로 충분하다 — 말풍선은 220pt 이고
+// 전체 화면도 폰 해상도를 못 넘는다. 그보다 크게 잡은 이유는 **갤러리 저장**을
+// 허용했기 때문이다. 저장한 사진을 나중에 큰 화면에서 볼 걸 생각하면 1280 은
+// 아쉽다. 1920 / 0.8 은 ~700KB 로 전송비가 2배쯤 되지만 절대액이 작다.
+const PHOTO_MAX_EDGE = 1920;
+const PHOTO_QUALITY = 0.8;
 
 // message-reply: 입력창 위 답장 프리뷰 바의 대략 높이 (onLayout 측정 전 폴백).
 const REPLY_PREVIEW_HEIGHT = 46;
@@ -248,6 +261,7 @@ export default function ChatScreen() {
     loadMessages,
     loadOlder,
     send,
+    sendPhoto,
     // idempotent-send sprint: 낙관 stub 의 송신 상태(sending/failed) 맵 + 실패
     // 말풍선 탭 재시도. ChatBubble 에 sendState[item.id] / onRetry 로 배선.
     sendState,
@@ -284,6 +298,15 @@ export default function ChatScreen() {
   // 를 예약해 두고 effect 에서 처리한다. 도착하면 잠깐 하이라이트.
   const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  // chat-photos: 전체 화면 뷰어는 화면당 하나. 말풍선마다 Modal 을 달면 대화
+  // 길이만큼 모달이 마운트된다 (액션 시트와 같은 이유).
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
+  const [sendingPhoto, setSendingPhoto] = useState(false);
+  // chat-photos: 고른 사진을 바로 보내지 않고 미리보기를 한 번 거친다. 리사이즈
+  // 까지 끝난 값이라 여기 보이는 것이 실제로 전송될 이미지와 같다.
+  const [pendingPhoto, setPendingPhoto] = useState<
+    { uri: string; width: number; height: number } | null
+  >(null);
   // 점프 직후엔 목록이 교체되며 리스트가 잠깐 "최신 끝" 에 놓인다. 그 순간의
   // onStartReached 를 그대로 받으면 곧장 다음 페이지를 당겨와 #1 로 가자마자
   // #51 로 끌려간다. 예약된 스크롤이 실제로 끝난 뒤부터 열어준다.
@@ -437,6 +460,96 @@ export default function ChatScreen() {
     requestAnimationFrame(toBottom);
     setTimeout(toBottom, 250);
     setNewMessagesCount(0);
+  };
+
+  // chat-photos: 갤러리에서 한 장 골라 리사이즈 → 미리보기 → 전송.
+  //
+  // 안드로이드(삼성 One UI 등)는 시스템 피커가 자체 "미리보기 / 확인" 을 얹어
+  // 확인이 두 번이 된다. 그래도 앱 모달을 두는 이유는 **iOS 때문**이다 —
+  // PHPicker 는 단일 선택 시 탭하는 순간 닫혀 확인 단계가 아예 없다. 앱 모달이
+  // 없으면 아이폰에서는 고르는 즉시 전송된다 (사용자 결정 2026-09-10).
+  const handlePickPhoto = async () => {
+    if (sendingPhoto) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showAlert({
+        variant: 'info',
+        title: t('chat.photo.permissionTitle'),
+        message: t('chat.photo.permissionMessage'),
+      });
+      return;
+    }
+
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 1,
+      // v1 은 한 장씩 (사용자 결정 2026-09-10).
+      allowsMultipleSelection: false,
+    });
+    if (picked.canceled || !picked.assets?.[0]) return;
+
+    const asset = picked.assets[0];
+    try {
+      // 리사이즈를 미리보기 **전** 에 끝낸다 — 미리보기가 실제 전송본과 같아지고,
+      // "보내기" 이후의 대기가 업로드뿐이 된다.
+      //
+      // 이 단계가 하는 일 셋:
+      //   1) 긴 변을 PHOTO_MAX_EDGE 로 축소 (비율 유지). 원본 12MP 를 그대로
+      //      올리면 저장보다 **조회 트래픽**이 훨씬 비싸진다.
+      //   2) JPEG 재압축 — 원본 3~8MB 를 ~700KB 로. 5MB multer 한도도 여기서 해결.
+      //   3) **HEIC → JPEG 변환**. 이건 선택이 아니라 필수다 — 아이폰 기본 촬영
+      //      포맷이 HEIC 인데 BE 는 jpeg/png/webp 만 받는다.
+      const resized = await ImageManipulator.manipulateAsync(
+        asset.uri,
+        [
+          {
+            resize: {
+              width: asset.width >= asset.height ? PHOTO_MAX_EDGE : undefined,
+              height: asset.height > asset.width ? PHOTO_MAX_EDGE : undefined,
+            },
+          },
+        ],
+        { compress: PHOTO_QUALITY, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      setPendingPhoto({ uri: resized.uri, width: resized.width, height: resized.height });
+    } catch (e: any) {
+      showAlert({ variant: 'error', title: t('common.error'), message: userFacingError(e, t) });
+    }
+  };
+
+  // 미리보기에서 "보내기" 를 눌렀을 때만 실제 업로드.
+  const handleConfirmPhoto = async () => {
+    if (!pendingPhoto || sendingPhoto) return;
+    setSendingPhoto(true);
+    // 옛 구간을 보는 중이면 보낸 사진이 화면 밖에 생긴다 — 텍스트 전송과 동일.
+    if (jumped) await backToLatest();
+    const replyForSend = replyTarget;
+    setReplyTarget(null);
+    try {
+      await sendPhoto(pendingPhoto.uri, {
+        replyToId: replyForSend?.id,
+        width: pendingPhoto.width,
+        height: pendingPhoto.height,
+      });
+      setPendingPhoto(null);
+    } catch (e: any) {
+      // 모더레이션 차단은 메시지와 같은 카피를 재사용한다 (표면별 카피를 늘리지
+      // 않는 게 message-moderation-v1 이후의 규칙). 미리보기를 열어 두면 같은
+      // 사진을 다시 보내려 시도하게 되므로 닫는다.
+      if (e instanceof ApiRequestError && e.code === 'photo_blocked') {
+        setPendingPhoto(null);
+        showAlert({
+          variant: 'info',
+          title: t('moderation.blocked.title'),
+          message: t('moderation.blocked.toast'),
+        });
+      } else {
+        showAlert({ variant: 'error', title: t('common.error'), message: userFacingError(e, t) });
+      }
+      setReplyTarget(replyForSend);
+    } finally {
+      setSendingPhoto(false);
+    }
   };
 
   const handleSend = async () => {
@@ -709,6 +822,7 @@ export default function ChatScreen() {
               : undefined
           }
           highlighted={highlightId === item.id}
+          onPhotoPress={setViewerUri}
           onListened={markListened}
           onRegenerateAudio={regenerateAudio}
           onAvatarPress={() => {
@@ -1101,6 +1215,24 @@ export default function ChatScreen() {
                   expanded={emotionPickerOpen}
                   onToggleExpanded={() => setEmotionPickerOpen((v) => !v)}
                 />
+                {/* chat-photos: 감정 토글 오른쪽 (사용자 결정 2026-09-10). */}
+                <Pressable
+                  onPress={handlePickPhoto}
+                  disabled={sendingPhoto}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('chat.photo.send')}
+                  style={({ pressed }) => [
+                    styles.photoButton,
+                    pressed && { transform: [{ scale: 0.95 }] },
+                  ]}
+                >
+                  {sendingPhoto ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Ionicons name="image-outline" size={22} color={colors.primary} />
+                  )}
+                </Pressable>
                 {/* Text overlay placeholder — RN drops fontFamily on the
                     native placeholder for multiline TextInputs (Android
                     quirk), so an absolutely-positioned Text inside a
@@ -1143,7 +1275,15 @@ export default function ChatScreen() {
                     multiline
                   />
                   {text.length === 0 ? (
-                    <Text style={styles.inputPlaceholder} pointerEvents="none">
+                    <Text
+                      style={styles.inputPlaceholder}
+                      pointerEvents="none"
+                      // 사진 버튼이 들어오면서 좁은 기기에서는 입력창 폭이 줄어
+                      // 플레이스홀더가 두 줄로 접혔다. 실제 입력은 여러 줄이지만
+                      // 안내 문구는 한 줄로 고정한다.
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
                       {t('chat.typeMessage')}
                     </Text>
                   ) : null}
@@ -1290,6 +1430,20 @@ export default function ChatScreen() {
         onClose={() => setPromptsModalOpen(false)}
       />
 
+      <PhotoConfirmModal
+        visible={!!pendingPhoto}
+        uri={pendingPhoto?.uri ?? null}
+        sending={sendingPhoto}
+        onCancel={() => setPendingPhoto(null)}
+        onConfirm={handleConfirmPhoto}
+      />
+
+      <PhotoViewerModal
+        visible={!!viewerUri}
+        uri={viewerUri}
+        onClose={() => setViewerUri(null)}
+      />
+
       <MessageActionsSheet
         visible={!!actionTarget}
         message={actionTarget}
@@ -1425,6 +1579,16 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderSoft,
     backgroundColor: colors.card,
     gap: 8,
+  },
+  photoButton: {
+    width: 40,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
   },
   replyPreview: {
     flexDirection: 'row',

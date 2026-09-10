@@ -37,6 +37,18 @@ export interface PhotoUnlockedSnapshot {
 // 서버 row(200/201/202) 또는 재시도-무의미 4xx 도착 시 해당 키를 삭제한다.
 export type SendStatus = 'sending' | 'failed';
 
+// Realtime 페이로드는 **DB 원본 행**이라 서버가 HTTP 응답에서만 붙여주는
+// 필드가 빠져 있다 — 사진 서명 URL(photo_url)과 답장 인용 요약(reply_to).
+// 그대로 갈아끼우면 이미 받아둔 값이 지워진다 (송신자가 POST 응답으로 받은
+// 사진이 자기 메시지의 realtime INSERT 도착과 함께 사라지던 원인).
+function mergeServerOnly(incoming: Message, existing: Message): Message {
+  return {
+    ...incoming,
+    photo_url: incoming.photo_url ?? existing.photo_url,
+    reply_to: incoming.reply_to ?? existing.reply_to,
+  };
+}
+
 export function useChat(matchId: string) {
   const userId = useAuthStore((s) => s.userId);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -355,6 +367,37 @@ export function useChat(matchId: string) {
     [matchId],
   );
 
+  // chat-photos: 사진 전송. 텍스트 send 와 달리 낙관 stub 을 넣지 않는다 —
+  // 업로드가 끝나야 서버 row(서명 URL 포함)를 받을 수 있고, 로컬 uri 로 stub 을
+  // 만들면 그 자리를 나중에 서버 row 로 갈아끼울 때 이미지가 한 번 깜빡인다.
+  // 대신 호출처가 전송 중 인디케이터를 띄운다.
+  const sendPhoto = useCallback(
+    async (
+      uri: string,
+      opts?: { replyToId?: string; width?: number; height?: number },
+    ): Promise<Message | null> => {
+      setError(null);
+      const id = Crypto.randomUUID();
+      const msg = await messageService.sendPhotoMessage(matchId, uri, {
+        clientMessageId: id,
+        replyToId: opts?.replyToId,
+        width: opts?.width,
+        height: opts?.height,
+      });
+      setMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === msg.id);
+        if (idx >= 0) {
+          const next = prev.slice();
+          next[idx] = msg;
+          return next;
+        }
+        return [...prev, msg];
+      });
+      return msg;
+    },
+    [matchId],
+  );
+
   // message-reactions: 상대 메시지에 리액션을 남기거나 해제한다. 낙관 업데이트
   // 후 실패 시 이전 값으로 롤백 — 성공 경로는 realtime UPDATE 가 같은 row 를
   // 덮어 서버 진실로 수렴하지만, 실패했다면 그 UPDATE 자체가 없어서 낙관 값이
@@ -447,7 +490,7 @@ export function useChat(matchId: string) {
             const idx = prev.findIndex((m) => m.id === newMsg.id);
             if (idx >= 0) {
               const next = prev.slice();
-              next[idx] = newMsg;
+              next[idx] = mergeServerOnly(newMsg, prev[idx]);
               return next;
             }
             // message-reply(점프): 옛 구간을 보고 있는 동안 도착한 메시지를
@@ -456,6 +499,24 @@ export function useChat(matchId: string) {
             if (jumpedRef.current) return prev;
             return [...prev, newMsg];
           });
+
+          // chat-photos: realtime 페이로드는 DB 원본 행이라 photo_path 만 있고
+          // 서명 URL 이 없다. 그대로 두면 수신자 화면에 폴백 캡션만 뜨고 사진은
+          // 채팅방을 다시 들어와야(=GET 을 태워야) 보인다. 도착 직후 URL 만
+          // 따로 받아 그 행에 채워 넣는다.
+          if (newMsg.photo_path && !newMsg.photo_url) {
+            void messageService
+              .getPhotoUrl(matchId, newMsg.id)
+              .then((url) => {
+                if (cancelled || !url) return;
+                setMessages((prev) =>
+                  prev.map((m) => (m.id === newMsg.id ? { ...m, photo_url: url } : m)),
+                );
+              })
+              .catch(() => {
+                // 실패해도 다음 채팅방 진입 시 GET 이 서명 URL 을 실어 온다.
+              });
+          }
         },
         (updatedMsg) => {
           if (cancelled) return;
@@ -473,7 +534,7 @@ export function useChat(matchId: string) {
           //   * read-at-removal-list-mask sprint (mig 018): 옛 read_at 컬럼 제거.
           //     "읽음" 의미는 listened_at 단일 진실원.
           setMessages((prev) =>
-            prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m)),
+            prev.map((m) => (m.id === updatedMsg.id ? mergeServerOnly(updatedMsg, m) : m)),
           );
         },
         (status) => {
@@ -561,6 +622,7 @@ export function useChat(matchId: string) {
     jumped,
     hasNewer,
     send,
+    sendPhoto,
     // message-reactions: 말풍선 롱프레스 시트에서 호출. null = 해제.
     setReaction,
     // idempotent-send sprint: client id → 송신 상태. ChatBubble 에
