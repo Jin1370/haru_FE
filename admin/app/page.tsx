@@ -865,9 +865,17 @@ function MatchesPane({
   // 걸리고, 그동안 5s 폴링이 아직 옛 unread_count 를 실어와 뱃지가 되살아난다.
   // 서버 값이 0 으로 수렴할 때까지 로컬에서 눌러둔다.
   const openedRef = useRef<Set<string>>(new Set());
+  // 정렬은 앱 `useMatches` 와 동일 — BE 는 matches.created_at DESC 로 내려주므로
+  // 마지막 메시지 시각(없으면 매치 생성 시각) 기준으로 재정렬해 최신 대화가 위로.
   const applyLocalRead = useCallback(
     (ms: MatchSummary[]) =>
-      ms.map((m) => (openedRef.current.has(m.match_id) ? { ...m, unread_count: 0 } : m)),
+      ms
+        .map((m) => (openedRef.current.has(m.match_id) ? { ...m, unread_count: 0 } : m))
+        .sort((a, b) =>
+          (b.last_message?.created_at ?? b.created_at).localeCompare(
+            a.last_message?.created_at ?? a.created_at,
+          ),
+        ),
     [],
   );
 
