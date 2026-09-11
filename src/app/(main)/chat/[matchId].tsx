@@ -954,8 +954,8 @@ export default function ChatScreen() {
     (replyTarget ? REPLY_PREVIEW_HEIGHT : 0);
   // Rest-state (keyboard-closed) reservations. The live keyboard height is
   // added on top of these via the animated styles below so the three elements
-  // that must move with the keyboard — the dock, the inverted list's visual
-  // bottom spacer, and the "new messages" badge — track it frame-by-frame.
+  // that must move with the keyboard — the dock, the list viewport's bottom
+  // margin, and the "new messages" badge — track it frame-by-frame.
   const listBottomPadBase = (inputDockHeight || dockHeightFallback) + EXTRA_BUBBLE_GAP;
   const badgeBottomBase = 54 + bottomSafePad + 8;
 
@@ -965,15 +965,20 @@ export default function ChatScreen() {
   // 키보드가 안전영역(safeInset) 높이만큼 올라오는 첫 구간에는 dock 이 안 움직이고
   // (그 구간은 dock 의 상수 안전영역 padding 이 이미 커버), 그 이후부터 부드럽게
   // 올라간다. → padding 계단 없이 단일 값으로만 움직여 오버슈트 제거. 세 요소
-  // (dock / inverted 리스트 하단 spacer / new-messages badge)가 같은 lift 를 공유해
+  // (dock / 리스트 뷰포트 marginBottom / new-messages badge)가 같은 lift 를 공유해
   // 프레임 정합. 끝점: 열림 lift = -(kbH - safeInset), 닫힘 lift = 0.
   const dockAnimStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: Math.min(0, kbAnimHeight.value + safeInset) }],
   }));
-  // 2) Inverted-list bottom spacer (visual bottom, above the dock): dock 이
-  //    올라간 만큼(-lift) 함께 커져 최신 버블이 상승 중 dock 뒤로 안 숨음.
-  const listSpacerStyle = useAnimatedStyle(() => ({
-    height: listBottomPadBase - Math.min(0, kbAnimHeight.value + safeInset),
+  // 2) 리스트 뷰포트 하단 여백 (dock 높이 + 키보드 lift). 예전엔 이 값을
+  //    ListHeaderComponent 스페이서(= 콘텐츠 안, 시각적 바닥)의 height 로
+  //    줬는데, maintainVisibleContentPosition 이 "첫 보이는 항목(최신 버블)을
+  //    같은 화면 위치에 고정" 하느라 스페이서가 커지는 만큼 스크롤을 되감아
+  //    키보드가 올라와도 최신 메시지가 dock/키보드 뒤에 그대로 남았다.
+  //    뷰포트(marginBottom) 를 줄이면 콘텐츠 좌표는 안 변해 mVCP 가 개입하지
+  //    않고, offset 0 = 뷰포트 바닥이라 최신 버블이 키보드 위로 따라 올라온다.
+  const listAnimStyle = useAnimatedStyle(() => ({
+    marginBottom: listBottomPadBase - Math.min(0, kbAnimHeight.value + safeInset),
   }));
   // 3) "New messages" badge floats just above the dock — ride the same lift.
   const badgeAnimStyle = useAnimatedStyle(() => ({
@@ -1080,108 +1085,109 @@ export default function ChatScreen() {
             <View style={styles.dateLine} />
           </View>
         )}
-        <FlatList
-          ref={flatListRef}
-          data={inverseMessages}
-          renderItem={renderMessage}
-          // 최신 쪽(data[0])에 페이지가 붙어도 보던 위치가 안 밀리게 스크롤을
-          // 보정한다. 네이티브 리스트가 기본으로 해주는 일의 RN 대체품 —
-          // 이게 없으면 아래로 한 페이지 받을 때마다 화면이 튄다.
-          //
-          // autoscrollToTopThreshold 는 쓰지 않는다. "최신 끝 근처면 새 내용을
-          // 따라간다" 는 규칙이 **아래로 페이지를 받는 것까지** 따라가게 만든다
-          // (그것도 data[0] 에 붙으므로) — 따라가면 다시 끝 근처라 onStartReached
-          // 가 재발화해 #26 → #76 → #126 으로 끌려갔다. 방금 보낸 메시지를
-          // 보여주는 일은 scrollToBottom 이 명시적으로 한다.
-          maintainVisibleContentPosition={
-            preserveScroll ? { minIndexForVisible: 0 } : undefined
-          }
-          // 말풍선 높이가 제각각이라 아직 안 그린 항목으로는 바로 못 간다.
-          // 평균 높이로 근처까지 보낸 뒤 다음 프레임에 다시 시도.
-          onScrollToIndexFailed={(info) => {
-            flatListRef.current?.scrollToOffset({
-              offset: info.averageItemLength * info.index,
-              animated: false,
-            });
-            setTimeout(() => {
-              flatListRef.current?.scrollToIndex({
-                index: info.index,
+        <Animated.View style={[styles.list, listAnimStyle]}>
+          <FlatList
+            ref={flatListRef}
+            data={inverseMessages}
+            renderItem={renderMessage}
+            // 최신 쪽(data[0])에 페이지가 붙어도 보던 위치가 안 밀리게 스크롤을
+            // 보정한다. 네이티브 리스트가 기본으로 해주는 일의 RN 대체품 —
+            // 이게 없으면 아래로 한 페이지 받을 때마다 화면이 튄다.
+            //
+            // autoscrollToTopThreshold 는 쓰지 않는다. "최신 끝 근처면 새 내용을
+            // 따라간다" 는 규칙이 **아래로 페이지를 받는 것까지** 따라가게 만든다
+            // (그것도 data[0] 에 붙으므로) — 따라가면 다시 끝 근처라 onStartReached
+            // 가 재발화해 #26 → #76 → #126 으로 끌려갔다. 방금 보낸 메시지를
+            // 보여주는 일은 scrollToBottom 이 명시적으로 한다.
+            maintainVisibleContentPosition={
+              preserveScroll ? { minIndexForVisible: 0 } : undefined
+            }
+            // 말풍선 높이가 제각각이라 아직 안 그린 항목으로는 바로 못 간다.
+            // 평균 높이로 근처까지 보낸 뒤 다음 프레임에 다시 시도.
+            onScrollToIndexFailed={(info) => {
+              flatListRef.current?.scrollToOffset({
+                offset: info.averageItemLength * info.index,
                 animated: false,
-                viewPosition: 0.5,
               });
-            }, 80);
-          }}
-          // chat-audio-async-insert sprint: keyExtractor 는 item.id 단순 형태로
-          // 복귀. BE 가 mid-session UPDATE 패턴을 폐기하면서 audio_status 전이가
-          // 같은 row 위에서 일어나지 않게 됨 — voice clone 발신자의 stub(pending)
-          // 은 BE 가 INSERT 한 row(ready, audio_url) 로 useChat 에서 같은 id 로
-          // **upsert** 되며, 그 시점에 ChatBubble 내부에서 `audio_url` key 를 가진
-          // AudioPlayer 가 처음 mount → expo-audio cold-start path. 셀 자체를
-          // fresh re-mount 시킬 필요가 없으므로 무관한 UPDATE(read_at 등) 에 대한
-          // 불필요한 unmount 비용도 사라진다. (read-at-removal-list-mask sprint
-          // 이후 read_at 컬럼은 사라졌고, listened_at / audio_status 등의 부수
-          // UPDATE 만 도착한다.)
-          keyExtractor={(item) => item.id}
-          inverted
-          onEndReached={hasMore ? loadOlder : undefined}
-          // chat-flatlist-pagination sprint: 0.1 was too tight — with the
-          // inverted list + ListHeaderComponent padding the threshold
-          // calculation routinely missed fire. 0.5 gives the user a half-
-          // viewport of slack and matches the RN default for prefetching.
-          onEndReachedThreshold={0.5}
-          // inverted 리스트에서 start = 시각적 바닥 = 최신 쪽. 직접 오프셋으로
-          // "닿는 순간" 을 판정하는 것보다 확실하다 — FlatList 가 한 번 발화 후
-          // 다시 멀어질 때까지 재발화를 스스로 막는다.
-          onStartReached={
-            jumped && hasNewer
-              ? () => {
-                  if (!jumpSettledRef.current) return;
-                  paginatingRef.current = true;
-                  // 응답이 0건이어서 배열이 안 늘어나면 효과가 플래그를 못 지운다.
-                  // 다음 진짜 메시지를 삼키지 않도록 안전망을 둔다.
-                  setTimeout(() => {
-                    paginatingRef.current = false;
-                  }, 3000);
-                  void loadNewer();
-                }
-              : undefined
-          }
-          onStartReachedThreshold={0.3}
-          onContentSizeChange={() => {
-            // 교체된 목록이 막 측정된 시점. 여기서 내려야 옛 위치의 내용이
-            // 한 프레임도 안 보인다.
-            if (!pendingBottomRef.current) return;
-            pendingBottomRef.current = false;
-            flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-          }}
-          viewabilityConfig={viewabilityConfigRef.current}
-          onViewableItemsChanged={onViewableItemsChangedRef.current}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          contentContainerStyle={styles.messageList}
-          style={styles.list}
-          // Inverted: ListHeaderComponent renders at the visual BOTTOM (above
-          // the input dock), ListFooterComponent renders at the visual TOP.
-          ListHeaderComponent={
-            <>
-              {/* 최신 방향 페이지를 받는 동안 시각적 바닥(= 사용자가 내려가는
-                  방향)에 스피너. 없으면 스크롤이 그냥 막힌 것처럼 보인다. */}
-              {loadingNewer && (
+              setTimeout(() => {
+                flatListRef.current?.scrollToIndex({
+                  index: info.index,
+                  animated: false,
+                  viewPosition: 0.5,
+                });
+              }, 80);
+            }}
+            // chat-audio-async-insert sprint: keyExtractor 는 item.id 단순 형태로
+            // 복귀. BE 가 mid-session UPDATE 패턴을 폐기하면서 audio_status 전이가
+            // 같은 row 위에서 일어나지 않게 됨 — voice clone 발신자의 stub(pending)
+            // 은 BE 가 INSERT 한 row(ready, audio_url) 로 useChat 에서 같은 id 로
+            // **upsert** 되며, 그 시점에 ChatBubble 내부에서 `audio_url` key 를 가진
+            // AudioPlayer 가 처음 mount → expo-audio cold-start path. 셀 자체를
+            // fresh re-mount 시킬 필요가 없으므로 무관한 UPDATE(read_at 등) 에 대한
+            // 불필요한 unmount 비용도 사라진다. (read-at-removal-list-mask sprint
+            // 이후 read_at 컬럼은 사라졌고, listened_at / audio_status 등의 부수
+            // UPDATE 만 도착한다.)
+            keyExtractor={(item) => item.id}
+            inverted
+            onEndReached={hasMore ? loadOlder : undefined}
+            // chat-flatlist-pagination sprint: 0.1 was too tight — with the
+            // inverted list + ListHeaderComponent padding the threshold
+            // calculation routinely missed fire. 0.5 gives the user a half-
+            // viewport of slack and matches the RN default for prefetching.
+            onEndReachedThreshold={0.5}
+            // inverted 리스트에서 start = 시각적 바닥 = 최신 쪽. 직접 오프셋으로
+            // "닿는 순간" 을 판정하는 것보다 확실하다 — FlatList 가 한 번 발화 후
+            // 다시 멀어질 때까지 재발화를 스스로 막는다.
+            onStartReached={
+              jumped && hasNewer
+                ? () => {
+                    if (!jumpSettledRef.current) return;
+                    paginatingRef.current = true;
+                    // 응답이 0건이어서 배열이 안 늘어나면 효과가 플래그를 못 지운다.
+                    // 다음 진짜 메시지를 삼키지 않도록 안전망을 둔다.
+                    setTimeout(() => {
+                      paginatingRef.current = false;
+                    }, 3000);
+                    void loadNewer();
+                  }
+                : undefined
+            }
+            onStartReachedThreshold={0.3}
+            onContentSizeChange={() => {
+              // 교체된 목록이 막 측정된 시점. 여기서 내려야 옛 위치의 내용이
+              // 한 프레임도 안 보인다.
+              if (!pendingBottomRef.current) return;
+              pendingBottomRef.current = false;
+              flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+            }}
+            viewabilityConfig={viewabilityConfigRef.current}
+            onViewableItemsChanged={onViewableItemsChangedRef.current}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            contentContainerStyle={styles.messageList}
+            style={styles.list}
+            // Inverted: ListHeaderComponent renders at the visual BOTTOM (above
+            // the input dock), ListFooterComponent renders at the visual TOP.
+            // 최신 방향 페이지를 받는 동안 시각적 바닥(= 사용자가 내려가는
+            // 방향)에 스피너. 없으면 스크롤이 그냥 막힌 것처럼 보인다.
+            // dock/키보드 여백은 여기(콘텐츠) 가 아니라 위 Animated.View 의
+            // marginBottom — 이유는 listAnimStyle 주석 참조.
+            ListHeaderComponent={
+              loadingNewer ? (
                 <ActivityIndicator color={colors.primary} style={{ padding: 12 }} />
-              )}
-              <Animated.View style={listSpacerStyle} />
-            </>
-          }
-          ListFooterComponent={
-            // chat-flatlist-pagination sprint: also surface the spinner while
-            // older pages are being fetched. In an inverted list the footer
-            // renders at the visual TOP — exactly where the user is scrolling
-            // when loadOlder fires, so the indicator lands in-context.
-            loading || loadingOlder ? (
-              <ActivityIndicator color={colors.primary} style={{ padding: 12 }} />
-            ) : null
-          }
-        />
+              ) : null
+            }
+            ListFooterComponent={
+              // chat-flatlist-pagination sprint: also surface the spinner while
+              // older pages are being fetched. In an inverted list the footer
+              // renders at the visual TOP — exactly where the user is scrolling
+              // when loadOlder fires, so the indicator lands in-context.
+              loading || loadingOlder ? (
+                <ActivityIndicator color={colors.primary} style={{ padding: 12 }} />
+              ) : null
+            }
+          />
+        </Animated.View>
 
         {/* 새 메시지 개수가 있으면 그 pill 이 우선, 아니면 바닥에서 멀어졌을 때
             "최신으로" 화살표. 점프 모드가 풀린 뒤에도 위쪽에 있으면 계속 필요하다. */}
