@@ -203,6 +203,7 @@ export default {
             // "음성을 들어야 안다" funnel 일관성 — 채팅 목록 카드에서도 본문 노출 차단.
             // 미청취 개수는 우측 배지가 별도 표시하므로 미리보기 슬롯엔 중립 마스크만.
             newMessage: "새 메시지",
+            photo: "사진을 보냈어요",
         },
         report: {
             title: "신고하기",
@@ -351,6 +352,8 @@ export default {
             permissionTitle: "사진 접근이 필요해요",
             permissionMessage: "설정에서 사진 접근을 허용하면 사진을 보낼 수 있어요.",
             expired: "만료된 사진",
+            loadFailed: "사진을 불러오지 못했어요",
+            reload: "사진 다시 불러오기",
         },
         profileSheet: {
             age: "나이",

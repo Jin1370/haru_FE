@@ -5,7 +5,6 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,7 +15,6 @@ interface PhotoConfirmModalProps {
   visible: boolean;
   /** 이미 리사이즈까지 끝난 이미지 — 미리보기가 실제로 보낼 것과 같다. */
   uri: string | null;
-  sending: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -33,12 +31,12 @@ interface PhotoConfirmModalProps {
  * 아이폰에서는 고르는 즉시 전송된다.
  *
  * 리사이즈는 이 모달을 띄우기 **전** 에 끝낸다. 그래야 여기 보이는 것이 실제로
- * 전송될 이미지와 같고, "보내기" 를 누른 뒤의 대기도 업로드뿐이다.
+ * 전송될 이미지와 같다. "전송" 을 누르면 이 모달은 **즉시 닫히고** 업로드 진행은
+ * 채팅의 낙관 말풍선이 보여준다 — 여기서 스피너를 돌리며 붙잡아 두지 않는다.
  */
 export function PhotoConfirmModal({
   visible,
   uri,
-  sending,
   onCancel,
   onConfirm,
 }: PhotoConfirmModalProps) {
@@ -51,7 +49,7 @@ export function PhotoConfirmModal({
       transparent={false}
       statusBarTranslucent
       animationType="slide"
-      onRequestClose={sending ? undefined : onCancel}
+      onRequestClose={onCancel}
     >
       <View style={styles.container}>
         {uri ? (
@@ -61,7 +59,6 @@ export function PhotoConfirmModal({
         <View style={[styles.bar, { paddingBottom: insets.bottom + 14 }]}>
           <Pressable
             onPress={onCancel}
-            disabled={sending}
             accessibilityRole="button"
             style={({ pressed }) => [
               styles.button,
@@ -73,7 +70,6 @@ export function PhotoConfirmModal({
           </Pressable>
           <Pressable
             onPress={onConfirm}
-            disabled={sending}
             accessibilityRole="button"
             style={({ pressed }) => [
               styles.button,
@@ -81,11 +77,7 @@ export function PhotoConfirmModal({
               pressed && { opacity: 0.85 },
             ]}
           >
-            {sending ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Text style={styles.sendText}>{t('chat.photo.confirmSend')}</Text>
-            )}
+            <Text style={styles.sendText}>{t('chat.photo.confirmSend')}</Text>
           </Pressable>
         </View>
       </View>

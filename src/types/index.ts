@@ -266,6 +266,10 @@ export interface MatchListItem {
     // 별도 fetch 없이 평가.
     audio_status: AudioStatus;
     listened_at: string | null;
+    // chat-photos: 마지막 메시지가 사진인지. original_text 의 폴백 캡션은 옛 앱
+    // 전용 안내라("앱 업데이트 후 볼 수 있어요") 최신 앱은 이 플래그를 보고
+    // 자기 카피(matches.preview.photo)를 쓴다.
+    is_photo?: boolean;
   } | null;
   unread_count: number;
   // Per-match, viewer-relative photo reveal flags aggregated by BE.

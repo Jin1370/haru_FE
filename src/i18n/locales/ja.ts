@@ -202,6 +202,7 @@ export default {
             // read-at-removal-list-mask sprint: 相手の未試聴メッセージのマスキング。
             // 未試聴の件数は右側のバッジが別途表示するため、プレビューは中立マスクのみ。
             newMessage: "新しいメッセージ",
+            photo: "写真を送りました",
         },
         report: {
             title: "通報する",
@@ -348,6 +349,8 @@ export default {
             permissionTitle: "写真へのアクセスが必要です",
             permissionMessage: "設定で写真へのアクセスを許可すると写真を送れます。",
             expired: "期限切れの写真",
+            loadFailed: "写真を読み込めませんでした",
+            reload: "写真を再読み込み",
         },
         profileSheet: {
             age: "年齢",

@@ -71,8 +71,12 @@ export function PhotoViewerModal({ visible, uri, onClose }: PhotoViewerModalProp
         }
       }
 
-      await MediaLibrary.saveToLibraryAsync(tmp);
-      await FileSystem.deleteAsync(tmp, { idempotent: true }).catch(() => {});
+      try {
+        await MediaLibrary.saveToLibraryAsync(tmp);
+      } finally {
+        // 중간에 끊겨 부분만 받아진 파일도 남기지 않는다.
+        await FileSystem.deleteAsync(tmp, { idempotent: true }).catch(() => {});
+      }
       showAlert({ variant: 'info', title: t('chat.photo.saved') });
     } catch (e) {
       if (__DEV__) {

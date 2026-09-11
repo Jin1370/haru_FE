@@ -46,6 +46,9 @@ export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
   const lastMessage = item.last_message;
   const isFromMe = lastMessage && partner ? lastMessage.sender_id !== partner.id : false;
   const isReadyAudio = lastMessage?.audio_status === 'ready';
+  // chat-photos: 사진 메시지는 original_text 대신 짧은 자체 카피를 쓴다
+  // (original_text 는 옛 앱용 "앱 업데이트 후 볼 수 있어요" 안내라 목록에 길다).
+  const photoPreview = lastMessage?.is_photo ? t('matches.preview.photo') : null;
   const isListened = !!lastMessage?.listened_at;
 
   let lastMessageText: string;
@@ -57,7 +60,7 @@ export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
     // BE 가 tombstone 매치에 한해 original_text 를 null 로 normalize 한다
     // (safety 권고 #2 의 raw API 누설 차단). tombstone 은 위 분기에서 처리되므로
     // 여기 도달 시 비어있을 일은 없지만 타입 safety 용 fallback.
-    lastMessageText = lastMessage.original_text ?? '';
+    lastMessageText = photoPreview ?? lastMessage.original_text ?? '';
   } else if (!isReadyAudio) {
     // 상대 발신이지만 비정상 status — BE v3 가 last_message 후보에서 제외하므로
     // 실제로 도달하기 어려운 분기. "비어 있는 카드" 회피용 폴백.
@@ -67,7 +70,7 @@ export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
     // 본문은 청취 전까지 노출하지 않는다 ("음성을 들어야 안다" funnel). 미청취
     // 개수는 우측 배지가 별도로 표시하므로 여기선 중립 마스크만 채운다.
     lastMessageText = isListened
-      ? (lastMessage.original_text ?? '')
+      ? (photoPreview ?? lastMessage.original_text ?? '')
       : t('matches.preview.newMessage');
   }
 

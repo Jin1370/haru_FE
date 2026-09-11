@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Image,
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Animated,
@@ -87,6 +88,9 @@ interface ChatBubbleProps {
   // chat-photos: 사진 탭 → 전체 화면 뷰어. 뷰어는 채팅 화면이 하나만 들고
   // 대상 uri 만 갈아끼운다 (말풍선마다 Modal 을 달지 않기 위해).
   onPhotoPress?: (uri: string) => void;
+  // 이미지 로드가 실패했을 때 서명 URL 을 새로 받아오기. 서명 URL 은 1시간이면
+  // 만료되는데 화면을 계속 열어두면 state 의 값이 그대로 낡는다.
+  onPhotoReload?: (messageId: string) => Promise<void> | void;
 }
 
 const AVATAR_SIZE = 36;
@@ -108,6 +112,7 @@ export function ChatBubble({
   onQuotePress,
   highlighted = false,
   onPhotoPress,
+  onPhotoReload,
 }: ChatBubbleProps) {
   const { t, i18n } = useTranslation();
   // idempotent-send sprint: 낙관 stub 3-상태. isMine 전용이라 수신자 게이팅
@@ -184,9 +189,69 @@ export function ChatBubble({
   //   * isPhotoPurged — 전송 30일 sweep 이 지움. 음성과 달리 **복구 경로가
   //     없어서** 재생성 버튼이 아니라 만료 안내를 띄운다.
   const isPhotoPurged = !!message.photo_purged_at;
-  const cachedPhoto = cachedPhotoUri(message.id);
-  const photoUri = cachedPhoto ?? message.photo_url ?? null;
-  const isPhoto = !isPhotoPurged && !!photoUri;
+  const [photoError, setPhotoError] = useState(false);
+  // 캐시 파일이 깨진 경우에만 캐시를 건너뛴다. 무조건 건너뛰면 서명 URL 이 만료
+  // 됐을 때 멀쩡한 캐시를 두고도 실패로 떨어진다 (채팅방을 한 시간 열어두면
+  // 예전 사진이 전부 오류로 바뀌던 원인).
+  const [skipPhotoCache, setSkipPhotoCache] = useState(false);
+  const cachedPhoto = skipPhotoCache ? null : cachedPhotoUri(message.id);
+  const photoCandidate = cachedPhoto ?? message.photo_url ?? null;
+  // 한 번 그리기 시작한 소스는 고정한다. uri 문자열이 바뀌면 같은 사진이어도
+  // RN 이 다시 로드해 **한 번 깜빡인다** — 발신자는 낙관 말풍선(로컬 파일)이
+  // 서버 row(원격 URL)로 교체될 때, 수신자는 백그라운드 캐시가 끝난 뒤 아무
+  // 리렌더(읽음 마킹 등)에서 로컬 경로로 넘어갈 때 걸렸다.
+  // 소스를 바꿔야 하는 건 로드가 실패했을 때뿐이고, 그 경로는 아래 onError 가
+  // displayUri 를 비워 다음 후보를 고르게 한다.
+  const [displayUri, setDisplayUri] = useState<string | null>(photoCandidate);
+  useEffect(() => {
+    if (displayUri || !photoCandidate) return;
+    setDisplayUri(photoCandidate);
+  }, [displayUri, photoCandidate]);
+  const photoUri = displayUri;
+  const isPhoto = !isPhotoPurged && !!photoUri && !photoError;
+  // 사진 행인데 아직 못 그리는 두 상태를 나눈다.
+  //   * photoPending — photo_path 는 있는데 서명 URL 이 없다. realtime 으로
+  //     막 도착한 직후가 대부분이라(URL 은 뒤따라 받아온다) 실패로 단정하면
+  //     사진이 올 때마다 오류 문구가 번쩍인다. 자리만 잡고 기다린다.
+  //   * photoError — 이미지 로드가 실제로 실패했다(만료된 URL / 깨진 캐시).
+  //     여기서만 재시도 문구를 띄운다.
+  // 서명이 끝내 실패하면(Storage 객체 부재 등 — Supabase 는 없는 객체에 서명을
+  // 거부한다) photoPending 자리 표시가 남고, 탭하면 다시 시도한다.
+  const awaitingPhotoUrl =
+    !isPhotoPurged && !!message.photo_path && !photoUri && !photoError;
+  // 받는 중은 **시간 제한**이 있어야 한다. photoError 는 <Image onError> 에서만
+  // 켜지는데 URL 이 없으면 <Image> 자체가 안 그려진다 — 서명이 끝내 실패하는
+  // 경우(Storage 객체 부재 등) 넘어갈 경로가 없어 영원히 스피너가 돈다.
+  const [urlTimedOut, setUrlTimedOut] = useState(false);
+  useEffect(() => {
+    if (!awaitingPhotoUrl) {
+      setUrlTimedOut(false);
+      return;
+    }
+    // realtime 도착 후 URL 한 번 받아오는 건 보통 1초 안쪽이라 넉넉한 값.
+    const timer = setTimeout(() => setUrlTimedOut(true), 8000);
+    return () => clearTimeout(timer);
+  }, [awaitingPhotoUrl]);
+
+  // 재시도 중에는 받는 중 자리 표시를 다시 쓴다 — 탭했는데 화면이 그대로면
+  // 눌린 건지 알 수가 없다 (서명이 끝내 실패하는 경로에서는 결과도 안 바뀐다).
+  const [photoRetrying, setPhotoRetrying] = useState(false);
+  const handlePhotoReload = () => {
+    if (photoRetrying || !onPhotoReload) return;
+    setPhotoRetrying(true);
+    Promise.resolve(onPhotoReload(message.id)).finally(() => setPhotoRetrying(false));
+  };
+
+  const photoPending = (awaitingPhotoUrl && !urlTimedOut) || photoRetrying;
+  const photoFailed = !photoRetrying && (photoError || (awaitingPhotoUrl && urlTimedOut));
+  // 껍데기를 벗기는 건 **실제 이미지가 뜰 때만**. 실패/만료/받는 중은 일반
+  // 메시지처럼 말풍선 안에 들어간다.
+  // 새 URL 이 도착하면 다시 시도할 수 있게 실패 상태와 자동 재시도 여유를 푼다.
+  const autoReloadedRef = useRef(false);
+  useEffect(() => {
+    setPhotoError(false);
+    autoReloadedRef.current = false;
+  }, [message.photo_url]);
   useEffect(() => {
     // 다음 마운트부터 로컬 파일을 쓰도록 미리 받아둔다. 이번 표시는 그대로
     // 원격 URL (audioCache 와 같은 절충 — 완료 시 리렌더는 걸지 않는다).
@@ -198,6 +263,8 @@ export function ChatBubble({
     message.translated_text !== message.original_text &&
     // 사진 메시지의 본문은 폴백 캡션뿐이라 원문/번역을 둘 다 띄울 이유가 없다.
     !isPhoto &&
+    !photoPending &&
+    !photoFailed &&
     !isPhotoPurged;
 
   // voice-first-message-gate sprint: 수신자 한정 게이팅 상태.
@@ -437,6 +504,7 @@ export function ChatBubble({
       {isPhoto ? (
         <Pressable
           onPress={() => photoUri && onPhotoPress?.(photoUri)}
+          disabled={isSending}
           accessibilityRole="button"
           accessibilityLabel={t('chat.photo.open')}
         >
@@ -450,14 +518,74 @@ export function ChatBubble({
                 : { aspectRatio: 1 },
             ]}
             resizeMode="cover"
+            onError={() => {
+              // 단계적으로 물러난다. 여기서 바로 실패로 못 박으면 만료처럼
+              // 저절로 회복 가능한 경우까지 오류로 보인다.
+              //   1) 캐시 파일로 그리다 실패 → 파일이 깨졌다. 원격으로 다시.
+              //   2) 원격 URL 로 실패 → 대개 만료(1시간). 새로 서명받는다.
+              //   3) 그래도 실패 → 그때 오류 UI.
+              if (!skipPhotoCache && cachedPhoto) {
+                setSkipPhotoCache(true);
+                setDisplayUri(null); // 다음 후보(원격 URL)로 넘어간다
+                return;
+              }
+              if (!autoReloadedRef.current && onPhotoReload) {
+                autoReloadedRef.current = true;
+                setPhotoRetrying(true);
+                setDisplayUri(null); // 새 서명 URL 이 도착하면 그걸로 다시 그린다
+                Promise.resolve(onPhotoReload(message.id)).finally(() =>
+                  setPhotoRetrying(false),
+                );
+                return;
+              }
+              setPhotoError(true);
+            }}
           />
+          {/* 전송 중: 실제 보내진 사진과 같은 모양을 유지한 채 흐림 + 스피너만
+              얹는다. 업로드가 끝나면 서버 row 로 교체되며 자연스럽게 사라진다. */}
+          {isSending && (
+            <View style={styles.photoSending} pointerEvents="none">
+              <ActivityIndicator color={colors.white} />
+            </View>
+          )}
+        </Pressable>
+      ) : photoPending ? (
+        <Pressable
+          onPress={handlePhotoReload}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.photo.reload')}
+          style={[
+            styles.photo,
+            styles.photoPending,
+            message.photo_width && message.photo_height
+              ? { aspectRatio: message.photo_width / message.photo_height }
+              : { aspectRatio: 1 },
+          ]}
+        >
+          <ActivityIndicator size="small" color={colors.primary} />
+        </Pressable>
+      ) : photoFailed ? (
+        <Pressable
+          onPress={handlePhotoReload}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.photo.reload')}
+          style={styles.photoExpired}
+        >
+          <Ionicons
+            name="refresh"
+            size={18}
+            color={isMine ? 'rgba(255,255,255,0.85)' : colors.textSecondary}
+          />
+          <Text style={[styles.photoExpiredText, isMine && styles.mineText]}>
+            {t('chat.photo.loadFailed')}
+          </Text>
         </Pressable>
       ) : isPhotoPurged ? (
         <View style={styles.photoExpired}>
           <Ionicons
             name="image-outline"
             size={20}
-            color={isMine ? 'rgba(255,255,255,0.8)' : colors.textSecondary}
+            color={isMine ? 'rgba(255,255,255,0.85)' : colors.textSecondary}
           />
           <Text style={[styles.photoExpiredText, isMine && styles.mineText]}>
             {t('chat.photo.expired')}
@@ -652,6 +780,9 @@ export function ChatBubble({
             // chat-photos: 사진은 말풍선 없이 이미지 단독으로 보인다. 배경/패딩/
             // 테두리를 지워야 사진 아래로 말풍선 색이 삐져나오지 않는다.
             isPhoto && styles.bubblePhoto,
+            // Android 의 elevation 은 배경이 투명한 뷰에 걸리면 둥근 모서리를
+            // 못 따라가고 **사각형 그림자**를 그린다. 껍데기를 벗긴 사진에는
+            // 그림자를 아예 주지 않는다.
             !isPhoto && shadows.soft,
             // idempotent-send sprint: 실패 시에만 dim — 재시도 필요 신호.
             // 전송중(sending)은 일반 말풍선과 동일 색(dim 안 함, 사용자 결정
@@ -816,6 +947,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
     borderWidth: 0,
+    // overflow:'hidden' 은 쓰지 않는다. 말풍선의 둥근 모서리(반지름 18)가 아래
+    // 우측의 전송 시각을 잘라 먹는다 — 이미지는 자체 borderRadius 로 이미
+    // 둥글어서 클리핑이 필요 없다.
   },
   photoExpired: {
     flexDirection: 'row',
@@ -824,9 +958,25 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   photoExpiredText: {
+    // 한 줄 문구가 길어 말풍선(최대 78%) 밖으로 삐져나오던 것 — 남는 폭 안에서
+    // 줄바꿈되게 한다.
+    flexShrink: 1,
     fontSize: 12,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
+  },
+  photoSending: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.sm,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  // 서명 URL 을 받아오는 동안의 자리 표시. 사진과 같은 비율이라 도착 시 레이아웃이
+  // 안 튄다.
+  photoPending: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   // message-reply: 본문 위 인용 블록. 연분홍 배경 + 좌측 세로바로 본문과 갈라
   // 놓는다 (세로바만으로는 내 말풍선처럼 배경이 이미 분홍인 쪽에서 잘 안 보였다).

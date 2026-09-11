@@ -64,6 +64,34 @@ export function cachedPhotoUri(messageId: string): string | null {
   return name && entries.has(name) ? DIR + name : null;
 }
 
+/**
+ * 내가 방금 보낸 사진처럼 **이미 기기에 있는 파일**을 캐시로 편입한다.
+ * 업로드한 것과 같은 바이트라 서버에서 다시 받을 이유가 없다 (발신자는 자기
+ * 사진을 한 번 더 내려받고 있었다).
+ */
+export function adoptLocalPhoto(messageId: string, localUri: string): void {
+  const name = fileNameOf(messageId);
+  if (!name || entries.has(name) || inFlight.has(name)) return;
+  inFlight.add(name);
+  void (async () => {
+    const target = DIR + name;
+    try {
+      await ready;
+      if (entries.has(name)) return;
+      await FileSystem.copyAsync({ from: localUri, to: target });
+      const info = await FileSystem.getInfoAsync(target);
+      const size = info.exists && !info.isDirectory ? (info.size ?? 0) : 0;
+      entries.set(name, { size, mtime: info.exists ? (info.modificationTime ?? 0) : 0 });
+      totalBytes += size;
+      await evict();
+    } catch {
+      await FileSystem.deleteAsync(target, { idempotent: true }).catch(() => {});
+    } finally {
+      inFlight.delete(name);
+    }
+  })();
+}
+
 /** 백그라운드 다운로드. 이미 있거나 받는 중이면 no-op. */
 export function cachePhoto(messageId: string, url: string): void {
   const name = fileNameOf(messageId);

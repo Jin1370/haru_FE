@@ -31,6 +31,7 @@ import { ChatPromptsModal } from '@/components/chat/ChatPromptsModal';
 import { MessageActionsSheet } from '@/components/chat/MessageActionsSheet';
 import { PhotoViewerModal } from '@/components/chat/PhotoViewerModal';
 import { PhotoConfirmModal } from '@/components/chat/PhotoConfirmModal';
+import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { ChatPromptsToggleButton } from '@/components/chat/ChatPromptsToggleButton';
@@ -55,6 +56,10 @@ const PHOTO_QUALITY = 0.8;
 
 // message-reply: 입력창 위 답장 프리뷰 바의 대략 높이 (onLayout 측정 전 폴백).
 const REPLY_PREVIEW_HEIGHT = 46;
+
+// 인용 점프를 로컬 스크롤로 처리할 최대 거리(항목 수). 이보다 멀면 around 로
+// 그 구간을 다시 받아 목록을 교체한다 — 가상화 범위 밖으로는 한 번에 못 간다.
+const NEAR_JUMP_ITEMS = 40;
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
 import { ProfilePhotoGallery } from '@/components/ui/ProfilePhotoGallery';
 import { useChat } from '@/hooks/useChat';
@@ -262,6 +267,7 @@ export default function ChatScreen() {
     loadOlder,
     send,
     sendPhoto,
+    reloadPhotoUrl,
     // idempotent-send sprint: 낙관 stub 의 송신 상태(sending/failed) 맵 + 실패
     // 말풍선 탭 재시도. ChatBubble 에 sendState[item.id] / onRetry 로 배선.
     sendState,
@@ -301,11 +307,10 @@ export default function ChatScreen() {
   // chat-photos: 전체 화면 뷰어는 화면당 하나. 말풍선마다 Modal 을 달면 대화
   // 길이만큼 모달이 마운트된다 (액션 시트와 같은 이유).
   const [viewerUri, setViewerUri] = useState<string | null>(null);
-  const [sendingPhoto, setSendingPhoto] = useState(false);
   // chat-photos: 고른 사진을 바로 보내지 않고 미리보기를 한 번 거친다. 리사이즈
   // 까지 끝난 값이라 여기 보이는 것이 실제로 전송될 이미지와 같다.
   const [pendingPhoto, setPendingPhoto] = useState<
-    { uri: string; width: number; height: number } | null
+    { uri: string; width: number; height: number; clientId: string } | null
   >(null);
   // 점프 직후엔 목록이 교체되며 리스트가 잠깐 "최신 끝" 에 놓인다. 그 순간의
   // onStartReached 를 그대로 받으면 곧장 다음 페이지를 당겨와 #1 로 가자마자
@@ -344,6 +349,44 @@ export default function ChatScreen() {
   // as the user keeps typing past one line, instead of staying pinned to 44h.
   const [inputContentHeight, setInputContentHeight] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+
+  // 하단(최신)으로 내리기. 한 번만 부르면 maintainVisibleContentPosition 이
+  // 레이아웃 후 위치를 되돌려 놓는다 — 특히 사진처럼 높이가 큰 말풍선이 들어올
+  // 때. 즉시 / 다음 프레임 / 250ms 세 번 부른다 (같은 호출이라 중복은 무해).
+  // 아래(최신) 방향 페이지를 받는 중인지. 페이지네이션으로 붙는 메시지를 "새
+  // 메시지 도착" 으로 오인하면 하단으로 끌려간다 — 특히 마지막 페이지에서
+  // 점프 모드가 풀리는 순간(jumped 가 false 로 바뀌며 가드가 열린다) 그대로
+  // 맨 아래로 튀었다.
+  const paginatingRef = useRef(false);
+
+  // 목록을 통째로 교체할 때(= "최신으로") 는 위치 보정을 꺼야 한다. 켜져 있으면
+  // 교체 직후 프레임에서 보던 항목을 붙잡아, 맨 아래로 가는 도중 한 번 멈췄다
+  // 가는 것처럼 보인다.
+  const [preserveScroll, setPreserveScroll] = useState(true);
+
+  // 목록 교체 후 "새 내용이 측정되는 그 시점" 에 바닥으로 보내기 위한 1회용 깃발.
+  // setTimeout 으로 늦게 밀면 그 사이 옛 스크롤 위치의 내용이 그대로 보여
+  // "중간에 한 번 멈췄다 간다" 로 읽힌다.
+  const pendingBottomRef = useRef(false);
+
+  // 지금 화면에 보이는 첫 항목의 인덱스. 인용 점프가 "가까운 이동" 인지 판단하는
+  // 데만 쓴다. ref 라 리렌더를 유발하지 않는다.
+  const firstVisibleIndexRef = useRef(0);
+  const viewabilityConfigRef = useRef({ itemVisiblePercentThreshold: 50 });
+  const onViewableItemsChangedRef = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
+      const first = viewableItems[0]?.index;
+      if (typeof first === 'number') firstVisibleIndexRef.current = first;
+    },
+  );
+
+  const scrollToBottom = useCallback((animated = true) => {
+    const go = () => flatListRef.current?.scrollToOffset({ offset: 0, animated });
+    go();
+    requestAnimationFrame(go);
+    setTimeout(go, 250);
+  }, []);
+
   // Track previous list state so we only auto-scroll when a NEW message is
   // appended at the end — not when older messages are prepended via loadOlder.
   const prevLengthRef = useRef(0);
@@ -415,10 +458,15 @@ export default function ChatScreen() {
       // 점프 중에는 새 메시지를 배열에 안 붙이므로 여기 도달할 일이 거의 없지만,
       // 본인이 보낸 낙관 stub 은 realtime 이 아니라 send() 가 직접 넣는다 —
       // 옛 구간을 읽는 중에 화면이 최신으로 튀지 않게 한 번 더 막는다.
-      if (appendedNew && prevLen > 0 && !jumped) {
+      if (appendedNew && paginatingRef.current) {
+        // 페이지네이션 결과다 — 위치를 건드리지 않는다.
+        paginatingRef.current = false;
+      } else if (appendedNew && prevLen > 0 && !jumped) {
         const isMine = lastMessage?.sender_id === userId;
         if (isMine || isNearBottomRef.current) {
-          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+          // 본인 발신은 위로 올라가 읽던 중이어도 항상 내려간다 — 보낸 게
+          // 어디 갔는지 안 보이면 전송됐는지조차 알 수 없다.
+          scrollToBottom();
           setNewMessagesCount(0);
         } else {
           setNewMessagesCount((c) => c + 1);
@@ -429,7 +477,7 @@ export default function ChatScreen() {
     prevLengthRef.current = currLen;
     prevFirstIdRef.current = currFirstId;
     prevLastIdRef.current = currLastId;
-  }, [messages, userId]);
+  }, [messages, userId, jumped, scrollToBottom]);
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     // In an inverted FlatList contentOffset.y === 0 means the visual bottom
@@ -445,7 +493,7 @@ export default function ChatScreen() {
   };
 
   const handleNewMessagesBadgePress = () => {
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    scrollToBottom();
     setNewMessagesCount(0);
   };
 
@@ -453,12 +501,19 @@ export default function ChatScreen() {
   // 스크롤 위치는 그대로 남고, maintainVisibleContentPosition 이 "보던 위치
   // 유지" 를 하려 들어서 새 목록 중간에 멈춘다. 교체가 렌더된 뒤 바닥으로
   // 보내야 하고, mVCP 가 레이아웃 후 한 번 더 보정할 수 있어 두 번 부른다.
-  const handleBackToLatest = async () => {
+  // 점프 모드에서 최신 구간으로 복귀. 버튼과 전송(텍스트/사진) 세 곳이 같은
+  // 경로를 써야 한다 — 예전엔 전송 쪽이 backToLatest 만 직접 불러 목록만 갈리고
+  // 스크롤은 옛 위치에 남았다 (보낸 메시지가 화면 밖에 생기던 원인).
+  const returnToLatest = useCallback(async () => {
+    setPreserveScroll(false);
+    pendingBottomRef.current = true;
     await backToLatest();
-    const toBottom = () =>
-      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-    requestAnimationFrame(toBottom);
-    setTimeout(toBottom, 250);
+    // 교체가 끝난 뒤 다시 켠다 — 아래 방향 페이지네이션이 이 보정에 의존한다.
+    setTimeout(() => setPreserveScroll(true), 300);
+  }, [backToLatest]);
+
+  const handleBackToLatest = async () => {
+    await returnToLatest();
     setNewMessagesCount(0);
   };
 
@@ -469,7 +524,6 @@ export default function ChatScreen() {
   // PHPicker 는 단일 선택 시 탭하는 순간 닫혀 확인 단계가 아예 없다. 앱 모달이
   // 없으면 아이폰에서는 고르는 즉시 전송된다 (사용자 결정 2026-09-10).
   const handlePickPhoto = async () => {
-    if (sendingPhoto) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       showAlert({
@@ -511,33 +565,43 @@ export default function ChatScreen() {
         ],
         { compress: PHOTO_QUALITY, format: ImageManipulator.SaveFormat.JPEG },
       );
-      setPendingPhoto({ uri: resized.uri, width: resized.width, height: resized.height });
+      setPendingPhoto({
+        uri: resized.uri,
+        width: resized.width,
+        height: resized.height,
+        // 미리보기에 id 를 귀속시켜 재시도가 같은 id 로 나가게 한다 (BE 멱등).
+        clientId: Crypto.randomUUID(),
+      });
     } catch (e: any) {
       showAlert({ variant: 'error', title: t('common.error'), message: userFacingError(e, t) });
     }
   };
 
-  // 미리보기에서 "보내기" 를 눌렀을 때만 실제 업로드.
+  // 미리보기에서 "전송" 을 누르면 **바로 닫고** 채팅으로 넘어간다. 업로드 진행은
+  // 채팅의 낙관 말풍선(흐림 + 스피너)이 보여준다 — 전송 버튼 스피너를 보고 있는
+  // 것보다 "보내졌다" 는 감각이 자연스럽다.
+  //
+  // 실패해도 미리보기로 되돌리지 않는다 (사용자 결정 2026-09-11). 오류 모달만
+  // 띄우고 끝 — 낙관 말풍선은 useChat 이 걷어낸다.
   const handleConfirmPhoto = async () => {
-    if (!pendingPhoto || sendingPhoto) return;
-    setSendingPhoto(true);
+    if (!pendingPhoto) return;
+    const photo = pendingPhoto;
+    setPendingPhoto(null);
     // 옛 구간을 보는 중이면 보낸 사진이 화면 밖에 생긴다 — 텍스트 전송과 동일.
-    if (jumped) await backToLatest();
+    if (jumped) await returnToLatest();
     const replyForSend = replyTarget;
     setReplyTarget(null);
     try {
-      await sendPhoto(pendingPhoto.uri, {
+      await sendPhoto(photo.uri, {
         replyToId: replyForSend?.id,
-        width: pendingPhoto.width,
-        height: pendingPhoto.height,
+        width: photo.width,
+        height: photo.height,
+        clientId: photo.clientId,
       });
-      setPendingPhoto(null);
     } catch (e: any) {
       // 모더레이션 차단은 메시지와 같은 카피를 재사용한다 (표면별 카피를 늘리지
-      // 않는 게 message-moderation-v1 이후의 규칙). 미리보기를 열어 두면 같은
-      // 사진을 다시 보내려 시도하게 되므로 닫는다.
+      // 않는 게 message-moderation-v1 이후의 규칙).
       if (e instanceof ApiRequestError && e.code === 'photo_blocked') {
-        setPendingPhoto(null);
         showAlert({
           variant: 'info',
           title: t('moderation.blocked.title'),
@@ -547,8 +611,6 @@ export default function ChatScreen() {
         showAlert({ variant: 'error', title: t('common.error'), message: userFacingError(e, t) });
       }
       setReplyTarget(replyForSend);
-    } finally {
-      setSendingPhoto(false);
     }
   };
 
@@ -565,7 +627,7 @@ export default function ChatScreen() {
     const trimmed = text.trim();
     // 옛 구간을 보는 중에 보내면 그 메시지가 어디로 갔는지 안 보인다. 먼저
     // 최신으로 돌아온 뒤 보낸다 (카톡/라인과 같은 동선).
-    if (jumped) await backToLatest();
+    if (jumped) await returnToLatest();
     setSending(true);
     setText('');
     const emotionForSend = selectedEmotion;
@@ -751,7 +813,14 @@ export default function ChatScreen() {
   // 범위 밖이면 그 구간을 서버에서 받아 목록을 교체한다 (jumpToMessage).
   const handleQuotePress = useCallback(
     async (messageId: string) => {
-      if (messagesById.has(messageId)) {
+      // 목록에 있어도 **멀면** 그냥 스크롤하지 않는다. 가상화된 리스트는 렌더
+      // 범위 밖 인덱스로 한 번에 못 가서, scrollToIndex 실패 → 평균 높이로 근사
+      // 이동 → 재시도가 반복되며 그 사이 메시지를 단계적으로 훑는다. around 로
+      // 창을 다시 받으면 목록이 50개짜리로 짧아져 한 번에 정확히 간다.
+      const index = inverseMessages.findIndex((m) => m.id === messageId);
+      const isNear =
+        index >= 0 && Math.abs(index - firstVisibleIndexRef.current) <= NEAR_JUMP_ITEMS;
+      if (isNear) {
         setPendingScrollId(messageId);
         return;
       }
@@ -760,7 +829,7 @@ export default function ChatScreen() {
       if (ok) setPendingScrollId(messageId);
       else jumpSettledRef.current = true;
     },
-    [messagesById, jumpToMessage],
+    [inverseMessages, jumpToMessage],
   );
 
   // 예약된 점프 대상이 목록에 나타나면 그 위치로 스크롤. 말풍선 높이가
@@ -770,7 +839,10 @@ export default function ChatScreen() {
     if (!pendingScrollId) return;
     const index = inverseMessages.findIndex((m) => m.id === pendingScrollId);
     if (index < 0) return;
-    flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+    // 즉시 이동한다. 애니메이션을 켜면 거리가 멀 때 그 사이 메시지를 전부
+    // 훑고 올라간다 — 아래로 페이지를 다 받아 목록에 200개가 있으면 그게
+    // 고스란히 보인다. 도착했다는 신호는 말풍선 색 펄스가 담당한다.
+    flatListRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0.5 });
     setHighlightId(pendingScrollId);
     setPendingScrollId(null);
     // 스크롤 애니메이션이 끝날 때까지는 최신 방향 로드를 막아둔다.
@@ -823,6 +895,7 @@ export default function ChatScreen() {
           }
           highlighted={highlightId === item.id}
           onPhotoPress={setViewerUri}
+          onPhotoReload={reloadPhotoUrl}
           onListened={markListened}
           onRegenerateAudio={regenerateAudio}
           onAvatarPress={() => {
@@ -1003,7 +1076,15 @@ export default function ChatScreen() {
           // 최신 쪽(data[0])에 페이지가 붙어도 보던 위치가 안 밀리게 스크롤을
           // 보정한다. 네이티브 리스트가 기본으로 해주는 일의 RN 대체품 —
           // 이게 없으면 아래로 한 페이지 받을 때마다 화면이 튄다.
-          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          //
+          // autoscrollToTopThreshold 는 쓰지 않는다. "최신 끝 근처면 새 내용을
+          // 따라간다" 는 규칙이 **아래로 페이지를 받는 것까지** 따라가게 만든다
+          // (그것도 data[0] 에 붙으므로) — 따라가면 다시 끝 근처라 onStartReached
+          // 가 재발화해 #26 → #76 → #126 으로 끌려갔다. 방금 보낸 메시지를
+          // 보여주는 일은 scrollToBottom 이 명시적으로 한다.
+          maintainVisibleContentPosition={
+            preserveScroll ? { minIndexForVisible: 0 } : undefined
+          }
           // 말풍선 높이가 제각각이라 아직 안 그린 항목으로는 바로 못 간다.
           // 평균 높이로 근처까지 보낸 뒤 다음 프레임에 다시 시도.
           onScrollToIndexFailed={(info) => {
@@ -1014,7 +1095,7 @@ export default function ChatScreen() {
             setTimeout(() => {
               flatListRef.current?.scrollToIndex({
                 index: info.index,
-                animated: true,
+                animated: false,
                 viewPosition: 0.5,
               });
             }, 80);
@@ -1044,11 +1125,26 @@ export default function ChatScreen() {
             jumped && hasNewer
               ? () => {
                   if (!jumpSettledRef.current) return;
+                  paginatingRef.current = true;
+                  // 응답이 0건이어서 배열이 안 늘어나면 효과가 플래그를 못 지운다.
+                  // 다음 진짜 메시지를 삼키지 않도록 안전망을 둔다.
+                  setTimeout(() => {
+                    paginatingRef.current = false;
+                  }, 3000);
                   void loadNewer();
                 }
               : undefined
           }
           onStartReachedThreshold={0.3}
+          onContentSizeChange={() => {
+            // 교체된 목록이 막 측정된 시점. 여기서 내려야 옛 위치의 내용이
+            // 한 프레임도 안 보인다.
+            if (!pendingBottomRef.current) return;
+            pendingBottomRef.current = false;
+            flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+          }}
+          viewabilityConfig={viewabilityConfigRef.current}
+          onViewableItemsChanged={onViewableItemsChangedRef.current}
           onScroll={handleScroll}
           scrollEventThrottle={16}
           contentContainerStyle={styles.messageList}
@@ -1218,7 +1314,6 @@ export default function ChatScreen() {
                 {/* chat-photos: 감정 토글 오른쪽 (사용자 결정 2026-09-10). */}
                 <Pressable
                   onPress={handlePickPhoto}
-                  disabled={sendingPhoto}
                   hitSlop={6}
                   accessibilityRole="button"
                   accessibilityLabel={t('chat.photo.send')}
@@ -1227,11 +1322,7 @@ export default function ChatScreen() {
                     pressed && { transform: [{ scale: 0.95 }] },
                   ]}
                 >
-                  {sendingPhoto ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  ) : (
-                    <Ionicons name="image-outline" size={22} color={colors.primary} />
-                  )}
+                  <Ionicons name="image-outline" size={22} color={colors.primary} />
                 </Pressable>
                 {/* Text overlay placeholder — RN drops fontFamily on the
                     native placeholder for multiline TextInputs (Android
@@ -1433,7 +1524,6 @@ export default function ChatScreen() {
       <PhotoConfirmModal
         visible={!!pendingPhoto}
         uri={pendingPhoto?.uri ?? null}
-        sending={sendingPhoto}
         onCancel={() => setPendingPhoto(null)}
         onConfirm={handleConfirmPhoto}
       />

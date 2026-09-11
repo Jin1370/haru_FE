@@ -100,6 +100,7 @@ function applyIncomingMessage(
       // 입력값. INSERT realtime payload 의 status/listened_at 을 그대로 반영.
       audio_status: message.audio_status,
       listened_at: message.listened_at,
+      is_photo: !!message.photo_path,
     },
     unread_count: isMine ? row.unread_count : row.unread_count + 1,
   };

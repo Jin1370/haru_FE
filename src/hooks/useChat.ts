@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import useSWR from 'swr';
 import * as messageService from '@/services/messages';
+import { adoptLocalPhoto } from '@/components/chat/photoCache';
 import {
   subscribeToMessages,
   unsubscribeFromMessages,
@@ -347,53 +348,137 @@ export function useChat(matchId: string) {
   // 게이팅 복귀, 사용자가 다시 청취하면 자동 재호출되므로 별도 retry 불필요.
   // 성공 시 realtime UPDATE 가 같은 row 를 머지 — 서버 timestamp 가 client
   // 임시값을 덮어쓰지만 둘 다 truthy 라 게이팅 분기 결과 동일.
+  // 같은 메시지에 POST 를 반복하지 않기 위한 기록. 예전에는 "낙관 업데이트가
+  // 실제로 일어났는가" 플래그로 걸렀는데, 그 플래그는 setMessages 의 updater
+  // 안에서 켜진다 — updater 는 React 가 **렌더 단계에서** 부르므로 바로 다음
+  // 줄의 검사는 항상 먼저 실행된다. React 의 eager state 최적화가 updater 를
+  // 즉시 불러주면 우연히 통과하고, 대기 중인 업데이트가 있으면 통과하지 못했다.
+  // 그래서 읽음 표시가 **비결정적으로** 안 떴다 (사진은 도착 직후 서명 URL
+  // 조회 등이 겹쳐 특히 잘 걸렸다). 라우트가 멱등이므로 그냥 보낸다.
+  const listenedPostedRef = useRef<Set<string>>(new Set());
   const markListened = useCallback(
     async (messageId: string) => {
-      let didOptimistic = false;
+      if (listenedPostedRef.current.has(messageId)) return;
+      listenedPostedRef.current.add(messageId);
       setMessages((prev) =>
-        prev.map((m) => {
-          if (m.id !== messageId || m.listened_at) return m;
-          didOptimistic = true;
-          return { ...m, listened_at: new Date().toISOString() };
-        }),
+        prev.map((m) =>
+          m.id === messageId && !m.listened_at
+            ? { ...m, listened_at: new Date().toISOString() }
+            : m,
+        ),
       );
-      if (!didOptimistic) return;
       try {
         await messageService.markMessageListened(matchId, messageId);
       } catch {
-        // silent — realtime UPDATE 가 NULL 그대로 도착하면 게이팅 회귀 후 자동 복구.
+        // 실패하면 다시 시도할 수 있게 기록을 되돌린다. 서버 값이 NULL 인 채로
+        // realtime UPDATE 가 오면 게이팅이 복귀하고, 다음 마운트에서 재시도된다.
+        listenedPostedRef.current.delete(messageId);
       }
     },
     [matchId],
   );
 
-  // chat-photos: 사진 전송. 텍스트 send 와 달리 낙관 stub 을 넣지 않는다 —
-  // 업로드가 끝나야 서버 row(서명 URL 포함)를 받을 수 있고, 로컬 uri 로 stub 을
-  // 만들면 그 자리를 나중에 서버 row 로 갈아끼울 때 이미지가 한 번 깜빡인다.
-  // 대신 호출처가 전송 중 인디케이터를 띄운다.
+  // chat-photos: 사진 전송. 텍스트와 같은 낙관 stub 방식이다 — "전송" 을 누르면
+  // 미리보기를 닫고 채팅에 사진이 바로 나타나되(흐림 + 스피너), 업로드가 끝나면
+  // 서버 row 로 교체된다. 로컬 파일 uri 를 photo_url 자리에 넣어 실제 전송본을
+  // 그대로 보여주므로 교체 시 이미지가 바뀌지 않는다.
+  //
+  // 실패하면 stub 을 걷어내고 throw — 호출처가 오류 모달을 띄운다. 텍스트처럼
+  // 말풍선에 남겨 재시도하게 두지 않는 이유는, 원본 파일이 캐시 디렉터리에 있는
+  // 임시 파일이라 나중까지 살아 있으리라는 보장이 없기 때문이다.
   const sendPhoto = useCallback(
     async (
       uri: string,
-      opts?: { replyToId?: string; width?: number; height?: number },
+      opts?: {
+        replyToId?: string;
+        width?: number;
+        height?: number;
+        // 재시도는 **같은 id** 로 보내야 한다. 업로드가 서버에 닿았는데 응답만
+        // 유실된 경우(전송 중 네트워크 끊김) 새 id 로 다시 보내면 사진이 두 장
+        // 생긴다 — 텍스트 경로가 client_message_id 로 푸는 문제와 같다.
+        clientId?: string;
+      },
     ): Promise<Message | null> => {
       setError(null);
-      const id = Crypto.randomUUID();
-      const msg = await messageService.sendPhotoMessage(matchId, uri, {
-        clientMessageId: id,
-        replyToId: opts?.replyToId,
-        width: opts?.width,
-        height: opts?.height,
-      });
-      setMessages((prev) => {
-        const idx = prev.findIndex((m) => m.id === msg.id);
-        if (idx >= 0) {
-          const next = prev.slice();
-          next[idx] = msg;
+      const id = opts?.clientId ?? Crypto.randomUUID();
+
+      const stub: Message = {
+        id,
+        match_id: matchId,
+        sender_id: userId ?? '',
+        original_text: '',
+        original_language: '',
+        translated_text: null,
+        translated_language: null,
+        audio_url: null,
+        audio_status: 'ready',
+        emotion: null,
+        listened_at: null,
+        audio_purged_at: null,
+        audio_refreshed_at: null,
+        reaction: null,
+        reply_to_id: opts?.replyToId ?? null,
+        // 로컬 파일을 그대로 보여준다 — 서버 row 로 바뀔 때 이미지가 안 깜빡인다.
+        photo_url: uri,
+        photo_width: opts?.width ?? null,
+        photo_height: opts?.height ?? null,
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prev) => (prev.some((m) => m.id === id) ? prev : [...prev, stub]));
+      setSendState((prev) => ({ ...prev, [id]: 'sending' }));
+
+      const clearSendState = () =>
+        setSendState((prev) => {
+          if (!(id in prev)) return prev;
+          const next = { ...prev };
+          delete next[id];
           return next;
-        }
-        return [...prev, msg];
-      });
-      return msg;
+        });
+
+      try {
+        const msg = await messageService.sendPhotoMessage(matchId, uri, {
+          clientMessageId: id,
+          replyToId: opts?.replyToId,
+          width: opts?.width,
+          height: opts?.height,
+        });
+        setMessages((prev) => {
+          const idx = prev.findIndex((m) => m.id === msg.id);
+          if (idx >= 0) {
+            const next = prev.slice();
+            next[idx] = msg;
+            return next;
+          }
+          return [...prev, msg];
+        });
+        clearSendState();
+        // 업로드한 파일을 그대로 캐시로 넘긴다 — 같은 바이트라 서버에서 다시
+        // 받을 이유가 없다 (다음 채팅방 진입부터 로컬 파일로 그려진다).
+        adoptLocalPhoto(msg.id, uri);
+        return msg;
+      } catch (e) {
+        setMessages((prev) => prev.filter((m) => m.id !== id));
+        clearSendState();
+        throw e;
+      }
+    },
+    [matchId, userId],
+  );
+
+  // chat-photos: 이미지 로드가 실패한 메시지의 서명 URL 을 새로 받아 채운다.
+  // 서명 URL 은 1시간이면 만료되는데, 채팅방을 오래 열어두면 state 의 값이
+  // 그대로 낡아 이미지가 깨진다.
+  const reloadPhotoUrl = useCallback(
+    async (messageId: string) => {
+      try {
+        const url = await messageService.getPhotoUrl(matchId, messageId);
+        if (!url) return;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === messageId ? { ...m, photo_url: url } : m)),
+        );
+      } catch {
+        // 실패하면 실패 표시가 그대로 남는다 — 사용자가 다시 탭하면 재시도.
+      }
     },
     [matchId],
   );
@@ -623,6 +708,7 @@ export function useChat(matchId: string) {
     hasNewer,
     send,
     sendPhoto,
+    reloadPhotoUrl,
     // message-reactions: 말풍선 롱프레스 시트에서 호출. null = 해제.
     setReaction,
     // idempotent-send sprint: client id → 송신 상태. ChatBubble 에

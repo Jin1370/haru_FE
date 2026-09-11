@@ -205,6 +205,7 @@ export default {
       // The unread count is shown separately by the right-side badge, so the
       // preview slot only carries a neutral mask.
       newMessage: 'New message',
+      photo: 'Sent a photo',
     },
     report: {
       title: 'Report',
@@ -353,6 +354,8 @@ export default {
       permissionTitle: 'Photo access needed',
       permissionMessage: 'Allow photo access in Settings to send photos.',
       expired: 'Photo expired',
+      loadFailed: "Couldn't load the photo",
+      reload: 'Reload photo',
     },
     profileSheet: {
       age: 'Age',
