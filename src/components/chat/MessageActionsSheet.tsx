@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, Modal, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Modal, StyleSheet, Clipboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { MESSAGE_REACTIONS } from '@/constants/messageReactions';
@@ -45,6 +45,25 @@ export function MessageActionsSheet({
   }, [message]);
 
   const current = snapshot?.reaction ?? null;
+
+  // 사진 메시지의 본문은 옛 앱용 폴백 캡션("앱 업데이트 후 볼 수 있어요")뿐이라
+  // 복사할 것이 없다. 번역 행은 말풍선의 showTranslation 과 같은 조건 — 원문과
+  // 같은 문자열이면 두 행이 같은 걸 복사하게 된다.
+  const isPhotoMessage = !!snapshot?.photo_path;
+  const original = isPhotoMessage ? null : snapshot?.original_text || null;
+  const translated =
+    !isPhotoMessage && snapshot?.translated_text && snapshot.translated_text !== snapshot.original_text
+      ? snapshot.translated_text
+      : null;
+
+  const handleCopy = (text: string) => {
+    // ponytail: react-native 코어의 Clipboard 는 deprecated 지만 아직 동봉돼
+    // 있어 **기존 네이티브 빌드에서 그대로 동작한다** — expo-clipboard 를 넣으면
+    // 이 기능 하나 때문에 스토어 빌드+심사가 붙는다. RN 업그레이드에서 빠지면
+    // 그때 expo-clipboard 로 교체(네이티브 변경이 이미 있는 빌드에 얹어서).
+    Clipboard.setString(text);
+    onClose();
+  };
 
   const handlePick = (value: MessageReaction) => {
     if (!snapshot) return;
@@ -107,6 +126,28 @@ export function MessageActionsSheet({
             <Ionicons name="arrow-undo-outline" size={19} color={colors.text} />
             <Text style={styles.itemText}>{t('chat.reply.action')}</Text>
           </Pressable>
+
+          {original && (
+            <Pressable
+              onPress={() => handleCopy(original)}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+            >
+              <Ionicons name="copy-outline" size={19} color={colors.text} />
+              <Text style={styles.itemText}>{t('chat.copy.original')}</Text>
+            </Pressable>
+          )}
+
+          {translated && (
+            <Pressable
+              onPress={() => handleCopy(translated)}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+            >
+              <Ionicons name="copy-outline" size={19} color={colors.text} />
+              <Text style={styles.itemText}>{t('chat.copy.translated')}</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     </Modal>

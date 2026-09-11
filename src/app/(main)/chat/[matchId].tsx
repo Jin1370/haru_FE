@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  Image,
   TextInput,
   Pressable,
   StyleSheet,
@@ -80,7 +81,7 @@ import { fromRoundTrips } from '@/constants/photoAccess';
 import { photoAccessStore } from '@/stores/photoAccess';
 import { usePhotoAccess } from '@/hooks/usePhotoAccess';
 import type { PhotoAccess } from '@/types/photoAccess';
-import type { Emotion, MatchListItem, Message } from '@/types';
+import type { Emotion, MatchListItem, Message, ReplyQuote } from '@/types';
 
 // Minimum padding under the chat input bar so the send button never sits
 // directly on top of the Android gesture bar when useSafeAreaInsets() reports
@@ -523,17 +524,12 @@ export default function ChatScreen() {
   // 확인이 두 번이 된다. 그래도 앱 모달을 두는 이유는 **iOS 때문**이다 —
   // PHPicker 는 단일 선택 시 탭하는 순간 닫혀 확인 단계가 아예 없다. 앱 모달이
   // 없으면 아이폰에서는 고르는 즉시 전송된다 (사용자 결정 2026-09-10).
+  //
+  // 권한을 따로 묻지 않는다 — iOS PHPicker 는 권한 자체가 필요 없어서, 사진
+  // 접근을 거부해둔 사용자가 프로필 사진은 올리면서 채팅 사진만 막히는 비대칭이
+  // 생겼다. 프로필(profile.tsx)·온보딩(setup/photos.tsx) 피커와 같은 방식으로
+  // 그냥 띄우고, 사용자가 못 고르면 canceled 로 돌아온다.
   const handlePickPhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      showAlert({
-        variant: 'info',
-        title: t('chat.photo.permissionTitle'),
-        message: t('chat.photo.permissionMessage'),
-      });
-      return;
-    }
-
     const picked = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 1,
@@ -772,41 +768,56 @@ export default function ChatScreen() {
     [messages],
   );
 
-  // 인용에 쓸 이름 + 본문 한 줄. 두 가지를 여기서 끝낸다.
+  // 인용에 쓸 본문 한 줄. 두 가지를 여기서 끝낸다.
   //   * 언어 — 뷰어가 읽을 수 있는 쪽만 쓴다 (내 메시지면 원문, 상대 메시지면
   //     번역문). 본문처럼 원문+번역 두 줄을 넣으면 인용이 본문보다 두꺼워진다.
   //   * 게이트 — 아직 안 들은 상대 메시지는 "새 메시지" 로 가린다. 서버가 이미
   //     텍스트를 지워 보내지만(reply_to), 로컬 폴백 경로도 같은 규칙을 쓴다.
+  // 보낸 사람 이름은 안 넣는다 — 말풍선 좌/우와 아바타로 이미 드러난다.
   const buildQuote = useCallback(
-    (message: Message): { name: string; text: string } | null => {
+    (message: Message): { text: string; photoUri?: string | null } | null => {
       if (!message.reply_to_id) return null;
 
-      let source: { sender_id: string; original_text: string | null; translated_text: string | null } | null =
-        message.reply_to ?? null;
+      let source: ReplyQuote | null = message.reply_to ?? null;
       if (message.reply_to === undefined) {
         const local = messagesById.get(message.reply_to_id);
         if (local) {
           const mine = local.sender_id === userId;
           const hidden = !mine && !local.listened_at;
           source = {
+            id: local.id,
             sender_id: local.sender_id,
             original_text: hidden ? null : local.original_text,
             translated_text: hidden ? null : local.translated_text,
+            // 로컬 폴백은 이미 서명된 URL 을 그대로 재사용한다 — 같은 사진이라
+            // 다시 받을 이유가 없다 (photoCache 가 대부분 로컬 파일로 준다).
+            // URL 이 아직 없어도(realtime 도착 직후) photo_path 는 채워서
+            // "사진" 으로 표시되게 한다 — 캡션이 새면 안 된다.
+            photo_path: hidden ? null : (local.photo_path ?? null),
+            photo_purged_at: hidden ? null : (local.photo_purged_at ?? null),
+            photo_url: hidden ? null : (local.photo_url ?? null),
           };
         }
       }
       if (!source) return null;
 
       const mine = source.sender_id === userId;
+      // 사진 메시지의 본문은 옛 앱용 폴백 캡션뿐이라 인용에 그대로 쓰면
+      // "앱 업데이트 후 볼 수 있어요" 가 뜬다. 짧은 카피로 갈아끼운다.
+      // 판정은 photo_url 이 아니라 photo_path — 썸네일을 못 띄우는 경우(폐기,
+      // 서명 실패, realtime 직후 URL 미도착)에도 "사진" 으로는 보여야 한다.
+      if (source.photo_path) {
+        return {
+          text: t('chat.photo.label'),
+          photoUri: source.photo_purged_at ? null : (source.photo_url ?? null),
+        };
+      }
       const text = mine
         ? source.original_text
         : (source.translated_text ?? source.original_text);
-      return {
-        name: mine ? t('chat.reply.you') : (partnerName ?? t('matches.unknown')),
-        text: text ?? t('matches.preview.newMessage'),
-      };
+      return { text: text ?? t('matches.preview.newMessage') };
     },
-    [messagesById, userId, partnerName, t],
+    [messagesById, userId, t],
   );
 
   // 인용 탭 → 원본으로. 이미 로드돼 있으면 네트워크 없이 스크롤만 하고,
@@ -1263,18 +1274,19 @@ export default function ChatScreen() {
               {replyTarget && (
                 <View style={styles.replyPreview}>
                   <View style={styles.replyPreviewBar} />
-                  <View style={styles.replyPreviewBody}>
-                    <Text style={styles.replyPreviewName} numberOfLines={1}>
-                      {replyTarget.sender_id === userId
-                        ? t('chat.reply.you')
-                        : (partnerName ?? t('matches.unknown'))}
-                    </Text>
-                    <Text style={styles.replyPreviewText} numberOfLines={1}>
-                      {replyTarget.sender_id === userId
+                  {replyTarget.photo_url && !replyTarget.photo_purged_at ? (
+                    <Image
+                      source={{ uri: replyTarget.photo_url }}
+                      style={styles.replyPreviewThumb}
+                    />
+                  ) : null}
+                  <Text style={styles.replyPreviewText} numberOfLines={1}>
+                    {replyTarget.photo_url && !replyTarget.photo_purged_at
+                      ? t('chat.photo.label')
+                      : replyTarget.sender_id === userId
                         ? replyTarget.original_text
                         : (replyTarget.translated_text ?? replyTarget.original_text)}
-                    </Text>
-                  </View>
+                  </Text>
                   <Pressable
                     onPress={() => setReplyTarget(null)}
                     hitSlop={10}
@@ -1696,17 +1708,14 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     backgroundColor: colors.primary,
   },
-  replyPreviewBody: {
-    flex: 1,
-  },
-  replyPreviewName: {
-    fontSize: 10,
-    lineHeight: 13,
-    color: colors.primary,
-    fontFamily: fonts.medium,
-    letterSpacing: 0.2,
+  replyPreviewThumb: {
+    width: 30,
+    height: 30,
+    borderRadius: 5,
+    backgroundColor: colors.borderSoft,
   },
   replyPreviewText: {
+    flex: 1,
     fontSize: 11,
     lineHeight: 15,
     color: colors.textSecondary,

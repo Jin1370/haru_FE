@@ -341,9 +341,13 @@ export default {
     },
     reply: {
       action: 'Reply',
-      you: 'You',
+    },
+    copy: {
+      original: 'Copy original',
+      translated: 'Copy translation',
     },
     photo: {
+      label: 'Photo',
       send: 'Send a photo',
       confirmSend: 'Send',
       open: 'View photo',
@@ -351,8 +355,6 @@ export default {
       saved: 'Photo saved',
       saveFailed: "Couldn't save the photo",
       savePermission: 'Allow photo access in Settings.',
-      permissionTitle: 'Photo access needed',
-      permissionMessage: 'Allow photo access in Settings to send photos.',
       expired: 'Photo expired',
       loadFailed: "Couldn't load the photo",
       reload: 'Reload photo',

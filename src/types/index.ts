@@ -317,6 +317,12 @@ export interface ReplyQuote {
   sender_id: string;
   original_text: string | null;
   translated_text: string | null;
+  // chat-photos: 인용 대상이 사진인지. photo_path 가 "사진이었다" 의 유일한
+  // 신호 — 폐기/서명 실패로 photo_url 이 없어도 이건 남아서, 본문의 옛 앱용
+  // 폴백 캡션이 인용에 새는 걸 막는다.
+  photo_path?: string | null;
+  photo_purged_at?: string | null;
+  photo_url?: string | null;
 }
 
 export interface Message {

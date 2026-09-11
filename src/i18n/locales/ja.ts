@@ -336,9 +336,13 @@ export default {
         },
         reply: {
             action: "返信する",
-            you: "自分",
+        },
+        copy: {
+            original: "原文をコピー",
+            translated: "翻訳をコピー",
         },
         photo: {
+            label: "写真",
             send: "写真を送る",
             confirmSend: "送信",
             open: "写真を大きく見る",
@@ -346,8 +350,6 @@ export default {
             saved: "写真を保存しました",
             saveFailed: "写真を保存できませんでした",
             savePermission: "設定で写真へのアクセスを許可してください。",
-            permissionTitle: "写真へのアクセスが必要です",
-            permissionMessage: "設定で写真へのアクセスを許可すると写真を送れます。",
             expired: "期限切れの写真",
             loadFailed: "写真を読み込めませんでした",
             reload: "写真を再読み込み",

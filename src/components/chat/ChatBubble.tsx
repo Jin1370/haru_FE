@@ -78,7 +78,9 @@ interface ChatBubbleProps {
   onLongPress?: (message: Message) => void;
   // message-reply: 인용 블록에 그릴 이름/본문. 언어 선택(뷰어가 읽을 수 있는
   // 쪽)과 미청취 마스킹은 호출처가 끝내고 완성된 문자열만 넘긴다.
-  quote?: { name: string; text: string } | null;
+  // 사진 인용이면 photoUri 로 작은 썸네일. 보낸 사람 이름은 안 쓴다 —
+  // 말풍선 위치(좌/우)와 아바타로 이미 드러나서 한 줄이 순수 중복이었다.
+  quote?: { text: string; photoUri?: string | null } | null;
   // 인용 블록 탭 → 원본으로 이동. 원본이 어디 있는지 모를 때(로드 범위 밖)도
   // 호출처가 서버에서 그 구간을 받아오므로 항상 눌린다.
   onQuotePress?: () => void;
@@ -478,6 +480,11 @@ export function ChatBubble({
     </View>
   );
 
+  const canOpenActions = !!onLongPress && !showGate;
+  const [quoteThumbError, setQuoteThumbError] = useState(false);
+  // 인용 대상이 바뀌면(가상화 재사용) 실패 상태를 물려주지 않는다.
+  useEffect(() => setQuoteThumbError(false), [quote?.photoUri]);
+
   const inner = (
     <>
       {/* message-reply: 인용은 본문 위에 한 줄. 원본 텍스트를 본문에 합성하지
@@ -489,9 +496,16 @@ export function ChatBubble({
           style={({ pressed }) => [styles.quoteBox, pressed && styles.quoteBoxPressed]}
           accessibilityRole={onQuotePress ? 'button' : undefined}
         >
-          <Text style={styles.quoteName} numberOfLines={1}>
-            {quote.name}
-          </Text>
+          {quote.photoUri && !quoteThumbError ? (
+            <Image
+              source={{ uri: quote.photoUri }}
+              style={styles.quoteThumb}
+              // 서명 URL 은 1시간이면 만료된다. 말풍선 본체처럼 재서명까지 하지는
+              // 않고 썸네일만 접는다 — 인용을 탭하면 원본으로 가고, 거기엔 이미
+              // 자가 회복(재서명) 경로가 있다.
+              onError={() => setQuoteThumbError(true)}
+            />
+          ) : null}
           <Text style={styles.quoteText} numberOfLines={2}>
             {quote.text}
           </Text>
@@ -504,6 +518,10 @@ export function ChatBubble({
       {isPhoto ? (
         <Pressable
           onPress={() => photoUri && onPhotoPress?.(photoUri)}
+          // 사진은 자식 Pressable 이라 부모 말풍선의 롱프레스가 도달하지 않는다.
+          // 리액션/답장을 사진에서도 쓰려면 여기서 같은 핸들러를 한 번 더 건다.
+          onLongPress={canOpenActions ? () => onLongPress!(message) : undefined}
+          delayLongPress={350}
           disabled={isSending}
           accessibilityRole="button"
           accessibilityLabel={t('chat.photo.open')}
@@ -737,7 +755,6 @@ export function ChatBubble({
     };
   }, [highlighted, flash]);
 
-  const canOpenActions = !!onLongPress && !showGate;
   const reaction = reactionEmoji(message.reaction);
 
   return (
@@ -745,7 +762,7 @@ export function ChatBubble({
       style={[
         styles.container,
         isMine ? styles.mine : styles.theirs,
-        // 뱃지가 말풍선 아래로 걸쳐 나오므로 다음 줄과 겹치지 않게 여백을 준다.
+        // 뱃지가 말풍선 위로 걸쳐 나오므로 앞 줄과 겹치지 않게 여백을 준다.
         !!reaction && styles.containerWithReaction,
       ]}
     >
@@ -807,12 +824,7 @@ export function ChatBubble({
             않는다 — 톤은 목소리로 전해지는 것이고(차별점 2), 그 자리는 아래
             리액션 뱃지가 쓴다. */}
         {reaction && (
-          <View
-            style={[
-              styles.reactionBadge,
-              isMine ? styles.reactionBadgeMine : styles.reactionBadgeTheirs,
-            ]}
-          >
+          <View style={styles.reactionBadge}>
             <Text style={styles.reactionBadgeText}>{reaction}</Text>
           </View>
         )}
@@ -831,7 +843,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   containerWithReaction: {
-    marginBottom: 14,
+    marginTop: 14,
   },
   theirs: {
     justifyContent: 'flex-start',
@@ -983,6 +995,9 @@ const styles = StyleSheet.create({
   // 내/상대 말풍선 모두 같은 배경이라 글자색도 하나로 통일 — 흰 글씨를 남겨두면
   // 연분홍 위에서 안 읽힌다.
   quoteBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
     backgroundColor: colors.primaryLight,
     borderLeftWidth: 3,
     borderLeftColor: colors.primaryDark,
@@ -990,17 +1005,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginBottom: 7,
   },
+  quoteThumb: {
+    width: 26,
+    height: 26,
+    borderRadius: 4,
+    backgroundColor: colors.borderSoft,
+  },
   quoteBoxPressed: {
     opacity: 0.7,
   },
-  quoteName: {
-    fontSize: 10,
-    lineHeight: 13,
-    color: colors.primaryDark,
-    fontFamily: fonts.medium,
-    letterSpacing: 0.2,
-  },
   quoteText: {
+    flexShrink: 1,
     fontSize: 11,
     lineHeight: 15,
     color: colors.text,
@@ -1025,7 +1040,9 @@ const styles = StyleSheet.create({
   // 1:1 이라 항상 0 또는 1개 — 카운트 표기가 필요 없다.
   reactionBadge: {
     position: 'absolute',
-    bottom: -10,
+    // 좌/우를 발신자에 따라 나누지 않는다 — 우측 상단 고정 (사용자 결정).
+    top: -8,
+    right: -4,
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -1035,12 +1052,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSoft,
     ...shadows.soft,
-  },
-  reactionBadgeMine: {
-    left: -6,
-  },
-  reactionBadgeTheirs: {
-    right: -6,
   },
   reactionBadgeText: {
     fontSize: 13,
