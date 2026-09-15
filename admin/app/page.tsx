@@ -1604,12 +1604,22 @@ function MessageBubble({
               }
         }
       >
-        {/* 원문 — 송수신·번역문 모두 같은 크기로 통일(0.9375rem = 18.75px). */}
-        <div className="whitespace-pre-wrap break-words text-[0.9375rem] leading-normal">
-          {message.original_text}
-        </div>
+        {/* chat-photos: 사진 메시지는 캡션(옛 클라이언트용 폴백 문구) 대신 이미지만. */}
+        {message.photo_url ? (
+          <a href={message.photo_url} target="_blank" rel="noreferrer">
+            <img src={message.photo_url} alt="" className="max-h-80 rounded-xl" />
+          </a>
+        ) : message.photo_purged_at ? (
+          <div className="text-[0.9375rem] italic" style={{ color: C.textSecondary }}>
+            사진 (30일 경과로 폐기됨)
+          </div>
+        ) : (
+          <div className="whitespace-pre-wrap break-words text-[0.9375rem] leading-normal">
+            {message.original_text}
+          </div>
+        )}
         {/* 번역 — 앱 ChatBubble 과 동일: 원문과 다르면 송/수신 모두 아래로. */}
-        {message.translated_text && message.translated_text !== message.original_text && (
+        {!message.photo_url && !message.photo_purged_at && message.translated_text && message.translated_text !== message.original_text && (
           <div
             className="mt-1.5 text-[0.9375rem] leading-normal"
             style={{ color: C.textLight }}

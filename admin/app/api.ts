@@ -157,6 +157,9 @@ export type Message = {
   // read-at-removal-list-mask sprint (mig 018): 옛 read_at 컬럼 제거. "읽음" 의미는
   // listened_at 단일 진실원.
   listened_at: string | null;
+  // chat-photos: BE 가 응답 시점에 1시간 서명 URL 로 미러. 30일 폐기 후엔 null.
+  photo_url?: string | null;
+  photo_purged_at?: string | null;
   created_at: string;
 };
 
