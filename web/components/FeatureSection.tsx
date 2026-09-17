@@ -18,7 +18,7 @@ import { ART_PROFILE, TRANSLATE_BUBBLE, EMOTION_THREAD, VOICE_INTRO, type Locale
 // zigzag (right → left → right → left).
 const FEATURES = [
   { key: 'translate', emoji: '🌏', screen: 'chat', reverse: true },
-  { key: 'emotion', emoji: '💗', screen: 'chat', reverse: false },
+  { key: 'emotion', emoji: '🔊', screen: 'chat', reverse: false },
   { key: 'art', emoji: '🎨', screen: 'profile', reverse: true },
   { key: 'voiceintro', emoji: '🗣️', screen: 'voice', reverse: false },
 ] as const;
@@ -42,7 +42,7 @@ export default function FeatureSection() {
               }`}
             >
               <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[color:var(--color-primary-light)] px-4 py-1.5 text-base font-semibold text-[color:var(--color-primary-dark)]">
-                <span aria-hidden>{f.emoji}</span>
+                {f.emoji && <span aria-hidden>{f.emoji}</span>}
                 {t(`${f.key}.tag`)}
               </span>
               <h2 className="break-keep text-3xl font-bold leading-snug text-[color:var(--color-text)] md:text-4xl">
