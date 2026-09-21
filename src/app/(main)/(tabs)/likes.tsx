@@ -28,6 +28,7 @@ export default function LikesScreen() {
   const {
     candidates,
     loading,
+    error,
     loadCandidates,
     syncQuota,
     handleSwipe,
@@ -99,13 +100,27 @@ export default function LikesScreen() {
     }
   };
 
+  const [retrying, setRetrying] = useState(false);
+  const onRetry = async () => {
+    setRetrying(true);
+    try {
+      await loadCandidates();
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const current = candidates[0];
 
   return (
     <CardDeck
       refreshing={refreshing}
       onRefresh={handleRefresh}
-      loading={loading && candidates.length === 0}
+      // 오류 중엔 자동 재시도(SWR errorRetry)가 로딩 화면을 띄우지 않게 한다 —
+      // 띄우면 오류 화면 ↔ "불러오는 중..." 이 수 초마다 번갈아 깜빡이고 재시도
+      // 버튼이 누르는 순간 사라진다. 자동 재시도는 뒤에서 조용히 돌다 성공하면
+      // 카드로 바뀌고, 사용자가 버튼을 누른 경우(retrying)만 로딩을 보여준다.
+      loading={(loading && candidates.length === 0 && !error) || retrying}
     >
       {current ? (
         <SwipeCard
@@ -117,6 +132,15 @@ export default function LikesScreen() {
           onLike={() => onSwipe('like')}
           onPass={() => onSwipe('pass')}
           onReported={() => removeCandidate(current.id)}
+        />
+      ) : error ? (
+        // 로드 실패 — "받은 좋아요 0개" 와 구분 (디스커버와 동일).
+        <EmptyState
+          iconName="cloud-offline-outline"
+          title={t('common.loadFailed')}
+          subtitle={t('common.tryAgainLater')}
+          ctaLabel={t('common.retry')}
+          onCtaPress={onRetry}
         />
       ) : (
         // 받은 좋아요 0개 — 디스커버로 유도하는 CTA. 출시 초기엔 사용자 풀이 작아

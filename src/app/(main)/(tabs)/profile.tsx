@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VoiceIntroMultiLangPreview } from '@/components/profile/VoiceIntroMultiLangPreview';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { useProfile, MAX_PHOTOS } from '@/hooks/useProfile';
 import * as profileService from '@/services/profile';
 import { downloadWatermarkedPhoto } from '@/services/profile';
@@ -450,9 +451,7 @@ export default function ProfileScreen() {
   if (!profile) {
     return (
       <PhotoBackground variant="app">
-        <View style={styles.center}>
-          <Text style={styles.loadingText}>{t('profile.loadingProfile')}</Text>
-        </View>
+        <LoadingState />
       </PhotoBackground>
     );
   }
@@ -1010,16 +1009,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 40,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontFamily: fonts.regular,
-    fontSize: 14,
-    color: colors.textSecondary,
   },
   photoGrid: {
     flexDirection: 'row',

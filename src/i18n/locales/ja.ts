@@ -22,6 +22,9 @@ export default {
         networkTimeout: "応答に時間がかかっています。もう一度お試しください。",
         serverError: "一時的な問題が発生しました。しばらくしてからもう一度お試しください。",
         tryAgainLater: "問題が発生しました。もう一度お試しください。",
+        loading: "読み込み中...",
+        loadFailed: "読み込めませんでした",
+        retry: "再試行",
         logout: "ログアウト",
         back: "戻る",
         options: "オプション",
@@ -227,7 +230,6 @@ export default {
     },
 
     profile: {
-        loadingProfile: "プロフィールを読み込み中...",
         infoLabels: {
             age: "年齢",
             gender: "性別",

@@ -159,34 +159,48 @@ export async function getAuthBootState(): Promise<AuthBootState | null> {
   return null;
 }
 
+// 갱신 요청 제한시간. BE /refresh 최악 경로(GoTrue 5초 ×2 + 정지확인 3초 ≈ 13초)
+// 보다 길어야 BE 의 503 을 받아볼 수 있다 — 짧으면 FE 가 먼저 끊어 503 이 네트워크
+// 타임아웃으로 뭉개진다. 갱신 중엔 getValidToken() 이 모든 요청을 이 갱신에 묶으므로
+// 이 값이 곧 "앱 전체가 멈출 수 있는 최대 시간" 이다 (옛 25초 ×재시도 = 50초).
+const REFRESH_TIMEOUT_MS = 15000;
+
+// 반환: 새 access token / null = 세션 사망(토큰 폐기함).
+// 일시적 실패(네트워크·타임아웃·5xx·429)는 토큰을 **남긴 채** ApiRequestError 를
+// 던진다. 옛 구현은 이것도 clearTokens() 해서, 2026-09-21 BE /refresh 가 굳었을 때
+// 멀쩡한 refresh token 을 가진 사용자까지 전원 강제 로그아웃됐다. 부팅 경로
+// (authStore.tryAutoLogin) 가 "401 에서만 토큰 폐기" 로 바뀐 것과 같은 규칙.
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = await getRefreshToken();
   if (!refreshToken) return null;
 
-  try {
-    const res = await fetchWithRetry(
-      `${API_BASE_URL}/api/auth/refresh`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      },
-      REQUEST_TIMEOUT_MS,
-      '/api/auth/refresh',
-    );
+  // 네트워크 오류·타임아웃은 여기서 ApiRequestError(0) 로 던져진다 — 그대로 올린다.
+  const res = await fetchWithRetry(
+    `${API_BASE_URL}/api/auth/refresh`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    },
+    REFRESH_TIMEOUT_MS,
+    '/api/auth/refresh',
+  );
 
-    if (!res.ok) {
-      await clearTokens();
-      return null;
-    }
-
-    const data: TokenRefreshResponse = await res.json();
-    await saveTokens(data.access_token, data.refresh_token);
-    return data.access_token;
-  } catch {
+  // 4xx = 서버가 이 refresh token 을 거절(무효/폐기/정지) → 세션 사망.
+  // 408/429 는 "지금은 안 됨" 이라 일시적 쪽.
+  const sessionDead =
+    res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429;
+  if (sessionDead) {
     await clearTokens();
     return null;
   }
+  if (!res.ok) {
+    throw new ApiRequestError(res.status, 'Session refresh temporarily unavailable', 'refresh_unavailable');
+  }
+
+  const data: TokenRefreshResponse = await res.json();
+  await saveTokens(data.access_token, data.refresh_token);
+  return data.access_token;
 }
 
 async function getValidToken(): Promise<string | null> {
@@ -204,9 +218,8 @@ async function getValidToken(): Promise<string | null> {
 //
 // Non-JSON paths (FileSystem.uploadAsync/downloadAsync in services/profile.ts)
 // bypass ApiClient.request and therefore lack its built-in 401→refresh→retry.
-// Those paths call this on a 401 then retry once with the new token. Returning
-// null means the session is truly dead — the caller surfaces the 401 and the
-// next regular request() will fire onSessionExpired → logout.
+// Those paths call this on a 401 then retry once with the new token (see
+// refreshSession below for what null means).
 // 동시 401 을 하나의 /refresh 로 합친다. 콜드 스타트 채팅 진입 시 메시지 fetch +
 // 상대정보 fetch + 백그라운드 프로필 하이드레이트가 같은 만료 토큰으로 동시에
 // 401 을 받는데, 각자 refreshAccessToken() 을 호출하면 rotating refresh token 으로
@@ -226,8 +239,11 @@ async function dedupedRefresh(): Promise<string | null> {
   }
 }
 
+// 비-JSON 경로(업로드/다운로드)·Realtime 용. null = 지금 새 토큰을 못 받음 —
+// 세션 사망이면 이미 토큰이 폐기됐고, 일시적 실패면 토큰이 남아 다음 요청이 다시
+// 갱신을 시도한다. 호출처는 원래 401 을 그대로 노출하면 된다.
 export async function refreshSession(): Promise<string | null> {
-  return dedupedRefresh();
+  return dedupedRefresh().catch(() => null);
 }
 
 class ApiClient {
@@ -269,6 +285,8 @@ class ApiClient {
       path.startsWith('/api/auth/google');
 
     if (res.status === 401 && retry && !isAuthIssueEndpoint) {
+      // 일시적 갱신 실패는 여기서 ApiRequestError 로 throw 된다 — 로그아웃하지
+      // 않고 호출처(화면)에 오류로 전달. 토큰은 남아 있어 다음 요청이 재시도한다.
       const newToken = await dedupedRefresh();
 
       if (newToken) {

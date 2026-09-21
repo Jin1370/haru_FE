@@ -4,13 +4,13 @@ import {
   FlatList,
   StyleSheet,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { MatchItem } from '@/components/matches/MatchItem';
 import { MatchActionsSheet } from '@/components/matches/MatchActionsSheet';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
 import { useMatches } from '@/hooks/useMatches';
 import { showAlert } from '@/stores/alertStore';
@@ -98,11 +98,7 @@ export default function MatchesScreen() {
     // 첫 로드 동안에는 빈 화면 대신 중앙 스피너로 표시(이전엔 RefreshControl
     // 이 첫 로드 인디케이터를 겸했으나 위 분리로 더는 발화하지 않으므로).
     if (loading) {
-      return (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      );
+      return <LoadingState />;
     }
     return (
       <EmptyState
@@ -179,10 +175,5 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-  },
-  loadingWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

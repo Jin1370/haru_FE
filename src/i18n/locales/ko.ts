@@ -22,6 +22,9 @@ export default {
         networkTimeout: "응답이 지연되고 있어요. 다시 시도해주세요.",
         serverError: "일시적인 문제가 발생했어요. 잠시 후 다시 시도해주세요.",
         tryAgainLater: "문제가 발생했어요. 다시 시도해주세요.",
+        loading: "불러오는 중...",
+        loadFailed: "불러오지 못했어요",
+        retry: "다시 시도",
         logout: "로그아웃",
         back: "뒤로",
         options: "옵션",
@@ -228,7 +231,6 @@ export default {
     },
 
     profile: {
-        loadingProfile: "프로필 불러오는 중...",
         infoLabels: {
             age: "나이",
             gender: "성별",

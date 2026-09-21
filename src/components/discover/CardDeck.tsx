@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { View, ScrollView, RefreshControl, ActivityIndicator, StyleSheet } from 'react-native';
+import { ScrollView, RefreshControl, StyleSheet } from 'react-native';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
+import { LoadingState } from '@/components/ui/LoadingState';
 import { colors } from '@/constants/colors';
 
 // 디스커버 / 받은 좋아요 두 탭이 공유하는 카드 화면 껍데기.
@@ -19,7 +20,7 @@ export function CardDeck({
 }: {
   refreshing: boolean;
   onRefresh: () => void;
-  /** 첫 로드(캐시 없음) — 배경은 유지한 채 가운데 스피너만. */
+  /** 첫 로드(캐시 없음) — 배경은 유지한 채 가운데 "불러오는 중...". */
   loading?: boolean;
   /** 스크롤뷰 형제로 렌더되는 절대배치 오버레이(스크롤과 함께 움직이면 안 되는 것). */
   overlay?: ReactNode;
@@ -28,9 +29,7 @@ export function CardDeck({
   return (
     <PhotoBackground variant="app">
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <LoadingState />
       ) : (
         <ScrollView
           style={styles.scroll}
@@ -62,10 +61,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 16,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

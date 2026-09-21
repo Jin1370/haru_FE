@@ -22,6 +22,9 @@ export default {
     networkTimeout: 'The request is taking too long. Please try again.',
     serverError: 'Something went wrong on our end. Please try again later.',
     tryAgainLater: 'Something went wrong. Please try again.',
+    loading: 'Loading...',
+    loadFailed: "Couldn't load",
+    retry: 'Try again',
     logout: 'Logout',
     back: 'Back',
     options: 'Options',
@@ -230,7 +233,6 @@ export default {
   },
 
   profile: {
-    loadingProfile: 'Loading profile...',
     infoLabels: {
       age: 'Age',
       gender: 'Gender',

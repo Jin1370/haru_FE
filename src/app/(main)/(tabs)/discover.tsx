@@ -25,6 +25,7 @@ export default function DiscoverScreen() {
   const {
     candidates,
     loading,
+    error,
     loadCandidates,
     handleSwipe,
     consumeLikeLimitHit,
@@ -144,6 +145,16 @@ export default function DiscoverScreen() {
           onLike={() => onSwipe('like')}
           onPass={() => onSwipe('pass')}
           onReported={() => removeCandidate(current.id)}
+        />
+      ) : error ? (
+        // 로드 실패 — 빈 풀("더 이상 없어요")과 구분해야 한다. 서버 장애를 "사람이
+        // 없다" 로 보여주면 사용자가 앱을 떠난다.
+        <EmptyState
+          iconName="cloud-offline-outline"
+          title={t('common.loadFailed')}
+          subtitle={t('common.tryAgainLater')}
+          ctaLabel={t('common.retry')}
+          onCtaPress={loadCandidates}
         />
       ) : (
         // 풀 소진(카드 0장)일 때만 empty-state. 좋아요 예산 소진은 화면을 교체하지

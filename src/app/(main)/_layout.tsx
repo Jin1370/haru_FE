@@ -6,6 +6,35 @@ import { useAuthStore } from '@/stores/authStore';
 export default function MainLayout() {
   const { isAuthenticated } = useAuthStore();
   const photos = useAuthStore((s) => s.profile?.photos);
+  const hasProfile = useAuthStore((s) => s.hasProfile);
+  const profileLoaded = useAuthStore((s) => s.profile != null);
+  const loadProfile = useAuthStore((s) => s.loadProfile);
+
+  // 프로필이 비어 있는 동안 백오프 재시도 (2초 → 4 → 8 … 최대 30초).
+  // 부팅은 네트워크 없이 낙관적으로 진입하고 프로필은 백그라운드로 한 번 받는데,
+  // loadProfile 은 실패를 조용히 삼켜서 그 한 번이 실패하면 앱을 다시 켤 때까지
+  // profile=null 로 남았다 — 프로필 탭 영구 로딩 + 재동의/유입경로 게이트 미노출
+  // (2026-09-21 /refresh 장애 때 관측). 탭이 아니라 여기 두는 이유가 그 게이트들이다.
+  // hasProfile=false(가입 마법사)는 프로필이 원래 없는 상태라 돌지 않는다.
+  useEffect(() => {
+    if (!isAuthenticated || !hasProfile || profileLoaded) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let delay = 2000;
+    const attempt = async () => {
+      await loadProfile();
+      if (cancelled) return;
+      timer = setTimeout(attempt, delay);
+      delay = Math.min(delay * 2, 30000);
+    };
+    // 첫 시도는 한 박자 늦춘다 — 부팅 직후엔 tryAutoLogin 의 백그라운드 로드가
+    // 이미 진행 중이라 즉시 쏘면 GET /me 가 중복된다.
+    timer = setTimeout(attempt, delay);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isAuthenticated, hasProfile, profileLoaded, loadProfile]);
 
   // 다른 탭(채팅 목록 / 받은 좋아요) 데이터 프리로드는 여기서 하지 않는다 —
   // 첫 화면인 디스커버의 첫 후보/이미지와 대역폭을 다투기 때문. 디스커버가 첫
