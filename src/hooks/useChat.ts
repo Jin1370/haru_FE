@@ -75,6 +75,9 @@ export function useChat(matchId: string) {
   // ref 는 realtime 콜백이 최신 값을 봐야 해서 state 와 병행.
   const [jumped, setJumped] = useState(false);
   const jumpedRef = useRef(false);
+  // Realtime effect(deps: matchId) 안에서 최신 목록을 읽기 위한 ref.
+  const messagesRef = useRef<Message[]>([]);
+  messagesRef.current = messages;
   const [hasNewer, setHasNewer] = useState(false);
   const [loadingNewer, setLoadingNewer] = useState(false);
   const loadingNewerRef = useRef(false);
@@ -240,6 +243,15 @@ export function useChat(matchId: string) {
   // realtime reconcile 불변: 낙관 stub 은 isMine 전용이라 수신자 화면 미존재
   // (voice-first-gate 유지). 서버 row 가 stub 을 교체할 때 sendState 는 이미
   // 성공/터미널 분기에서 삭제되어 이중 표시가 없다.
+  const clearSendStateFor = useCallback((id: string) => {
+    setSendState((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
   const send = useCallback(
     async (
       text: string,
@@ -276,13 +288,7 @@ export function useChat(matchId: string) {
         return [...prev, stub];
       });
       setSendState((prev) => ({ ...prev, [id]: 'sending' }));
-      const clearSendState = () =>
-        setSendState((prev) => {
-          if (!(id in prev)) return prev;
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
+      const clearSendState = () => clearSendStateFor(id);
       try {
         const msg = await messageService.sendMessage(matchId, text, emotion, id, replyToId);
         setMessages((prev) => {
@@ -306,6 +312,15 @@ export function useChat(matchId: string) {
         }
         // 네트워크/타임아웃/5xx — 재시도 가능. stub 유지 + failed 마킹, throw 안 함.
         if (e instanceof ApiRequestError && (e.status === 0 || e.status >= 500)) {
+          // 응답만 유실된 경우: 타임아웃(25s) 전에 서버 row 가 Realtime 으로 먼저
+          // 도착해 있으면(파이프라인 7~15s 가 보통) 전송은 성공한 것 — 'failed' 를
+          // 다시 씌우지 않는다. stub 과 202 응답은 'pending', 서버 확정 row 는
+          // 'ready'/'failed' 라 audio_status 로 구분 가능.
+          const settled = messagesRef.current.find((m) => m.id === id);
+          if (settled && settled.audio_status !== 'pending') {
+            clearSendState();
+            return settled;
+          }
           setSendState((prev) => ({ ...prev, [id]: 'failed' }));
           return null;
         }
@@ -550,58 +565,89 @@ export function useChat(matchId: string) {
       }
     };
 
+    // Realtime INSERT 와 재연결 catch-up(아래) 이 같은 reconcile 을 탄다.
+    const applyIncoming = (newMsg: Message) => {
+      // voice-first-message-gate sprint follow-up: 상대 발신이면서
+      // audio_status != 'ready' 인 메시지는 청취 불가 → 영구 락 → 수신자
+      // 화면에서 아예 숨김. 본인 발신은 status 무관하게 통과 (재전송 등
+      // 대응을 위해 본인은 본인 메시지를 알아야 함).
+      if (newMsg.sender_id !== userId && newMsg.audio_status !== 'ready') {
+        return;
+      }
+      // chat-audio-async-insert sprint: 두 가지 INSERT 경로 reconcile.
+      //   * 본인 발신 (voice clone 보유): send() 가 stub(audio_status='pending')
+      //     을 먼저 넣었고, BE 가 TTS 완료 후 같은 id 로 INSERT → 같은 id 의
+      //     row 를 ready 상태 row 로 교체. expo-audio 입장에서는 'ready' +
+      //     audio_url 조합으로 첫 mount 가 일어남 → cold-start path 만 거침.
+      //   * 본인 발신 (voice clone 없음): send() 가 동기 INSERT 응답으로 이미
+      //     ready row 를 추가. realtime INSERT 가 같은 id 로 도착하면 무변경.
+      //   * 상대방 발신: stub 없음 → 신규 append.
+      // 본인 row 가 서버에서 도착했다 = 전송은 성공했다. POST 응답을 못 받아
+      // (타임아웃) 'failed' 로 남아 있어도 여기서 지운다 — 안 지우면 이미
+      // 전달된 메시지에 "재시도" 가 남아 사용자가 재타이핑 → 중복 (2026-09-21 사고).
+      if (newMsg.sender_id === userId) clearSendStateFor(newMsg.id);
+      setMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === newMsg.id);
+        if (idx >= 0) {
+          const next = prev.slice();
+          next[idx] = mergeServerOnly(newMsg, prev[idx]);
+          return next;
+        }
+        // message-reply(점프): 옛 구간을 보고 있는 동안 도착한 메시지를
+        // 끝에 붙이면 3주 전 메시지 바로 아래 오늘 메시지가 붙는다.
+        // 사용자가 "최신으로" 를 누르면 1페이지 재로드로 자연 합류한다.
+        if (jumpedRef.current) return prev;
+        return [...prev, newMsg];
+      });
+
+      // chat-photos: realtime 페이로드는 DB 원본 행이라 photo_path 만 있고
+      // 서명 URL 이 없다. 그대로 두면 수신자 화면에 폴백 캡션만 뜨고 사진은
+      // 채팅방을 다시 들어와야(=GET 을 태워야) 보인다. 도착 직후 URL 만
+      // 따로 받아 그 행에 채워 넣는다.
+      if (newMsg.photo_path && !newMsg.photo_url) {
+        void messageService
+          .getPhotoUrl(matchId, newMsg.id)
+          .then((url) => {
+            if (cancelled || !url) return;
+            setMessages((prev) =>
+              prev.map((m) => (m.id === newMsg.id ? { ...m, photo_url: url } : m)),
+            );
+          })
+          .catch(() => {
+            // 실패해도 다음 채팅방 진입 시 GET 이 서명 URL 을 실어 온다.
+          });
+      }
+    };
+
+    // 소켓 공백 메우기. 백그라운드/전파 끊김/Realtime 재연결 동안 INSERT 된 row 는
+    // 재구독해도 다시 오지 않는다 (2026-09-21 사고: 수신자가 메시지 1건을 영영 못
+    // 봄). SUBSCRIBED 마다 마지막 서버 확정 row 이후를 GET 으로 끌어와 같은
+    // reconcile 에 태운다. 기준점은 본인 pending stub 제외 — stub 의 created_at 은
+    // 클라이언트 시계라 서버 row 보다 앞설 수 있다.
+    // ponytail: 한 페이지(50)만. 그 이상 놓쳤으면 채팅방 재진입이 메운다.
+    const catchUp = async () => {
+      if (jumpedRef.current) return;
+      const confirmed = messagesRef.current.filter(
+        (m) => !(m.sender_id === userId && m.audio_status === 'pending'),
+      );
+      const newest = confirmed[confirmed.length - 1];
+      if (!newest) return;
+      try {
+        const data = await messageService.getMessagesAfter(matchId, newest.created_at);
+        if (cancelled) return;
+        [...data].reverse().forEach(applyIncoming);
+      } catch {
+        // 다음 SUBSCRIBED 또는 채팅방 재진입이 다시 시도한다.
+      }
+    };
+
     const connect = async () => {
       clearRetry();
       await subscribeToMessages(
         matchId,
         (newMsg) => {
           if (cancelled) return;
-          // voice-first-message-gate sprint follow-up: 상대 발신이면서
-          // audio_status != 'ready' 인 메시지는 청취 불가 → 영구 락 → 수신자
-          // 화면에서 아예 숨김. 본인 발신은 status 무관하게 통과 (재전송 등
-          // 대응을 위해 본인은 본인 메시지를 알아야 함).
-          if (newMsg.sender_id !== userId && newMsg.audio_status !== 'ready') {
-            return;
-          }
-          // chat-audio-async-insert sprint: 두 가지 INSERT 경로 reconcile.
-          //   * 본인 발신 (voice clone 보유): send() 가 stub(audio_status='pending')
-          //     을 먼저 넣었고, BE 가 TTS 완료 후 같은 id 로 INSERT → 같은 id 의
-          //     row 를 ready 상태 row 로 교체. expo-audio 입장에서는 'ready' +
-          //     audio_url 조합으로 첫 mount 가 일어남 → cold-start path 만 거침.
-          //   * 본인 발신 (voice clone 없음): send() 가 동기 INSERT 응답으로 이미
-          //     ready row 를 추가. realtime INSERT 가 같은 id 로 도착하면 무변경.
-          //   * 상대방 발신: stub 없음 → 신규 append.
-          setMessages((prev) => {
-            const idx = prev.findIndex((m) => m.id === newMsg.id);
-            if (idx >= 0) {
-              const next = prev.slice();
-              next[idx] = mergeServerOnly(newMsg, prev[idx]);
-              return next;
-            }
-            // message-reply(점프): 옛 구간을 보고 있는 동안 도착한 메시지를
-            // 끝에 붙이면 3주 전 메시지 바로 아래 오늘 메시지가 붙는다.
-            // 사용자가 "최신으로" 를 누르면 1페이지 재로드로 자연 합류한다.
-            if (jumpedRef.current) return prev;
-            return [...prev, newMsg];
-          });
-
-          // chat-photos: realtime 페이로드는 DB 원본 행이라 photo_path 만 있고
-          // 서명 URL 이 없다. 그대로 두면 수신자 화면에 폴백 캡션만 뜨고 사진은
-          // 채팅방을 다시 들어와야(=GET 을 태워야) 보인다. 도착 직후 URL 만
-          // 따로 받아 그 행에 채워 넣는다.
-          if (newMsg.photo_path && !newMsg.photo_url) {
-            void messageService
-              .getPhotoUrl(matchId, newMsg.id)
-              .then((url) => {
-                if (cancelled || !url) return;
-                setMessages((prev) =>
-                  prev.map((m) => (m.id === newMsg.id ? { ...m, photo_url: url } : m)),
-                );
-              })
-              .catch(() => {
-                // 실패해도 다음 채팅방 진입 시 GET 이 서명 URL 을 실어 온다.
-              });
-          }
+          applyIncoming(newMsg);
         },
         (updatedMsg) => {
           if (cancelled) return;
@@ -626,6 +672,7 @@ export function useChat(matchId: string) {
           if (cancelled) return;
           if (status === 'SUBSCRIBED') {
             retryAttempt = 0;
+            void catchUp();
             return;
           }
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
