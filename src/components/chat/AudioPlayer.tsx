@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, Text, View, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { safePlay } from './sharedAudioPlayer';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors, radii } from '@/constants/colors';
@@ -105,7 +106,7 @@ export function AudioPlayer({ url, compact = false, showProgressBar = false, sho
     if (duration > 0 && currentTime >= duration) {
       player.seekTo(0);
     }
-    player.play();
+    safePlay(player);
   }, [player, isPlaying, duration, currentTime]);
 
   if (showBar) {

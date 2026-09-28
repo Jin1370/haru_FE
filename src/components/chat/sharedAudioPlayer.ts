@@ -22,6 +22,7 @@
 
 import { createAudioPlayer, type AudioPlayer, type AudioStatus } from 'expo-audio';
 import { useSyncExternalStore } from 'react';
+import * as Sentry from '@sentry/react-native';
 import { cacheAudio, cachedUri } from './audioCache';
 
 export interface SharedAudioState {
@@ -69,6 +70,17 @@ function ensurePlayer(): AudioPlayer {
  * 로드되어 있으면 source 교체 없이 play 만 한다 (재생 끝까지 가 있으면
  * 처음으로 seek). 다른 URL 이 재생 중이면 source 만 교체.
  */
+// iOS 에서 play() 는 AVAudioSession.setActive(true) 를 동기 호출하고, 세션을
+// 못 잡으면 (iOS 27 "Session lookup failed" 등) JS 로 throw 한다. 탭 핸들러에서
+// 새면 앱이 죽으므로 삼킨다 — 이번 재생만 안 되고 다시 탭하면 된다.
+export function safePlay(p: AudioPlayer): void {
+  try {
+    p.play();
+  } catch (e) {
+    Sentry.captureException(e); // 크래시 대신 handled 로 보고 — 빈도 추적용
+  }
+}
+
 export function playSharedAudio(url: string): void {
   const p = ensurePlayer();
   // 로컬 캐시가 있으면 그 파일로 재생. currentUrl 은 원격 URL 을 유지해야
@@ -86,7 +98,7 @@ export function playSharedAudio(url: string): void {
   } else if (state.duration > 0 && state.currentTime >= state.duration) {
     p.seekTo(0).catch(() => {});
   }
-  p.play();
+  safePlay(p);
   cacheAudio(url); // 다음 재생부터 로컬 (이번 재생은 그대로 스트리밍)
 }
 
@@ -98,7 +110,7 @@ export function playLocalAudio(uri: string): void {
     currentUrl = uri;
     publish({ currentUrl: uri, isPlaying: false, duration: 0, currentTime: 0, isLoaded: false });
   }
-  p.play();
+  safePlay(p);
 }
 
 export function pauseSharedAudio(): void {

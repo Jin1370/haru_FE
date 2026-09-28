@@ -24,6 +24,7 @@ import { fonts } from "@/constants/fonts";
 import { calculateAge } from "@/utils/age";
 import { genderIconName, genderLabelKey } from "@/utils/gender";
 import type { DiscoverCandidate } from "@/types";
+import { safePlay } from "@/components/chat/sharedAudioPlayer";
 
 const ROTATION_RANGE = 14;
 
@@ -191,7 +192,7 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
         if (duration > 0 && currentTime >= duration) {
             player.seekTo(0);
         }
-        player.play();
+        safePlay(player);
     }, [audioUrl, player, isPlaying, duration, currentTime]);
 
     const translateX = useRef(new Animated.Value(0)).current;
