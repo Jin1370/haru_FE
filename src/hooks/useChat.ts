@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import * as Crypto from 'expo-crypto';
+import * as Sentry from '@sentry/react-native';
 import useSWR from 'swr';
 import * as messageService from '@/services/messages';
 import { adoptLocalPhoto } from '@/components/chat/photoCache';
 import {
   subscribeToMessages,
+  isKeychainLocked,
   unsubscribeFromMessages,
   type MatchUpdatePayload,
 } from '@/services/realtime';
@@ -641,8 +643,28 @@ export function useChat(matchId: string) {
       }
     };
 
+    const scheduleRetry = () => {
+      const delay = computeBackoffDelay(retryAttempt);
+      retryAttempt += 1;
+      clearRetry();
+      retryTimer = setTimeout(() => {
+        if (!cancelled) connect();
+      }, delay);
+    };
+
     const connect = async () => {
       clearRetry();
+      try {
+        await connectOnce();
+      } catch (e) {
+        // 구독 전에 실패하면 CHANNEL_ERROR 가 안 와서 재시도가 멈춘다 — 여기서 직접.
+        if (cancelled || isKeychainLocked(e)) return;
+        Sentry.captureException(e);
+        scheduleRetry();
+      }
+    };
+
+    const connectOnce = async () => {
       await subscribeToMessages(
         matchId,
         (newMsg) => {
@@ -676,12 +698,7 @@ export function useChat(matchId: string) {
             return;
           }
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            const delay = computeBackoffDelay(retryAttempt);
-            retryAttempt += 1;
-            clearRetry();
-            retryTimer = setTimeout(() => {
-              if (!cancelled) connect();
-            }, delay);
+            scheduleRetry();
           }
         },
         // mig 014 match-roundtrip-realtime: matches UPDATE 핸들러. 트리거가

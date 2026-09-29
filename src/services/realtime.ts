@@ -275,6 +275,16 @@ function tokenExpiringSoon(token: string): boolean {
 // back to anon. realtime.setAuth() skips GoTrue entirely; we only have to make
 // sure the token we hand it is fresh, refreshing via the BE-mediated, deduped
 // refreshSession() first when it's at/near expiry.
+// iOS 가 잠긴 동안 키체인(토큰) 읽기를 거절한 경우. 무해 — 포그라운드 복귀 시
+// AppState 'active' 가 connect() 를 다시 부른다. 그 외 실패는 호출처가 보고+재시도.
+// ponytail: expo-secure-store 에러 문구 매칭. 문구가 바뀌면 Sentry 에 다시 보인다(안전한 쪽).
+export function isKeychainLocked(e: unknown): boolean {
+  const err = e as { message?: unknown; cause?: unknown } | null;
+  return `${String(err?.message ?? e)} ${String(err?.cause ?? '')}`.includes(
+    'User interaction is not allowed',
+  );
+}
+
 export async function setRealtimeAuth() {
   let token = await getAccessToken();
   if (!token || tokenExpiringSoon(token)) {
