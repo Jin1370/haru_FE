@@ -127,14 +127,14 @@ export default function SettingsScreen() {
         <View style={styles.legalLinks}>
           <Text
             style={styles.legalLink}
-            onPress={() => Linking.openURL(LEGAL_URLS.terms)}
+            onPress={() => Linking.openURL(LEGAL_URLS.terms).catch(() => {})}
           >
             {t('settings.termsOfService')}
           </Text>
           <Text style={styles.legalSeparator}> · </Text>
           <Text
             style={styles.legalLink}
-            onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
+            onPress={() => Linking.openURL(LEGAL_URLS.privacy).catch(() => {})}
           >
             {t('settings.privacyPolicy')}
           </Text>

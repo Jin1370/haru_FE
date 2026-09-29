@@ -90,7 +90,7 @@ export function ConsentForm({
               <Text style={styles.itemLabel}>{t(item.labelKey)}</Text>
             </Pressable>
             <Pressable
-              onPress={() => Linking.openURL(item.url)}
+              onPress={() => Linking.openURL(item.url).catch(() => {})}
               hitSlop={8}
               accessibilityLabel={t('consent.view')}
             >
