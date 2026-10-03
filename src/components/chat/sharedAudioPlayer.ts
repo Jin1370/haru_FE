@@ -20,7 +20,7 @@
 // 동시 재생 사용처 없음). voice intro / SwipeCard 의 보이스 인트로 player
 // 와는 별개 (그쪽은 cold-start path 라 본 singleton 에 합칠 필요 없음).
 
-import { createAudioPlayer, type AudioPlayer, type AudioStatus } from 'expo-audio';
+import { createAudioPlayer, setAudioModeAsync, type AudioPlayer, type AudioStatus } from 'expo-audio';
 import { useSyncExternalStore } from 'react';
 import * as Sentry from '@sentry/react-native';
 import { cacheAudio, cachedUri } from './audioCache';
@@ -71,14 +71,41 @@ function ensurePlayer(): AudioPlayer {
  * 처음으로 seek). 다른 URL 이 재생 중이면 source 만 교체.
  */
 // iOS 에서 play() 는 AVAudioSession.setActive(true) 를 동기 호출하고, 세션을
-// 못 잡으면 (iOS 27 "Session lookup failed" 등) JS 로 throw 한다. 탭 핸들러에서
+// 못 잡으면 ("Session lookup failed" 등) JS 로 throw 한다. 탭 핸들러에서
 // 새면 앱이 죽으므로 삼킨다 — 이번 재생만 안 되고 다시 탭하면 된다.
-export function safePlay(p: AudioPlayer): void {
+export function safePlay(p: AudioPlayer): boolean {
   try {
     p.play();
+    return true;
   } catch (e) {
     Sentry.captureException(e); // 크래시 대신 handled 로 보고 — 빈도 추적용
+    return false;
   }
+}
+
+// iOS 오디오 서버(mediaserverd)가 재시작되면 ("Server was dead when activation
+// request was made") 기존 native player 는 앱 재시작 전까지 계속 깨져 있다 —
+// Apple 은 오디오 객체 재생성을 요구한다. singleton 이라 스스로는 안 풀리므로
+// 실패 시 버리고 새로 만들어 1회 재시도. 옛 player 를 먼저 버려 동시 1개 유지.
+function playOrRecover(uri: string, key: string): void {
+  if (safePlay(ensurePlayer())) return;
+  try {
+    player?.remove();
+  } catch {}
+  player = null;
+  currentUrl = null;
+  publish({ currentUrl: null, isPlaying: false, duration: 0, currentTime: 0, isLoaded: false });
+  // 서버 재시작 시 세션 카테고리도 기본값으로 돌아가므로 무음모드 재생 설정 재적용.
+  setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false })
+    .catch(() => {})
+    .then(() => {
+      if (player) return; // 그 사이 다른 메시지 탭이 이미 새 player 로 재생
+      const p = ensurePlayer();
+      p.replace({ uri });
+      currentUrl = key;
+      publish({ currentUrl: key, isPlaying: false, duration: 0, currentTime: 0, isLoaded: false });
+      safePlay(p);
+    });
 }
 
 export function playSharedAudio(url: string): void {
@@ -98,7 +125,7 @@ export function playSharedAudio(url: string): void {
   } else if (state.duration > 0 && state.currentTime >= state.duration) {
     p.seekTo(0).catch(() => {});
   }
-  safePlay(p);
+  playOrRecover(cachedUri(url) ?? url, url);
   cacheAudio(url); // 다음 재생부터 로컬 (이번 재생은 그대로 스트리밍)
 }
 
@@ -110,7 +137,7 @@ export function playLocalAudio(uri: string): void {
     currentUrl = uri;
     publish({ currentUrl: uri, isPlaying: false, duration: 0, currentTime: 0, isLoaded: false });
   }
-  safePlay(p);
+  playOrRecover(uri, uri);
 }
 
 export function pauseSharedAudio(): void {
