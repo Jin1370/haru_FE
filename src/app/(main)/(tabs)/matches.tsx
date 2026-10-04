@@ -4,6 +4,7 @@ import {
   FlatList,
   StyleSheet,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +22,7 @@ import type { MatchListItem } from '@/types';
 
 export default function MatchesScreen() {
   const { t } = useTranslation();
-  const { matches, loading, hasMore, loadMatches, loadMore, toggleMute } = useMatches();
+  const { matches, loading, loadingMore, hasMore, loadMatches, loadMore, toggleMute } = useMatches();
   const [actionTarget, setActionTarget] = useState<MatchListItem | null>(null);
   // RefreshControl 의 refreshing 은 "사용자가 직접 당긴" 경우에만 true 로 둔다.
   // 일반 loading(=isValidating)을 그대로 묶으면, useFocusEffect 의 focus
@@ -122,6 +123,11 @@ export default function MatchesScreen() {
         ListEmptyComponent={renderEmpty}
         onEndReached={hasMore ? loadMore : undefined}
         onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          loadingMore ? (
+            <ActivityIndicator color={colors.primary} style={{ padding: 12 }} />
+          ) : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

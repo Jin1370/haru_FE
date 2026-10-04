@@ -5,7 +5,8 @@ export async function getMatches(
   limit = 20,
   before?: string,
 ): Promise<MatchListItem[]> {
-  let path = `/api/matches?limit=${limit}`;
+  // sort=activity: BE 가 마지막 대화 순으로 자르고 before 커서도 last_activity_at 기준.
+  let path = `/api/matches?limit=${limit}&sort=activity`;
   if (before) path += `&before=${encodeURIComponent(before)}`;
   return api.get<MatchListItem[]>(path);
 }

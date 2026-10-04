@@ -125,7 +125,9 @@ export function useMatches() {
   const [extraPages, setExtraPages] = useState<MatchListItem[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
-  const loadingMore = useRef(false);
+  const loadingMoreRef = useRef(false);
+  // ref 는 중복 호출 가드, state 는 하단 스피너 렌더용.
+  const [loadingMore, setLoadingMore] = useState(false);
   // Mirror state into refs so loadMore can read the freshest cursor without
   // depending on closure values. Prevents the rare race where extraPages was
   // just reset by a focus-revalidate but the closure still sees the old tail.
@@ -150,12 +152,9 @@ export function useMatches() {
     }
   }, [data]);
 
-  // BE 는 페이지네이션 커서 호환을 위해 matches.created_at DESC 로 내려준다.
-  // 화면 정렬은 "가장 최근 메시지를 주고받은 채팅" 기준이어야 하므로 표시
-  // 직전에 last_message.created_at 으로 재정렬한다. 메시지가 아직 없는 매치
-  // (last_message=null) 는 매치 생성 시각으로 폴백 — 신규 매치가 상단에 노출.
-  // dataRef / extraPagesRef 는 BE 순서를 그대로 유지해 loadMore 의 tail.created_at
-  // 커서가 BE 정렬 기준과 어긋나지 않도록 한다.
+  // BE(sort=activity) 가 last_activity_at DESC 로 내려주지만, Realtime 이 data 만
+  // 갱신하므로 표시 직전 last_message.created_at 으로 재정렬해 화면 순서를 맞춘다.
+  // 메시지 없는 매치(last_message=null) 는 매치 생성 시각으로 폴백.
   const matches = data
     ? [...data, ...extraPages].sort((a, b) => {
         const aTime = a.last_message?.created_at ?? a.created_at;
@@ -204,24 +203,28 @@ export function useMatches() {
   );
 
   const loadMore = useCallback(async () => {
-    if (loadingMore.current || !hasMore) return;
-    loadingMore.current = true;
+    if (loadingMoreRef.current || !hasMore) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
     try {
-      const tailExtra = extraPagesRef.current;
-      const tailData = dataRef.current;
-      const tail =
-        tailExtra.length > 0
-          ? tailExtra[tailExtra.length - 1]
-          : tailData?.[tailData.length - 1];
-      if (!tail) return;
-      const newPage = await matchService.getMatches(PAGE_SIZE, tail.created_at);
+      // Realtime 이 data 의 행을 맨 위로 올리므로 배열 끝 ≠ 가장 오래된 행.
+      // BE 커서(last_activity_at) 기준 최솟값을 직접 찾는다. Realtime 은 이 값을
+      // 갱신하지 않으므로 서버가 준 값 그대로의 최솟값 = 서버 페이지 경계.
+      const loaded = [...(dataRef.current ?? []), ...extraPagesRef.current];
+      if (loaded.length === 0) return;
+      const oldest = loaded.reduce((a, b) => (b.last_activity_at < a.last_activity_at ? b : a));
+      const newPage = await matchService.getMatches(PAGE_SIZE, oldest.last_activity_at);
       ingestMatches(newPage);
-      setExtraPages((prev) => [...prev, ...newPage]);
+      // 스크롤 중 다음 페이지 행이 새 대화로 앞 페이지에 이미 들어와 있을 수 있다 —
+      // 중복 키로 같은 방이 두 번 그려지지 않게 거른다.
+      const seen = new Set(loaded.map((m) => m.match_id));
+      setExtraPages((prev) => [...prev, ...newPage.filter((m) => !seen.has(m.match_id))]);
       setHasMore(newPage.length === PAGE_SIZE);
     } catch (e: any) {
       setLoadMoreError(e.message);
     } finally {
-      loadingMore.current = false;
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
     }
   }, [hasMore]);
 
@@ -404,5 +407,5 @@ export function useMatches() {
 
   const error = swrError ? (swrError as Error).message : loadMoreError;
 
-  return { matches, loading: isValidating, hasMore, error, loadMatches, loadMore, toggleMute };
+  return { matches, loading: isValidating, loadingMore, hasMore, error, loadMatches, loadMore, toggleMute };
 }

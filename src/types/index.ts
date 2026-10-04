@@ -246,6 +246,8 @@ export interface PartnerDetail {
 export interface MatchListItem {
   match_id: string;
   created_at: string;
+  // mig 058: max(매치 생성, 마지막 메시지). 목록 페이지 커서.
+  last_activity_at: string;
   // Tombstone marker for ended chats (mig 013). When non-null the match has
   // been ended via block / unmatch / report — FE renders the row with a
   // "매치 종료" label and the chat composer is read-only. Distinct from
