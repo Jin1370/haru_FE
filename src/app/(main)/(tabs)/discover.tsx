@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SwipeCard } from '@/components/discover/SwipeCard';
 import { LaunchPromoCard } from '@/components/discover/LaunchPromoCard';
@@ -10,13 +10,19 @@ import {
   showLikeLimit,
   showMatchAlert,
 } from '@/components/discover/DiscoverGate';
+import { LockedCard, useCountdown, nextLocalMidnightMs } from '@/components/discover/LockedCard';
+import { showStarSheet } from '@/components/stars/StarSheet';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useDiscover } from '@/hooks/useDiscover';
+import * as discoverService from '@/services/discover';
+import { ApiRequestError } from '@/services/api';
+import type { DiscoverCandidate } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiscoverStore } from '@/stores/discoverStore';
 import { showAlert } from '@/stores/alertStore';
-import { radii } from '@/constants/colors';
+import { colors, radii } from '@/constants/colors';
+import { fonts } from '@/constants/fonts';
 
 export default function DiscoverScreen() {
   const { t } = useTranslation();
@@ -29,6 +35,10 @@ export default function DiscoverScreen() {
     loadCandidates,
     handleSwipe,
     consumeLikeLimitHit,
+    consumeStarsShort,
+    syncQuota,
+    monetizationEnabled,
+    starsTotal,
     removeCandidate,
     dailyLimitReached,
     passResetEnabled,
@@ -76,9 +86,43 @@ export default function DiscoverScreen() {
     loadCandidates();
   }, [reloadVersion, loadCandidates]);
 
+  // 별사탕을 쓰거나(pay) 그냥 보내거나 공통 — 결과 신호(429/402)와 매치 알럿 처리.
+  const sendSwipe = async (candidateId: string, direction: 'like' | 'pass', pay = false) => {
+    const res = await handleSwipe(candidateId, direction, pay);
+
+    // 멀티기기 stale: 로컬 카운트로는 여유였지만 BE 가 429 로 캡한 경우, 훅이 세운
+    // one-shot 신호를 소비해 즉시 모달을 띄운다(다음 렌더의 stale 상태에 의존하지 않음).
+    if (consumeLikeLimitHit()) {
+      showLikeOut(candidateId);
+      return;
+    }
+    if (consumeStarsShort()) {
+      showAlert({ variant: 'info', title: t('stars.insufficient') });
+      return;
+    }
+
+    if (res?.match) showMatchAlert(t, res.match.id);
+  };
+
+  // 좋아요 무료 한도 소진. 유료화 ON 이면 별사탕 시트(1개 사용 / 광고 / 충전),
+  // OFF 면 기존 안내 모달.
+  const showLikeOut = (candidateId: string) => {
+    if (!monetizationEnabled) {
+      showLikeLimit(t);
+      return;
+    }
+    // 질문 + 아이콘·잔액 + "확인" 만 (부족하면 광고·충전이 함께 뜬다).
+    showStarSheet({
+      message: t('discover.likeMore'),
+      useLabel: t('common.confirm'),
+      cost: 1,
+      onUse: () => sendSwipe(candidateId, 'like', true),
+    });
+  };
+
   const onSwipe = async (direction: 'like' | 'pass') => {
     const candidate = candidates[0];
-    if (!candidate) return;
+    if (!candidate || candidate.locked) return;
 
     // like-wall: 미등록 사용자의 좋아요는 어차피 기능하지 않는다(상대 피드에
     // 안 보여 매치 불가). 좋아요는 기록하지 않고(=카드 유지, 돌아와 다시 좋아요)
@@ -92,27 +136,68 @@ export default function DiscoverScreen() {
     // 예산 소모) 카드면 카드를 넘기지 않고 즉시 한도 모달만 띄운다(카드 그대로).
     // 매치를 완성하는 like(candidate.liked_you=true = 면제)는 소진 후에도 통과시켜
     // 즉시 매치되게 한다(결정 #4). liked_you 가 stale(로드 후 상대가 unlike)이라
-    // BE 가 non-reciprocal 로 429 를 주면 아래 consumeLikeLimitHit 가 방어한다.
+    // BE 가 non-reciprocal 로 429 를 주면 sendSwipe 의 consumeLikeLimitHit 가 방어한다.
+    // 유료화 ON 에선 BE 가 liked_you 를 보내지 않는다 — 탐색 좋아요는 전부 차감이라
+    // 한도 소진 후엔 모든 카드에서 별사탕 시트가 뜬다.
     if (direction === 'like' && dailyLimitReached && !candidate.liked_you) {
-      showLikeLimit(t);
+      showLikeOut(candidate.id);
       return;
     }
 
-    const res = await handleSwipe(candidate.id, direction);
+    await sendSwipe(candidate.id, direction);
+  };
 
-    // 멀티기기 stale: 로컬 카운트로는 여유였지만 BE 가 429 로 캡한 경우, 훅이 세운
-    // one-shot 신호를 소비해 즉시 모달을 띄운다(다음 렌더의 stale 상태에 의존하지 않음).
-    if (consumeLikeLimitHit()) {
-      showLikeLimit(t);
+  // 카드 10장 추가 (별사탕 4개). 항상 확인 모달 — 볼 수 있는 새 카드가 10장
+  // 미만이면 그 수와 "나머지는 오늘 새 카드가 생기면" 안내. 별사탕이 모자라면
+  // 확인 대신 별사탕 시트(광고 / 충전)로.
+  const runCardReset = async () => {
+    try {
+      await discoverService.cardReset();
+      await syncQuota();
+      await loadCandidates();
+    } catch (e) {
+      if (e instanceof ApiRequestError && e.status === 402) {
+        showAlert({ variant: 'info', title: t('stars.insufficient') });
+        syncQuota();
+        return;
+      }
+      showAlert({ variant: 'info', title: t('common.tryAgainLater') });
+    }
+  };
+
+  const onCardReset = (locked: DiscoverCandidate) => {
+    // 서버가 최대 10 으로 잘라 보낸다 (리셋 1회 = 10장).
+    const message = t('discover.cardsOut.confirm', { count: locked.available_count ?? 0 });
+    if (starsTotal < 4) {
+      showStarSheet({ title: message, cost: 4, onUse: runCardReset });
       return;
     }
-
-    if (res?.match) showMatchAlert(t, res.match.id);
+    // 제목 없이 본문만 + 우상단 X, 버튼은 "사용하기" 하나(가로 전체).
+    showAlert({
+      variant: 'confirm',
+      message,
+      closable: true,
+      confirmText: t('stars.useConfirm'),
+      onConfirm: runCardReset,
+    });
   };
 
   // "넘긴 사람 다시 보기" — 막힌 상태(빈 화면/한도 도달)에서만 노출되는 탈출구.
-  // 카드는 즉시 복구된다. 모달은 다시 볼 사람이 없을 때(0명)만 띄운다.
-  const onReset = async () => {
+  // 확인 모달 후 적용 — 다시 보는 카드는 카드 수에서 차감되지 않는다는 안내 포함.
+  // 모달은 다시 볼 사람이 없을 때(0명)만 띄운다.
+  const onReset = () => {
+    showAlert({
+      variant: 'confirm',
+      title: t('discover.passReset.confirmTitle'),
+      // 차감 안내는 유료화 ON 일 때만 의미가 있다 (OFF 면 제목만).
+      message: monetizationEnabled ? t('discover.passReset.confirmFreeNote') : undefined,
+      confirmText: t('discover.passReset.confirmButton'),
+      cancelText: t('common.cancel'),
+      onConfirm: runPassReset,
+    });
+  };
+
+  const runPassReset = async () => {
     const resetCount = await handleResetPasses();
     if (resetCount === null) return;
     if (resetCount === 0) {
@@ -133,7 +218,15 @@ export default function DiscoverScreen() {
       loading={loading && candidates.length === 0}
       overlay={current ? <LaunchPromoCard /> : null}
     >
-      {current ? (
+      {current?.locked ? (
+        // 오늘 카드를 다 봤다 — 다음 후보를 블러로 보여주며 궁금증을 남긴다.
+        <LockedCard candidate={current}>
+          <CardsOutPanel
+            onReset={() => onCardReset(current)}
+            onMidnight={loadCandidates}
+          />
+        </LockedCard>
+      ) : current ? (
         <SwipeCard
           key={current.id}
           candidate={current}
@@ -181,7 +274,38 @@ export default function DiscoverScreen() {
   );
 }
 
+// 잠긴 카드 위 안내 — 다음 무료 카드까지 남은 시간 + 별사탕으로 10장 더 보기.
+// 자정이 지나면 onMidnight 로 다시 불러와 무료 카드를 받는다.
+function CardsOutPanel({ onReset, onMidnight }: { onReset: () => void; onMidnight: () => void }) {
+  const { t } = useTranslation();
+  const [target] = useState(nextLocalMidnightMs);
+  const left = useCountdown(target, onMidnight);
+  return (
+    <>
+      <Text style={styles.lockedTitle}>{t('discover.cardsOut.title')}</Text>
+      <Text style={styles.lockedTimer}>{t('discover.cardsOut.nextFree', { time: left })}</Text>
+      <Button title={t('discover.cardsOut.resetButton')} onPress={onReset} style={styles.lockedBtn} />
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
+  lockedTitle: {
+    fontSize: 18,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  lockedTimer: {
+    fontSize: 15,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    opacity: 0.85,
+  },
+  lockedBtn: {
+    marginTop: 8,
+    borderRadius: radii.pill,
+  },
   resetBtn: {
     marginTop: 28,
     borderRadius: radii.pill,

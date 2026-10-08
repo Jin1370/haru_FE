@@ -167,8 +167,20 @@ export default {
     voiceProcessingHint: 'Please wait a moment.',
     likeGateMessage: 'Complete your profile to send a like',
     passReset: {
-      button: 'See skipped people again',
+      button: 'See skipped cards again',
       empty_zero: "You haven't skipped anyone yet",
+      confirmTitle: 'See skipped cards again',
+      confirmFreeNote: "These cards won't count toward today's card limit.",
+      confirmButton: 'See again',
+    },
+    likeMore: 'Send another like?',
+    cardsLeft: 'Cards {{count}}',
+    likesLeft: 'Likes left {{count}}',
+    cardsOut: {
+      title: "You've seen all of today's cards",
+      nextFree: 'Next cards open in {{time}}',
+      resetButton: 'See 10 more',
+      confirm: '{{count}} more cards available. Use 4 Stars?',
     },
     launchPromo: {
       title: 'Launch celebration event',
@@ -184,6 +196,29 @@ export default {
       text: 'Meet more people in the Discover tab.',
       cta: 'Discover now',
     },
+    locked: {
+      freeReveal: 'Reveal for free',
+      paidReveal: 'Reveal for 2 Stars',
+      nextFree: 'Next free reveal in {{time}}',
+      confirmPaid: 'Use 2 Stars to reveal?',
+    },
+  },
+
+  stars: {
+    balance: 'Stars: {{count}}',
+    use: 'Use Stars ×{{count}}',
+    useConfirm: 'Use',
+    watchAd: 'Watch an ad, get 1 Star',
+    watchAdRemaining: '{{count}} left',
+    watchAdDone: "You've claimed all of today's ad rewards",
+    charge: 'Get more',
+    adsUnavailable: "Ads can't be loaded right now. Please try again later.",
+    insufficient: 'Not enough Stars',
+    shopTitle: 'Store',
+    shopProduct: '{{count}} Stars',
+    shopUnavailable: "Products can't be loaded right now. Please try again later.",
+    purchaseDone: 'Purchase complete. It may take a few seconds to appear.',
+    purchaseFailed: "The purchase couldn't be completed. Please try again.",
   },
 
   matches: {
@@ -393,6 +428,7 @@ export default {
   },
 
   setupProfile: {
+    identityLockNotice: "Birth date, gender, and nationality can't be changed after sign-up.",
     displayName: 'Nickname',
     displayNamePlaceholder: 'Your nickname',
     birthDate: 'Birth Date',
@@ -598,6 +634,7 @@ export default {
   },
 
   settings: {
+    identityLocked: "The birth date, gender, and nationality you entered at sign-up can't be changed.",
     title: 'Settings',
     languageSettings: 'Language',
     changePassword: 'Change Password',

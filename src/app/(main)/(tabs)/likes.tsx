@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SwipeCard } from '@/components/discover/SwipeCard';
@@ -15,7 +15,11 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useReceivedLikes } from '@/hooks/useReceivedLikes';
 import { useAuthStore } from '@/stores/authStore';
 import { showAlert } from '@/stores/alertStore';
-import { radii } from '@/constants/colors';
+import { colors, radii } from '@/constants/colors';
+import { fonts } from '@/constants/fonts';
+import { LockedCard, useCountdown } from '@/components/discover/LockedCard';
+import { showStarSheet } from '@/components/stars/StarSheet';
+import { ApiRequestError } from '@/services/api';
 
 // 받은 좋아요 탭 — 나를 like 한 사용자 카드 목록.
 // 디스커버와 동일한 SwipeCard/CardDeck 을 재사용해 UX 일관성 유지. 차이점은
@@ -33,6 +37,9 @@ export default function LikesScreen() {
     syncQuota,
     handleSwipe,
     consumeLikeLimitHit,
+    reveal,
+    starsTotal,
+    nextFreeRevealAt,
     removeCandidate,
     passResetEnabled,
     hasPasses,
@@ -60,9 +67,49 @@ export default function LikesScreen() {
     }, [loadCandidates]),
   );
 
+  // 받은 좋아요 공개. 무료가 남았으면 바로, 아니면 확인 후 별사탕 2개 —
+  // 별사탕이 모자라면 별사탕 시트(광고 / 충전)로.
+  const [revealing, setRevealing] = useState(false);
+  const runReveal = async (likerId: string, pay: boolean) => {
+    setRevealing(true);
+    try {
+      await reveal(likerId, pay);
+    } catch (e) {
+      const code = e instanceof ApiRequestError ? e.code : undefined;
+      showAlert({
+        variant: 'info',
+        title: code === 'insufficient_stars' ? t('stars.insufficient') : t('common.tryAgainLater'),
+      });
+    } finally {
+      setRevealing(false);
+    }
+  };
+
+  const onReveal = (likerId: string) => {
+    if (!nextFreeRevealAt) {
+      runReveal(likerId, false);
+      return;
+    }
+    if (starsTotal < 2) {
+      showStarSheet({
+        title: t('likes.locked.paidReveal'),
+        cost: 2,
+        onUse: () => runReveal(likerId, true),
+      });
+      return;
+    }
+    showAlert({
+      variant: 'confirm',
+      title: t('likes.locked.confirmPaid'),
+      confirmText: t('stars.useConfirm'),
+      cancelText: t('common.cancel'),
+      onConfirm: () => runReveal(likerId, true),
+    });
+  };
+
   const onSwipe = async (direction: 'like' | 'pass') => {
     const candidate = candidates[0];
-    if (!candidate) return;
+    if (!candidate || candidate.locked) return;
 
     // like-wall: 미등록 사용자의 좋아요는 기능하지 않으므로(상대 피드 비노출 →
     // 매치 불가) 좋아요는 기록하지 않고 등록을 유도한다. pass 는 그대로 처리.
@@ -122,7 +169,16 @@ export default function LikesScreen() {
       // 카드로 바뀌고, 사용자가 버튼을 누른 경우(retrying)만 로딩을 보여준다.
       loading={(loading && candidates.length === 0 && !error) || retrying}
     >
-      {current ? (
+      {current?.locked ? (
+        <LockedCard candidate={current}>
+          <RevealPanel
+            nextFreeRevealAt={nextFreeRevealAt}
+            revealing={revealing}
+            onReveal={() => onReveal(current.id)}
+            onFreeAgain={syncQuota}
+          />
+        </LockedCard>
+      ) : current ? (
         <SwipeCard
           key={current.id}
           candidate={current}
@@ -168,7 +224,47 @@ export default function LikesScreen() {
   );
 }
 
+// 잠긴 카드 위 공개 버튼. 무료 공개가 남았으면 "무료로 공개하기", 아니면 다음 무료
+// 공개까지 타이머 + "별사탕 2개로 공개하기". 타이머가 끝나면 quota 를 다시 읽어 무료로 전환.
+function RevealPanel({
+  nextFreeRevealAt,
+  revealing,
+  onReveal,
+  onFreeAgain,
+}: {
+  nextFreeRevealAt: string | null;
+  revealing: boolean;
+  onReveal: () => void;
+  onFreeAgain: () => void;
+}) {
+  const { t } = useTranslation();
+  const target = nextFreeRevealAt ? new Date(nextFreeRevealAt).getTime() : null;
+  const left = useCountdown(target, onFreeAgain);
+  return (
+    <>
+      {target ? <Text style={styles.lockedTimer}>{t('likes.locked.nextFree', { time: left })}</Text> : null}
+      <Button
+        title={target ? t('likes.locked.paidReveal') : t('likes.locked.freeReveal')}
+        onPress={onReveal}
+        loading={revealing}
+        disabled={revealing}
+        style={styles.lockedBtn}
+      />
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
+  lockedTimer: {
+    fontSize: 15,
+    fontFamily: fonts.medium,
+    color: colors.white,
+    opacity: 0.85,
+    textAlign: 'center',
+  },
+  lockedBtn: {
+    borderRadius: radii.pill,
+  },
   resetBtn: {
     marginTop: 12,
     borderRadius: radii.pill,

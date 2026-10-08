@@ -30,6 +30,8 @@ export function useDiscover() {
   // ref 를 쓰는 이유: 429 직후 카운트가 한도로 올라가도 그건 다음 렌더라,
   // 같은 tick 의 onSwipe 클로저는 stale(false) 이다.
   const likeLimitHitRef = useRef(false);
+  // 402(별사탕 부족) one-shot 신호 — likeLimitHitRef 와 같은 방식으로 화면이 소비.
+  const starsShortRef = useRef(false);
   useEffect(() => {
     candidatesRef.current = candidates;
   }, [candidates]);
@@ -125,10 +127,12 @@ export function useDiscover() {
     prefetchMore();
   }, [candidates.length, loading, prefetchMore]);
 
-  const { bumpCount, markLimitReached, markHasPasses } = quota;
+  const { bumpCount, bumpCards, markLimitReached, markHasPasses, syncQuota } = quota;
   const handleSwipe = useCallback(async (
     swipedId: string,
     direction: 'like' | 'pass',
+    // 좋아요 한도 소진 후 사용자가 별사탕 시트에서 "1개 사용" 을 누른 경우.
+    payWithStars = false,
   ): Promise<SwipeResponse | null> => {
     // Optimistic: drop the swiped card and bump the count immediately so the
     // next card surfaces the instant the current one flies off — without
@@ -142,13 +146,22 @@ export function useDiscover() {
     setCandidates((prev) => prev.filter((c) => c.id !== swipedId));
     // 낙관적 +1 은 like 일 때만. pass(넘기기)는 예산을 소모하지 않으므로 카운트 불변.
     if (direction === 'like') bumpCount(1);
+    // 남은 카드 수 즉시 차감 (다시보기·캠페인 봇 카드는 제외). 실패 시 아래에서 되돌림.
+    const countsCard = removed !== null && !removed.free_card;
+    if (countsCard) bumpCards(1);
     // Register in the shared session swiped-set so an in-flight (not-yet-committed)
     // POST can't let this user re-surface via a concurrent prefetch — and so the
     // 받은 좋아요 탭이 같은 카드를 즉시 덱에서 제거한다(구독 알림).
     swipedSession.add(swipedId);
 
     try {
-      const res = await discoverService.swipe({ swiped_id: swipedId, direction });
+      const res = await discoverService.swipe({
+        swiped_id: swipedId,
+        direction,
+        ...(payWithStars ? { pay_with_stars: true } : {}),
+      });
+      // 별사탕을 썼으면 잔액이 바뀌었다.
+      if (payWithStars) syncQuota();
       // 방금 pass 행이 생겼으므로 "다시 보기" 버튼 노출 조건을 즉시 충족시킨다
       // (다음 quota 동기화를 기다리지 않고 in-session 으로 반영).
       if (direction === 'pass') markHasPasses();
@@ -175,6 +188,8 @@ export function useDiscover() {
 
       // 그 외(429 예산 소진 / 네트워크 / 500): 스와이프가 기록되지 않았으므로
       // 카드를 원래 위치에 복원해 프로필 유실을 막는다.
+      // 스와이프가 기록되지 않았으니 낙관적으로 줄인 남은 카드 수도 되돌린다.
+      if (countsCard) bumpCards(-1);
       if (removed) {
         setCandidates((prev) => {
           if (prev.some((c) => c.id === removed.id)) return prev;
@@ -188,7 +203,21 @@ export function useDiscover() {
       // (409 는 위에서 early-return 했으므로 여기 도달하지 않음 — 집합에 유지)
       swipedSession.delete(swipedId);
 
-      if (status === 429) {
+      const code = e instanceof ApiRequestError ? e.code : undefined;
+      if (status === 429 && code === 'daily_card_limit') {
+        // 오늘 카드를 다 봤다 (멀티기기 등으로 FE 가 몰랐던 경우). 다시 불러오면
+        // 서버가 잠긴 카드를 내려준다.
+        if (direction === 'like') bumpCount(-1);
+        loadCandidates();
+        syncQuota();
+        return null;
+      } else if (status === 402) {
+        // 별사탕 부족 (시트를 띄운 뒤 다른 기기에서 썼거나 잔액이 늦게 반영됨).
+        if (direction === 'like') bumpCount(-1);
+        starsShortRef.current = true;
+        syncQuota();
+        return null;
+      } else if (status === 429) {
         // 예산 소진(429는 like 에서만 발생). 화면을 잠그지 않는다 — 카드는 위에서
         // 복원됐고 pass 는 계속 가능. 카운트를 한도로 맞춰 이후 like 제스처가
         // dailyLimitReached 게이트에 걸리게 하고, one-shot 신호를 세워 화면이
@@ -202,7 +231,13 @@ export function useDiscover() {
       setError(e.message);
       return null;
     }
-  }, [userId, globalMutate, bumpCount, markLimitReached, markHasPasses]);
+  }, [userId, globalMutate, bumpCount, bumpCards, markLimitReached, markHasPasses, syncQuota, loadCandidates]);
+
+  const consumeStarsShort = useCallback(() => {
+    if (!starsShortRef.current) return false;
+    starsShortRef.current = false;
+    return true;
+  }, []);
 
   // 화면 onSwipe 가 handleSwipe 직후 동기 호출해 429(예산 소진) 신호를 소비한다.
   // true 를 반환하면 showLikeLimit 모달을 띄운다. 소비 즉시 flag 를 내려 재발동 방지.
@@ -243,6 +278,10 @@ export function useDiscover() {
     loadCandidates,
     handleSwipe,
     consumeLikeLimitHit,
+    consumeStarsShort,
+    syncQuota,
+    monetizationEnabled: quota.monetizationEnabled,
+    starsTotal: quota.starsTotal,
     removeCandidate,
     dailyCount: quota.dailyCount,
     dailyLimit: quota.dailyLimit,

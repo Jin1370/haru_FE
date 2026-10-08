@@ -8,7 +8,8 @@ export type AlertSpecVariant = AlertCardVariant;
 export interface AlertSpec {
   id: string;
   variant: AlertSpecVariant;
-  title: string;
+  /** 생략하면 본문만 보여준다 (AlertCard 참고). */
+  title?: string;
   message?: string;
   /** Primary button label. Defaults to `common.ok` resolved by AlertHost. */
   confirmText?: string;

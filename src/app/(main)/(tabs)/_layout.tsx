@@ -1,3 +1,4 @@
+import { StarChip, DiscoverHeaderRight } from '@/components/stars/StarChip';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
@@ -91,6 +92,7 @@ export default function TabLayout() {
           options={{
             title: t('tabs.discover'),
             headerTitle: () => <HeaderTitle icon="compass" label={t('tabs.discover')} />,
+            headerRight: () => <DiscoverHeaderRight />,
             tabBarIcon: ({ color, size, focused }) => (
               <Ionicons name={focused ? 'compass' : 'compass-outline'} size={size} color={color} />
             ),
@@ -101,6 +103,7 @@ export default function TabLayout() {
           options={{
             title: t('tabs.likes'),
             headerTitle: () => <HeaderTitle icon="heart" label={t('likes.headerTitle')} />,
+            headerRight: () => <StarChip />,
             tabBarIcon: ({ color, size, focused }) => (
               <Ionicons name={focused ? 'heart' : 'heart-outline'} size={size} color={color} />
             ),

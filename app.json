@@ -11,7 +11,7 @@
     "updates": {
       "url": "https://u.expo.dev/0058361e-081e-4790-b8f9-bf1b4d1e745d"
     },
-    "runtimeVersion": "1",
+    "runtimeVersion": "2",
     "backgroundColor": "#FEEEF0",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -109,6 +109,19 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "haru uses this to show you more relevant ads when you choose to watch an ad for Stars."
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-7598342994891184~2153085260",
+          "iosAppId": "ca-app-pub-7598342994891184~7471787095"
+        }
       ]
     ],
     "extra": {
@@ -117,5 +130,9 @@
         "projectId": "0058361e-081e-4790-b8f9-bf1b4d1e745d"
       }
     }
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-7598342994891184~2153085260",
+    "ios_app_id": "ca-app-pub-7598342994891184~7471787095"
   }
 }

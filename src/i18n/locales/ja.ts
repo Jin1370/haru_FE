@@ -165,8 +165,20 @@ export default {
         voiceProcessingHint: "少々お待ちください。",
         likeGateMessage: "「いいね」を送るにはプロフィールを完成させてください",
         passReset: {
-            button: "スキップした人をもう一度見る",
+            button: "スキップしたカードをもう一度見る",
             empty_zero: "まだスキップした人がいません",
+            confirmTitle: "スキップしたカードをもう一度見る",
+            confirmFreeNote: "もう一度見るカードは、今日のカード枚数にカウントされません。",
+            confirmButton: "もう一度見る",
+        },
+        likeMore: "追加でいいねを送りますか？",
+        cardsLeft: "カード{{count}}枚",
+        likesLeft: "残りいいね{{count}}回",
+        cardsOut: {
+            title: "今日のカードをすべて見ました",
+            nextFree: "次のカード公開まで {{time}}",
+            resetButton: "あと10枚見る",
+            confirm: "あと{{count}}枚見られます。金平糖を4個使いますか？",
         },
         launchPromo: {
             title: "リリース記念イベント",
@@ -182,6 +194,29 @@ export default {
             text: "「探す」タブでもっと多くの人に出会ってみましょう。",
             cta: "今すぐ探す",
         },
+        locked: {
+            freeReveal: "無料で公開する",
+            paidReveal: "金平糖2個で公開する",
+            nextFree: "次の無料公開まで {{time}}",
+            confirmPaid: "金平糖を2個使って公開しますか？",
+        },
+    },
+
+    stars: {
+        balance: "所持金平糖 {{count}}個",
+        use: "金平糖{{count}}個を使う",
+        useConfirm: "使う",
+        watchAd: "広告を見て1個もらう",
+        watchAdRemaining: "残り{{count}}回",
+        watchAdDone: "今日の広告特典はすべて受け取りました",
+        charge: "チャージする",
+        adsUnavailable: "現在広告を読み込めません。しばらくしてからもう一度お試しください。",
+        insufficient: "金平糖が足りません",
+        shopTitle: "ストア",
+        shopProduct: "金平糖{{count}}個",
+        shopUnavailable: "現在商品を読み込めません。しばらくしてからもう一度お試しください。",
+        purchaseDone: "チャージが完了しました。反映まで数秒かかる場合があります。",
+        purchaseFailed: "購入を完了できませんでした。もう一度お試しください。",
     },
 
     matches: {
@@ -388,6 +423,7 @@ export default {
     },
 
     setupProfile: {
+        identityLockNotice: "生年月日・性別・国籍は登録後に変更できません。",
         displayName: "ニックネーム",
         displayNamePlaceholder: "ニックネームを入力してください",
         birthDate: "生年月日",
@@ -594,6 +630,7 @@ export default {
     },
 
     settings: {
+        identityLocked: "登録時に入力した生年月日・性別・国籍は変更できません。",
         title: "設定",
         languageSettings: "言語設定",
         changePassword: "パスワード変更",

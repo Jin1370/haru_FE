@@ -16,7 +16,11 @@ function ingest(candidates: DiscoverCandidate[]): DiscoverCandidate[] {
 }
 
 export async function getDiscoverCandidates(limit = 10): Promise<DiscoverCandidate[]> {
-  return ingest(await api.get<DiscoverCandidate[]>(`/api/discover?limit=${limit}`));
+  // tz: 유료화 ON 의 카드 한도(로컬 자정 리셋) 계산용.
+  const tz = new Date().getTimezoneOffset();
+  return ingest(
+    await api.get<DiscoverCandidate[]>(`/api/discover?limit=${limit}&tz_offset_minutes=${tz}`),
+  );
 }
 
 // 받은 좋아요 — 나를 like 한 사용자 중 내가 아직 응답 안 했고 차단 양방향 아닌 후보.
@@ -46,4 +50,23 @@ export async function getDiscoverQuota(): Promise<DiscoverQuota> {
 // 경로에선 도달 안 함), account_frozen 은 글로벌 ApiRequestError 핸들러가 모달 처리.
 export async function resetPasses(): Promise<{ reset_count: number }> {
   return api.delete<{ reset_count: number }>('/api/discover/passes');
+}
+
+// ── 별사탕 유료화 (BE mig 059) ──────────────────────────────────────
+
+// 탐색 카드 10장 추가 (별사탕 4개). 402 = 별사탕 부족.
+export async function cardReset(): Promise<{ stars_total: number }> {
+  return api.post<{ stars_total: number }>('/api/discover/card-reset', {});
+}
+
+// 받은 좋아요 1명 공개. 무료 공개가 안 되면 402 reveal_requires_stars —
+// 사용자가 확인하면 payWithStars=true 로 다시 부른다 (별사탕 2개).
+export async function revealLike(
+  likerId: string,
+  payWithStars = false,
+): Promise<{ revealed: boolean; next_free_reveal_at: string | null }> {
+  return api.post('/api/discover/likes-received/reveal', {
+    liker_id: likerId,
+    pay_with_stars: payWithStars,
+  });
 }

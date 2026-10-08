@@ -11,10 +11,12 @@ import { userFacingError } from '@/utils/errors';
 import { colors, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { LEGAL_URLS } from '@/constants/legal';
+import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { monetizationEnabled } = useDiscoverQuota();
   const profile = useAuthStore((s) => s.profile);
   const logout = useAuthStore((s) => s.logout);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
@@ -80,6 +82,15 @@ export default function SettingsScreen() {
             label={t('profile.voiceSettings')}
             onPress={() => router.push('/(main)/settings/voice')}
           />
+          {monetizationEnabled ? (
+            <>
+              <View style={styles.divider} />
+              <MenuCardButton
+                label={t('stars.shopTitle')}
+                onPress={() => router.push('/(main)/settings/stars')}
+              />
+            </>
+          ) : null}
         </View>
 
         <Text style={styles.sectionTitle}>{t('settings.sections.app')}</Text>

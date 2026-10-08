@@ -15,7 +15,8 @@ export interface AlertCardAction {
 
 interface AlertCardProps {
   variant: AlertCardVariant;
-  title: string;
+  /** 생략하면 본문(message)만 보여준다 — 짧은 확인 모달용. */
+  title?: string;
   message?: string;
   primary: AlertCardAction;
   secondary?: AlertCardAction;
@@ -67,8 +68,14 @@ export function AlertCard({
           <Ionicons name="close" size={22} color={colors.textSecondary} />
         </Pressable>
       ) : null}
-      <Text style={[styles.title, onClose && styles.titleWithClose]}>{title}</Text>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      {title ? (
+        <Text style={[styles.title, onClose && styles.titleWithClose]}>{title}</Text>
+      ) : null}
+      {message ? (
+        <Text style={[styles.message, !title && styles.messageOnly, !title && onClose && styles.titleWithClose]}>
+          {message}
+        </Text>
+      ) : null}
 
       {children}
 
@@ -149,6 +156,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.2,
     lineHeight: 20,
+  },
+  // 제목 없는 모달: 본문이 맨 위라 간격 제거 + 본문 색을 제목처럼 진하게.
+  messageOnly: {
+    marginTop: 4,
+    fontSize: 15,
+    color: colors.text,
+    lineHeight: 22,
   },
   actions: {
     flexDirection: 'row',

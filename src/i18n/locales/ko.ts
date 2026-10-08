@@ -165,8 +165,22 @@ export default {
         voiceProcessingHint: "잠시만 기다려주세요.",
         likeGateMessage: "Like를 보내려면 프로필을 완성해주세요",
         passReset: {
-            button: "넘긴 사람 다시 보기",
+            button: "넘긴 카드 다시 보기",
             empty_zero: "아직 넘긴 사람이 없어요",
+            confirmTitle: "넘긴 카드 다시 보기",
+            confirmFreeNote: "다시 보는 카드는 오늘의 카드 수에서 차감되지 않아요.",
+            confirmButton: "다시 보기",
+        },
+        // 탐색 헤더의 오늘 남은 카드 수.
+        // 좋아요 소진 후 별사탕으로 좋아요 보낼 때 확인 문구.
+        likeMore: "추가로 좋아요를 보내시겠습니까?",
+        cardsLeft: "카드 {{count}}장",
+        likesLeft: "남은 좋아요 {{count}}개",
+        cardsOut: {
+            title: "오늘의 카드를 모두 봤어요",
+            nextFree: "다음 카드 오픈까지 {{time}}",
+            resetButton: "10장 더보기",
+            confirm: "더 볼 수 있는 카드가 {{count}}장 남아있어요. 별사탕 4개를 사용할까요?",
         },
         launchPromo: {
             title: "출시 기념 이벤트",
@@ -182,6 +196,30 @@ export default {
             text: "탐색 탭에서 더 많은 사람을 만나보세요.",
             cta: "지금 탐색하기",
         },
+        locked: {
+            freeReveal: "무료로 공개하기",
+            paidReveal: "별사탕 2개로 공개하기",
+            nextFree: "다음 무료 공개까지 {{time}}",
+            confirmPaid: "별사탕 2개를 사용해 공개할까요?",
+        },
+    },
+
+    // 별사탕 (유료화 화폐). 일본어는 金平糖, 영어는 Stars.
+    stars: {
+        balance: "보유 별사탕 {{count}}개",
+        use: "별사탕 {{count}}개 사용",
+        useConfirm: "사용하기",
+        watchAd: "광고 보고 1개 받기",
+        watchAdRemaining: "{{count}}회 남음",
+        watchAdDone: "오늘 광고 보상을 모두 받았어요",
+        charge: "충전하기",
+        adsUnavailable: "지금은 광고를 불러올 수 없어요. 잠시 후 다시 시도해 주세요.",
+        insufficient: "별사탕이 부족해요",
+        shopTitle: "스토어",
+        shopProduct: "별사탕 {{count}}개",
+        shopUnavailable: "지금은 상품을 불러올 수 없어요. 잠시 후 다시 시도해 주세요.",
+        purchaseDone: "충전이 완료됐어요. 반영까지 몇 초 걸릴 수 있어요.",
+        purchaseFailed: "결제를 완료하지 못했어요. 다시 시도해 주세요.",
     },
 
     matches: {
@@ -391,6 +429,7 @@ export default {
     },
 
     setupProfile: {
+        identityLockNotice: "생년월일, 성별, 국적은 가입 후 변경할 수 없어요.",
         displayName: "닉네임",
         displayNamePlaceholder: "닉네임을 입력하세요",
         birthDate: "생년월일",
@@ -597,6 +636,7 @@ export default {
     },
 
     settings: {
+        identityLocked: "가입 시 입력한 생년월일, 성별, 국적은 변경할 수 없어요.",
         title: "설정",
         languageSettings: "언어 설정",
         changePassword: "비밀번호 변경",

@@ -34,6 +34,7 @@ import { ErrorText } from '@/components/ui/ErrorText';
 import { validateDisplayName, validateBirthDate, DISPLAY_NAME_MAX } from '@/utils/validators';
 import { userFacingError } from '@/utils/errors';
 import { genderLabelKey } from '@/utils/gender';
+import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
 
@@ -46,6 +47,8 @@ const formatBirthDate = (input: string): string => {
 
 export default function EditProfileScreen() {
   const { t } = useTranslation();
+  // 별사탕 유료화 ON 이면 생년월일·성별·국적은 가입 후 변경 불가 (BE 가 403 으로도 막는다).
+  const identityLocked = useDiscoverQuota().monetizationEnabled;
   const insets = useSafeAreaInsets();
   const { profile, loading, upsertProfile } = useProfile();
   // Lift the absolute footer above the keyboard and extend ScrollView
@@ -197,9 +200,10 @@ export default function EditProfileScreen() {
               clearError('birth_date');
             }}
             placeholder={t('setupProfile.birthDatePlaceholder')}
+            editable={!identityLocked}
             keyboardType="number-pad"
             maxLength={10}
-            inputStyle={styles.inputCompact}
+            inputStyle={[styles.inputCompact, identityLocked && styles.lockedField]}
             error={errors.birth_date}
           />
         </View>
@@ -209,7 +213,8 @@ export default function EditProfileScreen() {
           {GENDER_OPTIONS.map((g) => (
             <Pressable
               key={g}
-              style={[styles.genderBtn, form.gender === g && styles.genderActive]}
+              style={[styles.genderBtn, form.gender === g && styles.genderActive, identityLocked && styles.lockedField]}
+              disabled={identityLocked}
               onPress={() => {
                 Keyboard.dismiss();
                 setForm((f) => ({ ...f, gender: g }));
@@ -228,7 +233,9 @@ export default function EditProfileScreen() {
             style={[
               styles.selectBtn,
               nationalityOpen && styles.selectBtnOpen,
+              identityLocked && styles.lockedField,
             ]}
+            disabled={identityLocked}
             onPress={() => {
               Keyboard.dismiss();
               setNationalityOpen((v) => !v);
@@ -269,6 +276,7 @@ export default function EditProfileScreen() {
             </View>
           )}
           <ErrorText>{errors.nationality ?? null}</ErrorText>
+          {identityLocked ? <Text style={styles.lockedNotice}>{t('settings.identityLocked')}</Text> : null}
         </View>
 
         <Text style={[styles.label, styles.sectionGap]}>
@@ -329,6 +337,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   selectBtnOpen: { borderColor: colors.primary, backgroundColor: colors.white },
+  lockedField: { opacity: 0.5 },
+  lockedNotice: {
+    marginTop: 6,
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+  },
   inputCompact: { fontSize: 14 },
   selectText: { fontSize: 14, color: colors.text, fontFamily: fonts.medium },
   selectPlaceholder: { color: colors.textLight },

@@ -182,11 +182,23 @@ export interface DiscoverCandidate {
   // 면제). 좋아요 소진 시 사전 게이트 분기에만 사용(카드에 시각 표시 없음).
   // 받은 좋아요 탭에선 항상 true. 구버전 BE 호환 위해 optional — 미제공 시 false 취급.
   liked_you?: boolean;
+  // 별사탕 유료화 (BE mig 059). 잠긴 카드 = 탐색 한도 초과 / 받은 좋아요 미공개.
+  // 사진은 서버가 만든 블러본, 이름·소개는 가짜 문자열, 보이스 없음 — FE 는 카드
+  // 전체에 블러를 씌우고 스와이프를 막는다. 탐색 잠긴 카드의 id 는 'locked'.
+  locked?: boolean;
+  // 탐색 잠긴 카드만: 초기화하면 지금 볼 수 있는 새 카드 수 (최대 10).
+  available_count?: number;
+  // 카드 수에서 차감되지 않는 카드 (다시보기 카드·캠페인 봇). 남은 카드 수 표시용.
+  free_card?: boolean;
 }
 
 export interface SwipeRequest {
   swiped_id: string;
   direction: 'like' | 'pass';
+  // 'likes' = 받은 좋아요 탭 (유료화 ON 에서 카드·좋아요 차감 면제, 서버가 공개 여부 검증).
+  source?: 'discover' | 'likes';
+  // 좋아요 한도 초과 시 사용자가 "별사탕 1개 사용" 을 확인한 경우만 true.
+  pay_with_stars?: boolean;
 }
 
 export interface SwipeResponse {
@@ -207,6 +219,15 @@ export interface DiscoverQuota {
   // 넘긴(pass) 사람이 실제로 있는지. false 면 버튼을 숨겨 "넘긴 적 없는데 다시 보기
   // 버튼이 뜨는" 어색함을 제거. 구버전 BE 응답엔 없을 수 있어 옵셔널.
   has_passes?: boolean;
+  // 별사탕 유료화. false/미제공이면 아래 필드 없음 — 지금 UI 그대로.
+  monetization_enabled?: boolean;
+  stars?: { free: number; paid: number; total: number };
+  // 오늘 탐색 카드 사용/한도 (화면 비표시).
+  cards?: { used: number; limit: number };
+  // null = 지금 무료 공개 가능.
+  next_free_reveal_at?: string | null;
+  // 오늘(KST) 남은 광고 보상 횟수.
+  ads_remaining?: number;
 }
 
 // === Match ===

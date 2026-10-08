@@ -31,6 +31,7 @@ import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { validateDisplayName, validateBirthDate, DISPLAY_NAME_MAX } from '@/utils/validators';
 import { isDisplayNameAvailable } from '@/services/profile';
+import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
 
@@ -43,6 +44,8 @@ const formatBirthDate = (input: string): string => {
 
 export default function SetupProfile() {
   const { t } = useTranslation();
+  // 유료화 ON 이면 생년월일·성별·국적은 가입 후 변경 불가 — 입력 전에 미리 알린다.
+  const identityLocked = useDiscoverQuota().monetizationEnabled;
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const draft = useSignupDraftStore();
@@ -305,6 +308,7 @@ export default function SetupProfile() {
           </View>
         )}
         <ErrorText>{errors.nationality ?? null}</ErrorText>
+        {identityLocked ? <Text style={styles.lockedNotice}>{t('setupProfile.identityLockNotice')}</Text> : null}
       </View>
 
       {/* Interests — optional. Markup mirrors settings/edit-profile.tsx so
@@ -396,6 +400,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   selectBtnOpen: { borderColor: colors.primary, backgroundColor: colors.white },
+  lockedNotice: {
+    marginTop: 6,
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+  },
   inputCompact: { fontSize: 14 },
   selectText: { fontSize: 14, color: colors.text, fontFamily: fonts.medium },
   selectPlaceholder: { color: colors.textLight },

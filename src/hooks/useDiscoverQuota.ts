@@ -8,6 +8,9 @@ import { quotaKey, quotaFetcher } from '@/lib/swr';
 import { DAILY_LIKE_LIMIT } from '@/utils/discoverDaily';
 import type { DiscoverQuota } from '@/types';
 
+// BE 의 무제한 계정 한도(UNLIMITED_LIKE_LIMIT=999999). 이 이상이면 카드 수를 숨긴다.
+const UNLIMITED_CARD_LIMIT = 999_999;
+
 // 디스커버 ↔ 받은 좋아요 두 탭이 공유하는 일일 좋아요 예산 + "넘긴 사람 다시 보기".
 //
 // 예전엔 두 훅(useDiscover / useReceivedLikes)이 quota state·syncQuota·pass-reset
@@ -46,6 +49,15 @@ export function useDiscoverQuota() {
         ...q,
         count: Math.max(0, Math.min(q.limit, q.count + delta)),
       })),
+    [patchQuota],
+  );
+
+  // 탐색 카드 사용량 낙관 갱신 (스와이프 즉시 남은 카드 수를 줄이고, 실패 시 되돌림).
+  const bumpCards = useCallback(
+    (delta: number) =>
+      patchQuota((q) =>
+        q.cards ? { ...q, cards: { ...q.cards, used: Math.max(0, q.cards.used + delta) } } : q,
+      ),
     [patchQuota],
   );
 
@@ -98,6 +110,17 @@ export function useDiscoverQuota() {
     dailyCount,
     dailyLimit,
     dailyLimitReached,
+    // 별사탕 유료화 (BE MONETIZATION_ENABLED). quota 도착 전·OFF 면 false — 지금 UI 그대로.
+    monetizationEnabled: data?.monetization_enabled === true,
+    starsTotal: data?.stars?.total ?? 0,
+    nextFreeRevealAt: data?.next_free_reveal_at ?? null,
+    adsRemaining: data?.ads_remaining ?? 0,
+    // 오늘 남은 탐색 카드 수. null = 표시 안 함 (유료화 OFF / 아직 모름 / 무제한 계정).
+    cardsRemaining:
+      data?.monetization_enabled && data.cards && data.cards.limit < UNLIMITED_CARD_LIMIT
+        ? Math.max(0, data.cards.limit - data.cards.used)
+        : null,
+    bumpCards,
     // quota 동기화 전에는 버튼 미노출(안전) — 기본 false.
     passResetEnabled: data?.pass_reset_enabled === true,
     hasPasses: data?.has_passes === true,

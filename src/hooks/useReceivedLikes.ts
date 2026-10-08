@@ -53,7 +53,8 @@ export function useReceivedLikes() {
       direction: 'like' | 'pass',
     ): Promise<SwipeResponse | null> => {
       try {
-        const res = await discoverService.swipe({ swiped_id: swipedId, direction });
+        // source=likes: 유료화 ON 에서 카드·좋아요 차감 면제 (서버가 공개 여부 검증).
+        const res = await discoverService.swipe({ swiped_id: swipedId, direction, source: 'likes' });
         // 방금 pass 행이 생겼으면 "다시 보기" 버튼 노출 조건을 즉시 충족.
         if (direction === 'pass') markHasPasses();
         // 공유 세션 집합에 등록 → 디스커버 탭이 같은 카드를 즉시 덱에서 제거(구독 알림).
@@ -97,6 +98,17 @@ export function useReceivedLikes() {
     swipedSession.add(id);
   }, []);
 
+  // 받은 좋아요 1명 공개 (유료화 ON). 무료 공개가 남았으면 무료, 아니면 별사탕 2개.
+  // 성공하면 목록을 다시 불러 잠긴 카드를 실제 카드로 바꾼다. 실패는 호출처로.
+  const { syncQuota } = quota;
+  const reveal = useCallback(
+    async (likerId: string, payWithStars: boolean) => {
+      await discoverService.revealLike(likerId, payWithStars);
+      await Promise.all([mutate(), syncQuota()]);
+    },
+    [mutate, syncQuota],
+  );
+
   const { resetPasses } = quota;
   const handleResetPasses = useCallback(
     () => resetPasses(loadCandidates).catch(() => null),
@@ -112,6 +124,10 @@ export function useReceivedLikes() {
     syncQuota: quota.syncQuota,
     handleSwipe,
     consumeLikeLimitHit,
+    reveal,
+    monetizationEnabled: quota.monetizationEnabled,
+    starsTotal: quota.starsTotal,
+    nextFreeRevealAt: quota.nextFreeRevealAt,
     removeCandidate,
     dailyCount: quota.dailyCount,
     dailyLimit: quota.dailyLimit,

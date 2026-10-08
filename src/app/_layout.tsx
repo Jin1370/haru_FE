@@ -22,6 +22,7 @@ import {
   type DeepLink,
 } from '@/lib/pendingDeepLink';
 import { AlertHost } from '@/components/ui/AlertHost';
+import { StarSheetHost } from '@/components/stars/StarSheet';
 import { PhotoEditorHost } from '@/components/photo/PhotoEditorHost';
 import { ReconsentGate } from '@/components/setup/ReconsentGate';
 import { AcquisitionGate } from '@/components/setup/AcquisitionGate';
@@ -159,6 +160,7 @@ function RootShell() {
           <Stack.Screen name="index" />
         </Stack>
         <AlertHost />
+        <StarSheetHost />
         <PhotoEditorHost />
         {/* LAUNCH_CHECKLIST #5 — mig 039 이전 가입 회원 재동의 게이트. 동의
             미기록자에게 약관동의 화면(ConsentForm)을 전체화면으로 띄운다(소급 간주 금지). */}

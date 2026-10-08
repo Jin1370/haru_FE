@@ -36,7 +36,9 @@ module.exports = ({ config }) => {
     // build 사이에서 다른 해시를 내 OTA 가 빌드에 도달 못 하던 문제 때문에 전환
     // ([[project_eas_update_ota]]). ⚠️ 네이티브 의존성/플러그인 변경 시 dev 는 이
     // 값을, prod 는 app.json 의 runtimeVersion 을 각각 bump + 새 빌드 해야 한다.
-    runtimeVersion: 'haru-dev-20260611-worklets',
+    // 2026-10-07 bump: 별사탕 네이티브 4종(expo-blur·tracking-transparency·
+    // google-mobile-ads·purchases) 추가.
+    runtimeVersion: 'haru-dev-20261007-monetization',
     android: {
       ...config.android,
       package: 'com.haruvoice.app.dev',
