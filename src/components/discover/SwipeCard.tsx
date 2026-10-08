@@ -11,7 +11,7 @@ import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import CountryFlag from "react-native-country-flag";
 import { useTranslation } from "react-i18next";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { useAudioPlayerStatus } from "expo-audio";
 import {
     PanGestureHandler,
     State,
@@ -24,7 +24,7 @@ import { fonts } from "@/constants/fonts";
 import { calculateAge } from "@/utils/age";
 import { genderIconName, genderLabelKey } from "@/utils/gender";
 import type { DiscoverCandidate } from "@/types";
-import { safePlay } from "@/components/chat/sharedAudioPlayer";
+import { useRecoverableAudioPlayer } from "@/components/chat/sharedAudioPlayer";
 
 const ROTATION_RANGE = 14;
 
@@ -156,7 +156,7 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
     const photo = candidate.photos[0];
     const audioUrl = candidate.voice_intro_audio_url;
 
-    const player = useAudioPlayer(audioUrl ?? undefined);
+    const { player, play } = useRecoverableAudioPlayer(audioUrl ?? undefined);
     const status = useAudioPlayerStatus(player);
     const isPlaying = audioUrl ? status.playing : false;
     const duration = status.duration || 0;
@@ -192,8 +192,8 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
         if (duration > 0 && currentTime >= duration) {
             player.seekTo(0);
         }
-        safePlay(player);
-    }, [audioUrl, player, isPlaying, duration, currentTime]);
+        play();
+    }, [audioUrl, player, play, isPlaying, duration, currentTime]);
 
     const translateX = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(0)).current;

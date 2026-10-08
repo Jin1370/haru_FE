@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, Text, View, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { safePlay } from './sharedAudioPlayer';
+import { useAudioPlayerStatus } from 'expo-audio';
+import { useRecoverableAudioPlayer } from './sharedAudioPlayer';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors, radii } from '@/constants/colors';
@@ -46,7 +46,7 @@ export function AudioPlayer({ url, compact = false, showProgressBar = false, sho
   // 부팅 시 audio session 을 playback-only + playsInSilentMode 로 명시 고정한
   // 코드는 app/_layout.tsx 에 그대로 유지 (녹음 직후 잔여 session 상태 대비
   // 무해한 best practice).
-  const player = useAudioPlayer(url);
+  const { player, play } = useRecoverableAudioPlayer(url);
   const status = useAudioPlayerStatus(player);
   const isPlaying = status.playing;
   const duration = status.duration || 0;
@@ -106,8 +106,8 @@ export function AudioPlayer({ url, compact = false, showProgressBar = false, sho
     if (duration > 0 && currentTime >= duration) {
       player.seekTo(0);
     }
-    safePlay(player);
-  }, [player, isPlaying, duration, currentTime]);
+    play();
+  }, [player, play, isPlaying, duration, currentTime]);
 
   if (showBar) {
     return (

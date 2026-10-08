@@ -20,8 +20,8 @@
 // 동시 재생 사용처 없음). voice intro / SwipeCard 의 보이스 인트로 player
 // 와는 별개 (그쪽은 cold-start path 라 본 singleton 에 합칠 필요 없음).
 
-import { createAudioPlayer, setAudioModeAsync, type AudioPlayer, type AudioStatus } from 'expo-audio';
-import { useSyncExternalStore } from 'react';
+import { createAudioPlayer, setAudioModeAsync, useAudioPlayer, type AudioPlayer, type AudioStatus } from 'expo-audio';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import * as Sentry from '@sentry/react-native';
 import { cacheAudio, cachedUri } from './audioCache';
 
@@ -106,6 +106,31 @@ function playOrRecover(uri: string, key: string): void {
       publish({ currentUrl: key, isPlaying: false, duration: 0, currentTime: 0, isLoaded: false });
       safePlay(p);
     });
+}
+
+// playOrRecover 의 컴포넌트판 (보이스 한마디: AudioPlayer / SwipeCard).
+// useAudioPlayer 는 player 를 갈아끼우는 API 가 없지만 deps 에 updateInterval 이
+// 있어, 값을 1ms 바꾸면 hook 이 옛 player 를 release 하고 새로 만든다.
+export function useRecoverableAudioPlayer(url: string | undefined) {
+  const [gen, setGen] = useState(0);
+  const player = useAudioPlayer(url, { updateInterval: 500 + gen });
+  const playOnNewPlayer = useRef(false);
+
+  useEffect(() => {
+    if (!playOnNewPlayer.current) return;
+    playOnNewPlayer.current = false;
+    safePlay(player);
+  }, [player]);
+
+  const play = useCallback(() => {
+    if (safePlay(player)) return;
+    playOnNewPlayer.current = true;
+    setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false })
+      .catch(() => {})
+      .then(() => setGen((g) => g + 1));
+  }, [player]);
+
+  return { player, play };
 }
 
 export function playSharedAudio(url: string): void {
