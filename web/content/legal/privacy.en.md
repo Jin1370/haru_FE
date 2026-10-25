@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: June 23, 2026
+Last updated: October 17, 2026
 
 > haru (hereinafter the "Operator") publishes this Privacy Policy to protect members' personal information and to comply with applicable laws (the Personal Information Protection Act, the Network Act, etc.). This service is a voice-chat-based cross-language matching service and outsources some processing — such as voice synthesis, automatic translation, and content moderation — to overseas processors, as described in Article 3 below.
 
@@ -43,6 +43,8 @@ This outsourcing and cross-border transfer is conducted under the Network Act an
 ## 4. Retention and Destruction of Personal Information
 
 The Operator destroys personal information without delay once the purpose of collection has been achieved or the member deletes their account. Some information, such as synthesized audio files, is retained only for the period necessary to provide the service and is then destroyed. However, information that must be retained for dispute resolution, cooperation with investigations, prevention of repeat abuse, or other purposes required by applicable law or legitimate operations is stored separately from other information for the relevant period and then destroyed.
+
+Records of purchases of paid items (Stars) are retained for 5 years from the payment date, even after account deletion, to keep payment records as required by the Korean Act on Consumer Protection in Electronic Commerce, and are then destroyed. Only an anonymized internal identifier, the quantity purchased, and the store transaction ID are retained.
 
 ## 5. Rights of the Data Subject and How to Exercise Them
 

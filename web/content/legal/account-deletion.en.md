@@ -1,6 +1,6 @@
 # Account Deletion Guide
 
-Last updated: May 27, 2026
+Last updated: October 17, 2026
 
 > This page describes the account deletion procedure for the haru service and the data that is deleted or retained. The page is published for alignment with the Google Play Data Safety policy (requirement to publicly disclose the account deletion procedure).
 
@@ -35,7 +35,7 @@ The operator processes the request within 5 business days after identity verific
 
 ## Deleted and Retained Data
 
-When a member deletes their account, the member's data is handled in the following 4 categories.
+When a member deletes their account, the member's data is handled in the following 5 categories.
 
 ### Immediate deletion
 
@@ -78,6 +78,10 @@ This 1-year retention is processing based on the following legal grounds.
 - Telecommunications Business Act of Korea Article 83 — responding to investigative authorities' requests for communications data
 
 Audit records do not contain the member's identifying information (email, name, photo, voice, etc.); only an internal identifier (UUID) assigned by the operator and classification metadata are retained. Message originals / voice files / photos are not included in audit records.
+
+### Retained for 5 years then automatically purged
+
+Records of purchases of paid items (Stars) are retained for 5 years from the payment date to keep payment records as required by Article 6 of the Korean Act on Consumer Protection in Electronic Commerce, and are then automatically purged by the operator server's periodic sweep job (24-hour cycle). Only an anonymized internal identifier (UUID), the quantity purchased, and the store transaction ID are retained. Star earning and spending history other than purchases is deleted immediately upon account deletion.
 
 ### Permanent retention
 
