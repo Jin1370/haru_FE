@@ -19,7 +19,7 @@ import { fonts } from '@/constants/fonts';
 
 // 별사탕 충전 — 스토어 상품 2개 + 보상형 광고. 지급은 서버(웹훅/광고 콜백)가 하므로
 // 결제·시청 뒤엔 잔액을 몇 초 간격으로 다시 읽는다.
-const COUNT_BY_PRODUCT: Record<string, number> = { stars_30: 30, stars_80: 80 };
+const COUNT_BY_PRODUCT: Record<string, number> = { stars_30: 30, stars_80: 80, star_30: 30, star_80: 80 };
 const SYNC_DELAYS_MS = [2000, 5000];
 
 const DEV_PREVIEW_PRODUCTS: StarProduct[] = [
@@ -58,7 +58,7 @@ export default function StarsScreen() {
       const done = await buyStarProduct(userId, product);
       if (done) {
         showAlert({ variant: 'info', title: t('stars.purchaseDone') });
-        await syncAfterGrant();
+        void syncAfterGrant();
       }
     } catch {
       showAlert({ variant: 'info', title: t('stars.purchaseFailed') });
@@ -71,7 +71,7 @@ export default function StarsScreen() {
     if (!userId || busy) return;
     setBusy('ad');
     try {
-      if (await watchRewardedAd(userId)) await syncAfterGrant();
+      if (await watchRewardedAd(userId)) void syncAfterGrant();
     } catch {
       showAlert({ variant: 'info', title: t('stars.adsUnavailable') });
     } finally {

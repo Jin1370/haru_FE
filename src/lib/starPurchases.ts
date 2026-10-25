@@ -37,6 +37,8 @@ function initAds(): Promise<void> {
       if (Platform.OS === 'ios') {
         const att = loadNative<any>('att');
         await att.requestTrackingPermissionsAsync().catch(() => undefined);
+        // AdMob 콘솔 '테스트 기기' 등록용 광고 ID (IDFA).
+        if (__DEV__) console.log('[stars] IDFA', att.getAdvertisingId());
       }
       await ads.default().initialize();
     })().catch((e) => {
@@ -86,7 +88,8 @@ export async function watchRewardedAd(userId: string): Promise<boolean> {
 
 // ── 스토어 구매 ────────────────────────────────────────────────────
 
-export const STAR_PRODUCT_IDS = ['stars_30', 'stars_80'] as const;
+// iOS 는 star_*, Android 는 stars_* 로 등록됨 (스토어 제품 ID 는 변경 불가).
+export const STAR_PRODUCT_IDS = ['stars_30', 'stars_80', 'star_30', 'star_80'] as const;
 
 export interface StarProduct {
   id: string;
@@ -105,6 +108,7 @@ async function ensurePurchases(userId: string): Promise<any> {
       : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
   if (!apiKey) throw new StarPurchaseUnavailable();
   if (configuredFor === null) {
+    if (__DEV__) Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
     Purchases.configure({ apiKey, appUserID: userId });
     configuredFor = userId;
   } else if (configuredFor !== userId) {
@@ -120,6 +124,7 @@ export async function getStarProducts(userId: string): Promise<StarProduct[]> {
     [...STAR_PRODUCT_IDS],
     Purchases.PRODUCT_CATEGORY.NON_SUBSCRIPTION,
   );
+  if (__DEV__) console.log('[stars] products', products.map((x: any) => x.identifier));
   return STAR_PRODUCT_IDS.flatMap((id) => {
     const p = products.find((x: any) => x.identifier === id);
     return p ? [{ id, priceString: p.priceString as string, raw: p }] : [];
