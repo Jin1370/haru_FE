@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { useAuthStore } from '@/stores/authStore';
 import { showAlert } from '@/stores/alertStore';
 import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
+import { highlightText } from '@/components/ui/AlertCard';
 import { watchRewardedAd } from '@/lib/starPurchases';
 import { colors, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
@@ -19,6 +20,8 @@ export interface StarSheetSpec {
   // 생략하면 잔액과 사용 버튼만 보인다 (좋아요 소진 시트).
   title?: string;
   message?: string;
+  // message 에서 분홍색으로 강조할 부분.
+  messageHighlight?: string;
   cost: number;
   useLabel?: string;
   onUse: () => void;
@@ -64,19 +67,12 @@ export function StarSheetHost() {
     <Modal transparent animationType="fade" visible onRequestClose={closeStarSheet}>
       <Pressable style={styles.backdrop} onPress={closeStarSheet}>
         <Pressable style={styles.sheet} onPress={() => undefined}>
-          <Pressable
-            onPress={closeStarSheet}
-            hitSlop={10}
-            style={styles.close}
-            accessibilityRole="button"
-            accessibilityLabel={t('common.close')}
-          >
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
-          </Pressable>
           {spec.title ? (
             <>
               <Text style={styles.title}>{spec.title}</Text>
-              {spec.message ? <Text style={styles.message}>{spec.message}</Text> : null}
+              {spec.message ? (
+                <Text style={styles.message}>{highlightText(spec.message, spec.messageHighlight)}</Text>
+              ) : null}
               <Text style={styles.balance}>{t('stars.balance', { count: starsTotal })}</Text>
             </>
           ) : (
@@ -136,6 +132,14 @@ export function StarSheetHost() {
           </Pressable>
             </>
           ) : null}
+
+          <Pressable
+            style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}
+            onPress={closeStarSheet}
+            accessibilityRole="button"
+          >
+            <Text style={styles.cancelText}>{t('common.cancel')}</Text>
+          </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
@@ -160,7 +164,7 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   title: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.text,
     textAlign: 'center',
@@ -174,7 +178,6 @@ const styles = StyleSheet.create({
   },
   question: {
     marginTop: 6,
-    paddingHorizontal: 24,
     fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.text,
@@ -189,9 +192,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   balanceNumber: {
-    fontSize: 17,
+    fontSize: 15,
     fontFamily: fonts.bold,
     color: colors.text,
+    // 글꼴의 줄 상자 안에서 숫자가 아래쪽에 놓여 아이콘보다 낮아 보인다.
+    transform: [{ translateY: -1 }],
   },
   balance: {
     fontSize: 13,
@@ -239,15 +244,13 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.75,
   },
-  // 우측 상단 X (AlertCard 와 같은 위치).
-  close: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 32,
-    height: 32,
+  cancel: {
     alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
+    paddingVertical: 10,
+  },
+  cancelText: {
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.textSecondary,
   },
 });

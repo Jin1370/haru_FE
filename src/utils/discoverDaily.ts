@@ -7,3 +7,9 @@
 export const DAILY_LIKE_LIMIT = 15;
 export const BATCH_SIZE = 10;
 export const PREFETCH_THRESHOLD = 3;
+
+// 탐색 카드 n장 구매 가격. BE constants/stars.ts 의 cardResetCost 와 같은 공식이다
+// (서버가 실제 차감액을 계산하고, 여기 값은 표시용).
+export function cardResetCost(cards: number): number {
+  return Math.ceil((cards * 4) / 10);
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { SwipeCard } from '@/components/discover/SwipeCard';
 import { LaunchPromoCard } from '@/components/discover/LaunchPromoCard';
@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useDiscover } from '@/hooks/useDiscover';
 import * as discoverService from '@/services/discover';
 import { ApiRequestError } from '@/services/api';
+import { cardResetCost } from '@/utils/discoverDaily';
 import type { DiscoverCandidate } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiscoverStore } from '@/stores/discoverStore';
@@ -48,6 +49,7 @@ export default function DiscoverScreen() {
   } = useDiscover();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [buyingCards, setBuyingCards] = useState(false);
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -147,14 +149,13 @@ export default function DiscoverScreen() {
     await sendSwipe(candidate.id, direction);
   };
 
-  // 카드 10장 추가 (별사탕 4개). 항상 확인 모달 — 볼 수 있는 새 카드가 10장
-  // 미만이면 그 수와 "나머지는 오늘 새 카드가 생기면" 안내. 별사탕이 모자라면
+  // 볼 수 있는 카드 장수만큼 구매. 항상 확인 모달이고, 별사탕이 모자라면
   // 확인 대신 별사탕 시트(광고 / 충전)로.
-  const runCardReset = async () => {
+  const runCardReset = async (cards: number) => {
+    setBuyingCards(true);
     try {
-      await discoverService.cardReset();
-      await syncQuota();
-      await loadCandidates();
+      await discoverService.cardReset(cards);
+      await Promise.all([syncQuota(), loadCandidates()]);
     } catch (e) {
       if (e instanceof ApiRequestError && e.status === 402) {
         showAlert({ variant: 'info', title: t('stars.insufficient') });
@@ -162,23 +163,37 @@ export default function DiscoverScreen() {
         return;
       }
       showAlert({ variant: 'info', title: t('common.tryAgainLater') });
+    } finally {
+      setBuyingCards(false);
     }
   };
 
   const onCardReset = (locked: DiscoverCandidate) => {
-    // 서버가 최대 10 으로 잘라 보낸다 (리셋 1회 = 10장).
-    const message = t('discover.cardsOut.confirm', { count: locked.available_count ?? 0 });
-    if (starsTotal < 4) {
-      showStarSheet({ title: message, cost: 4, onUse: runCardReset });
+    // 서버가 최대 10 으로 잘라 보낸다.
+    const title = t('discover.cardsOut.confirmTitle');
+    const count = locked.available_count ?? 0;
+    // 영어만 단수·복수가 갈린다. ko·ja 의 confirmOne 은 confirm 과 같다.
+    const message = t(count === 1 ? 'discover.cardsOut.confirmOne' : 'discover.cardsOut.confirm', { count });
+    const cost = cardResetCost(count);
+    if (starsTotal < cost) {
+      showStarSheet({
+        title,
+        message,
+        messageHighlight: String(count),
+        cost,
+        onUse: () => runCardReset(count),
+      });
       return;
     }
-    // 제목 없이 본문만 + 우상단 X, 버튼은 "사용하기" 하나(가로 전체).
     showAlert({
       variant: 'confirm',
+      title,
       message,
-      closable: true,
+      messageHighlight: String(count),
+      starCost: cost,
+      cancelText: t('common.cancel'),
       confirmText: t('stars.useConfirm'),
-      onConfirm: runCardReset,
+      onConfirm: () => runCardReset(count),
     });
   };
 
@@ -191,8 +206,8 @@ export default function DiscoverScreen() {
       title: t('discover.passReset.confirmTitle'),
       // 차감 안내는 유료화 ON 일 때만 의미가 있다 (OFF 면 제목만).
       message: monetizationEnabled ? t('discover.passReset.confirmFreeNote') : undefined,
-      confirmText: t('discover.passReset.confirmButton'),
       cancelText: t('common.cancel'),
+      confirmText: t('discover.passReset.confirmButton'),
       onConfirm: runPassReset,
     });
   };
@@ -221,10 +236,11 @@ export default function DiscoverScreen() {
       {current?.locked ? (
         // 오늘 카드를 다 봤다 — 다음 후보를 블러로 보여주며 궁금증을 남긴다.
         <LockedCard candidate={current}>
-          <CardsOutPanel
-            onReset={() => onCardReset(current)}
-            onMidnight={loadCandidates}
-          />
+          {buyingCards ? (
+            <ActivityIndicator size="large" color={colors.primary} />
+          ) : (
+            <CardsOutPanel onReset={() => onCardReset(current)} onMidnight={loadCandidates} />
+          )}
         </LockedCard>
       ) : current ? (
         <SwipeCard
@@ -265,7 +281,6 @@ export default function DiscoverScreen() {
               loading={resetting}
               disabled={resetting}
               style={styles.resetBtn}
-              textStyle={styles.resetBtnText}
             />
           ) : null}
         </EmptyState>
@@ -274,7 +289,7 @@ export default function DiscoverScreen() {
   );
 }
 
-// 잠긴 카드 위 안내 — 다음 무료 카드까지 남은 시간 + 별사탕으로 10장 더 보기.
+// 잠긴 카드 위 안내 — 다음 무료 카드까지 남은 시간 + 별사탕으로 카드 더보기.
 // 자정이 지나면 onMidnight 로 다시 불러와 무료 카드를 받는다.
 function CardsOutPanel({ onReset, onMidnight }: { onReset: () => void; onMidnight: () => void }) {
   const { t } = useTranslation();
@@ -291,13 +306,13 @@ function CardsOutPanel({ onReset, onMidnight }: { onReset: () => void; onMidnigh
 
 const styles = StyleSheet.create({
   lockedTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.white,
     textAlign: 'center',
   },
   lockedTimer: {
-    fontSize: 15,
+    fontSize: 13,
     fontFamily: fonts.medium,
     color: colors.white,
     opacity: 0.85,
@@ -309,10 +324,5 @@ const styles = StyleSheet.create({
   resetBtn: {
     marginTop: 28,
     borderRadius: radii.pill,
-  },
-  // 16px 기본값이면 en "See skipped people again" / ja "スキップした人をもう一度見る"
-  // 가 EmptyState 의 좌우 여백(32×2) 안에서 두 줄로 접힌다.
-  resetBtnText: {
-    fontSize: 14,
   },
 });

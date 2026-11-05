@@ -101,8 +101,8 @@ export default function LikesScreen() {
     showAlert({
       variant: 'confirm',
       title: t('likes.locked.confirmPaid'),
-      confirmText: t('stars.useConfirm'),
       cancelText: t('common.cancel'),
+      confirmText: t('stars.useConfirm'),
       onConfirm: () => runReveal(likerId, true),
     });
   };
@@ -215,7 +215,6 @@ export default function LikesScreen() {
               loading={resetting}
               disabled={resetting}
               style={styles.resetBtn}
-              textStyle={styles.resetBtnText}
             />
           ) : null}
         </EmptyState>
@@ -256,7 +255,7 @@ function RevealPanel({
 
 const styles = StyleSheet.create({
   lockedTimer: {
-    fontSize: 15,
+    fontSize: 13,
     fontFamily: fonts.medium,
     color: colors.white,
     opacity: 0.85,
@@ -268,9 +267,5 @@ const styles = StyleSheet.create({
   resetBtn: {
     marginTop: 12,
     borderRadius: radii.pill,
-  },
-  // discover.tsx 와 동일 — 16px 기본값이면 en/ja 카피가 두 줄로 접힌다.
-  resetBtnText: {
-    fontSize: 14,
   },
 });

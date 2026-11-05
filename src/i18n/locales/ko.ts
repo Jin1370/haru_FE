@@ -119,26 +119,26 @@ export default {
     },
 
     validation: {
-        emailRequired: "이메일을 입력해주세요",
-        emailMalformed: "올바른 이메일 형식이 아니에요",
-        emailNotRegistered: "가입되지 않은 이메일입니다",
-        emailNotConfirmed: "이메일 인증이 완료되지 않았어요. 메일함을 확인해주세요",
-        emailTaken: "이미 가입된 이메일입니다",
-        passwordRequired: "비밀번호를 입력해주세요",
-        passwordWrong: "비밀번호를 다시 입력하세요",
-        passwordFormat: "8자 이상, 영문과 숫자를 모두 포함해주세요",
-        currentPasswordWrong: "현재 비밀번호가 일치하지 않아요",
-        samePassword: "현재 비밀번호와 다른 비밀번호로 설정해주세요",
-        passwordMismatch: "새 비밀번호가 일치하지 않습니다",
+        emailRequired: "이메일을 입력해주세요.",
+        emailMalformed: "올바른 이메일 형식이 아니에요.",
+        emailNotRegistered: "가입되지 않은 이메일입니다.",
+        emailNotConfirmed: "이메일 인증이 완료되지 않았어요. 메일함을 확인해주세요.",
+        emailTaken: "이미 가입된 이메일입니다.",
+        passwordRequired: "비밀번호를 입력해주세요.",
+        passwordWrong: "비밀번호를 다시 입력하세요.",
+        passwordFormat: "8자 이상, 영문과 숫자를 모두 포함해주세요.",
+        currentPasswordWrong: "현재 비밀번호가 일치하지 않아요.",
+        samePassword: "현재 비밀번호와 다른 비밀번호로 설정해주세요.",
+        passwordMismatch: "새 비밀번호가 일치하지 않습니다.",
         displayNameRequired: "필수 항목입니다.",
-        displayNameInvalidChars: "사용할 수 없는 문자가 포함되어 있어요",
-        displayNameTaken: "이미 사용 중인 닉네임이에요",
-        birthDateInvalid: "생년월일을 YYYY-MM-DD 형식으로 입력해주세요",
-        birthDateAdult: "만 18세 이상만 가입할 수 있어요",
-        voiceIntroTooLong: "보이스 한마디는 500자 이내로 입력해주세요",
-        messageEmpty: "메시지를 입력해주세요",
-        messageTooLong: "메시지는 500자 이내로 입력해주세요",
-        textInvalidChars: "사용할 수 없는 문자가 포함되어 있어요",
+        displayNameInvalidChars: "사용할 수 없는 문자가 포함되어 있어요.",
+        displayNameTaken: "이미 사용 중인 닉네임이에요.",
+        birthDateInvalid: "생년월일을 YYYY-MM-DD 형식으로 입력해주세요.",
+        birthDateAdult: "만 18세 이상만 가입할 수 있어요.",
+        voiceIntroTooLong: "보이스 한마디는 500자 이내로 입력해주세요.",
+        messageEmpty: "메시지를 입력해주세요.",
+        messageTooLong: "메시지는 500자 이내로 입력해주세요.",
+        textInvalidChars: "사용할 수 없는 문자가 포함되어 있어요.",
     },
 
     discover: {
@@ -147,9 +147,9 @@ export default {
         sendMessage: "대화 시작하기",
         keepDiscovering: "계속 둘러보기",
         noMoreProfiles: "더 이상 프로필이 없습니다",
-        checkBackLater: "나중에 새로운 사람을 확인해보세요",
+        checkBackLater: "나중에 새로운 사람을 확인해보세요.",
         dailyLimitTitle: "오늘 좋아요를 다 썼어요",
-        dailyLimitText: "자정이 지나면 다시 채워져요",
+        dailyLimitText: "자정이 지나면 다시 채워져요.",
         lockedVoiceTitle: "목소리를 먼저 등록해주세요",
         lockedBioTitle: "보이스 한마디를 등록해주세요",
         lockedPhotoTitle: "프로필 사진을 등록해주세요",
@@ -166,9 +166,9 @@ export default {
         likeGateMessage: "Like를 보내려면 프로필을 완성해주세요",
         passReset: {
             button: "넘긴 카드 다시 보기",
-            empty_zero: "아직 넘긴 사람이 없어요",
+            empty_zero: "아직 넘긴 사람이 없어요.",
             confirmTitle: "넘긴 카드 다시 보기",
-            confirmFreeNote: "다시 보는 카드는 오늘의 카드 수에서 차감되지 않아요.",
+            confirmFreeNote: "오늘의 카드 수에서 차감되지 않아요.",
             confirmButton: "다시 보기",
         },
         // 탐색 헤더의 오늘 남은 카드 수.
@@ -179,8 +179,10 @@ export default {
         cardsOut: {
             title: "오늘의 카드를 모두 봤어요",
             nextFree: "다음 카드 오픈까지 {{time}}",
-            resetButton: "10장 더보기",
-            confirm: "더 볼 수 있는 카드가 {{count}}장 남아있어요. 별사탕 4개를 사용할까요?",
+            resetButton: "카드 더보기",
+            confirmTitle: "카드 더보기",
+            confirm: "{{count}}장을 더 볼 수 있어요.",
+            confirmOne: "{{count}}장을 더 볼 수 있어요.",
         },
         launchPromo: {
             title: "출시 기념 이벤트",
@@ -211,7 +213,7 @@ export default {
         useConfirm: "사용하기",
         watchAd: "광고 보고 1개 받기",
         watchAdRemaining: "{{count}}회 남음",
-        watchAdDone: "오늘 광고 보상을 모두 받았어요",
+        watchAdDone: "오늘 광고 보상을 모두 받았어요.",
         charge: "충전하기",
         adsUnavailable: "지금은 광고를 불러올 수 없어요. 잠시 후 다시 시도해 주세요.",
         insufficient: "별사탕이 부족해요",
@@ -237,14 +239,14 @@ export default {
             hideConfirm: "이 채팅을 목록에서 삭제할까요?\n\n옛 대화 내용을 다시 볼 수 없게 되며, 이 작업은 되돌릴 수 없습니다.",
         },
         tombstone: {
-            unmatched: "매치가 종료되었어요",
+            unmatched: "매치가 종료되었어요.",
         },
         preview: {
             // read-at-removal-list-mask sprint: 상대가 보낸 미청취 메시지 마스킹.
             // "음성을 들어야 안다" funnel 일관성 — 채팅 목록 카드에서도 본문 노출 차단.
             // 미청취 개수는 우측 배지가 별도 표시하므로 미리보기 슬롯엔 중립 마스크만.
             newMessage: "새 메시지",
-            photo: "사진을 보냈어요",
+            photo: "사진을 보냈어요.",
         },
         report: {
             title: "신고하기",
@@ -290,7 +292,7 @@ export default {
         voiceSettings: "내 목소리 등록",
         matchingPreferences: "매칭 선호 설정",
         editBio: "보이스 한마디 등록",
-        bioEmpty: "보이스 한마디를 골라보세요",
+        bioEmpty: "보이스 한마디를 골라보세요.",
         editBioSubtitle: "고른 한마디가 등록된 목소리로 자동 생성돼요.",
         deletePhoto: "사진 삭제",
         removePhotoConfirm: "이 사진을 삭제하시겠습니까?",
@@ -394,7 +396,7 @@ export default {
             saveFailed: "사진을 저장하지 못했어요",
             savePermission: "설정에서 사진 접근을 허용해주세요.",
             expired: "만료된 사진",
-            loadFailed: "사진을 불러오지 못했어요",
+            loadFailed: "사진을 불러오지 못했어요.",
             reload: "사진 다시 불러오기",
         },
         profileSheet: {
@@ -419,7 +421,7 @@ export default {
             },
             preferences: {
                 title: "과몰입 방지! 혹시 MBTI가 뭐예요?",
-                body: "닮아서 편할지, 달라서 짜릿할지 궁금해요",
+                body: "닮아서 편할지, 달라서 짜릿할지 궁금해요.",
             },
             photos: {
                 title: "올해 꼭 해내고 싶은 '단 하나'는?",
@@ -440,7 +442,7 @@ export default {
         genderOther: "기타",
         nationality: "국적",
         nationalityPlaceholder: "국적을 선택하세요",
-        selectNationalityRequired: "국적을 선택해주세요",
+        selectNationalityRequired: "국적을 선택해주세요.",
         nationalityLimitedNotice: "찾는 국가가 없나요? 곧 더 많은 국가에서 만날 수 있어요.",
         referralCode: "추천 코드 (선택)",
         referralCodeHint: "모임·행사에서 코드를 받으셨다면 입력해주세요.",
@@ -460,7 +462,7 @@ export default {
             },
         },
         interests: "관심사 ({{count}}/10)",
-        interestsHint: "최대 10개까지 선택할 수 있어요",
+        interestsHint: "최대 10개까지 선택할 수 있어요.",
     },
 
     nationalities: {
@@ -608,7 +610,7 @@ export default {
         regenerateVoiceClone: "보이스 클론 재생성",
         regenerateConfirm: "새 녹음으로 기존 보이스 클론을 덮어쓰게 됩니다. 진행하시겠어요?",
         permissionRequired: "권한 필요",
-        microphonePermissionRequired: "마이크 권한이 필요합니다",
+        microphonePermissionRequired: "마이크 권한이 필요합니다.",
         fileTooLarge: "파일이 너무 큽니다",
         voiceSizeLimit:
             "음성 샘플은 10MB 이하여야 합니다. 더 짧게 녹음해주세요.",
@@ -632,7 +634,7 @@ export default {
         ageSuffix: "세",
         preferredGenders: "선호 성별",
         preferredNationalities: "선호 국적",
-        leaveEmptyAllNationalities: "선택한 국적의 상대가 우선 노출돼요",
+        leaveEmptyAllNationalities: "선택한 국적의 상대가 우선 노출돼요.",
     },
 
     settings: {
@@ -655,7 +657,7 @@ export default {
             messages: "메시지 알림",
             matches: "매칭 알림",
             likes: "받은 좋아요 알림",
-            permissionDenied: "시스템 설정에서 알림을 허용해주세요",
+            permissionDenied: "시스템 설정에서 알림을 허용해주세요.",
         },
         catAnimation: "고양이 애니메이션",
     },

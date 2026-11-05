@@ -54,9 +54,9 @@ export async function resetPasses(): Promise<{ reset_count: number }> {
 
 // ── 별사탕 유료화 (BE mig 059) ──────────────────────────────────────
 
-// 탐색 카드 10장 추가 (별사탕 4개). 402 = 별사탕 부족.
-export async function cardReset(): Promise<{ stars_total: number }> {
-  return api.post<{ stars_total: number }>('/api/discover/card-reset', {});
+// 탐색 카드 n장 구매. 가격은 서버가 장수로 계산한다. 402 = 별사탕 부족.
+export async function cardReset(cards: number): Promise<{ stars_total: number }> {
+  return api.post<{ stars_total: number }>('/api/discover/card-reset', { cards });
 }
 
 // 받은 좋아요 1명 공개. 무료 공개가 안 되면 402 reveal_requires_stars —

@@ -3,6 +3,8 @@ export const colors = {
   primary: '#E27AA0',
   primaryLight: '#FBDCE6',
   primaryDark: '#B85478',
+  // 공용 버튼 배경 (옛 gradients.primary 의 중간색보다 살짝 진하게).
+  primaryMid: '#E990AF',
 
   // Accent pairs — peach/gold + soft lavender to echo twilight light.
   secondary: '#F6B5C8',

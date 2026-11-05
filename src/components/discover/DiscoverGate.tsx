@@ -98,7 +98,7 @@ export function showLikeGate(state: DiscoverGateState, t: (key: string) => strin
     showAlert({
       variant: 'confirm',
       title: t('discover.likeGateMessage'),
-      closable: true,
+      cancelText: t('common.cancel'),
       confirmText: step.ctaLabel,
       stackedActions: true,
       onConfirm: () => router.push(route),

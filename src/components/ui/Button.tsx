@@ -1,6 +1,5 @@
 import { Pressable, Text, StyleSheet, ActivityIndicator, View, ViewStyle, TextStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, gradients, radii, shadows } from '@/constants/colors';
+import { colors, radii, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 
 interface ButtonProps {
@@ -52,24 +51,13 @@ export function Button({
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       style={({ pressed }) => [
         styles.shell,
-        isPrimary && shadows.glow,
+        isPrimary && shadows.soft,
         pressed && styles.pressed,
         isDisabled && styles.disabled,
         style,
       ]}
     >
-      {isPrimary ? (
-        <LinearGradient
-          colors={[...gradients.primary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.base, styles.primary]}
-        >
-          {content}
-        </LinearGradient>
-      ) : (
-        <View style={[styles.base, styles[variant]]}>{content}</View>
-      )}
+      <View style={[styles.base, styles[variant]]}>{content}</View>
     </Pressable>
   );
 }
@@ -80,14 +68,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   base: {
-    paddingVertical: 14,
+    paddingVertical: 13,
     paddingHorizontal: 24,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primary: {
-    // gradient handles the fill; keep for shape.
+    backgroundColor: colors.primaryMid,
   },
   secondary: {
     backgroundColor: colors.secondary,
@@ -108,7 +96,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   text: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.semibold,
     color: colors.white,
     letterSpacing: 0.3,

@@ -23,12 +23,10 @@ interface AlertCardProps {
   /** Override slot for custom content between message and actions (e.g. avatars). */
   children?: ReactNode;
   style?: ViewStyle;
+  /** 본문에서 분홍색으로 강조할 부분. */
+  messageHighlight?: string;
   /** Stack actions vertically (primary on top, secondary below) instead of side-by-side. */
   stackedActions?: boolean;
-  /** When set, render an X at the top-right that dismisses the card. */
-  onClose?: () => void;
-  /** a11y label for the close button. */
-  closeLabel?: string;
 }
 
 // The variant's only remaining job is to color the primary CTA — error reads
@@ -40,40 +38,39 @@ const VARIANT_ACCENTS: Record<AlertCardVariant, string> = {
   info: colors.primary,
 };
 
+// text 안의 highlight 첫 위치만 분홍색으로 감싼다. 없으면 text 그대로.
+export function highlightText(text: string, highlight?: string) {
+  const at = highlight ? text.indexOf(highlight) : -1;
+  if (!highlight || at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <Text style={styles.highlight}>{highlight}</Text>
+      {text.slice(at + highlight.length)}
+    </>
+  );
+}
+
 export function AlertCard({
   variant,
   title,
   message,
+  messageHighlight,
   primary,
   secondary,
   children,
   style,
   stackedActions = false,
-  onClose,
-  closeLabel,
 }: AlertCardProps) {
   const accent = VARIANT_ACCENTS[variant];
   const a11yRole = variant === 'error' ? 'alert' : 'none';
 
   return (
     <View accessibilityRole={a11yRole} style={[styles.card, style]}>
-      {onClose ? (
-        <Pressable
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel={closeLabel}
-          hitSlop={10}
-          style={({ pressed }) => [styles.close, pressed && styles.btnPressed]}
-        >
-          <Ionicons name="close" size={22} color={colors.textSecondary} />
-        </Pressable>
-      ) : null}
-      {title ? (
-        <Text style={[styles.title, onClose && styles.titleWithClose]}>{title}</Text>
-      ) : null}
+      {title ? <Text style={styles.title}>{title}</Text> : null}
       {message ? (
-        <Text style={[styles.message, !title && styles.messageOnly, !title && onClose && styles.titleWithClose]}>
-          {message}
+        <Text style={[styles.message, !title && styles.messageOnly]}>
+          {highlightText(message, messageHighlight)}
         </Text>
       ) : null}
 
@@ -126,27 +123,13 @@ const styles = StyleSheet.create({
     maxWidth: 340,
     ...shadows.card,
   },
-  close: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontFamily: fonts.bold,
     color: colors.text,
     textAlign: 'center',
     letterSpacing: 0.4,
-    lineHeight: 24,
-  },
-  // Keep a centered title clear of the top-right X when closable.
-  titleWithClose: {
-    paddingHorizontal: 20,
+    lineHeight: 22,
   },
   message: {
     marginTop: 8,
@@ -163,6 +146,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
     lineHeight: 22,
+  },
+  highlight: {
+    color: colors.primary,
   },
   actions: {
     flexDirection: 'row',
