@@ -59,14 +59,8 @@ export async function cardReset(cards: number): Promise<{ stars_total: number }>
   return api.post<{ stars_total: number }>('/api/discover/card-reset', { cards });
 }
 
-// 받은 좋아요 1명 공개. 무료 공개가 안 되면 402 reveal_requires_stars —
-// 사용자가 확인하면 payWithStars=true 로 다시 부른다 (별사탕 2개).
-export async function revealLike(
-  likerId: string,
-  payWithStars = false,
-): Promise<{ revealed: boolean; next_free_reveal_at: string | null }> {
-  return api.post('/api/discover/likes-received/reveal', {
-    liker_id: likerId,
-    pay_with_stars: payWithStars,
-  });
+// 잠긴 받은 좋아요 카드 공개 (별사탕 2개). 모자라면 402 insufficient_stars.
+// 상대가 그사이 탈퇴·정지·차단됐으면 차감 없이 revealed=false.
+export async function revealLike(likerId: string): Promise<{ revealed: boolean }> {
+  return api.post('/api/discover/likes-received/reveal', { liker_id: likerId });
 }

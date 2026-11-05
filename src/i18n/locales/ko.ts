@@ -173,13 +173,13 @@ export default {
         },
         // 탐색 헤더의 오늘 남은 카드 수.
         // 좋아요 소진 후 별사탕으로 좋아요 보낼 때 확인 문구.
+        likeMoreTitle: "좋아요 보내기",
         likeMore: "추가로 좋아요를 보내시겠습니까?",
         cardsLeft: "카드 {{count}}장",
         likesLeft: "남은 좋아요 {{count}}개",
         cardsOut: {
-            title: "오늘의 카드를 모두 봤어요",
-            nextFree: "다음 카드 오픈까지 {{time}}",
-            resetButton: "카드 더보기",
+            nextFree: "무료 카드 오픈까지 {{time}}",
+            resetButton: "지금 오픈하기",
             confirmTitle: "카드 더보기",
             confirm: "{{count}}장을 더 볼 수 있어요.",
             confirmOne: "{{count}}장을 더 볼 수 있어요.",
@@ -192,6 +192,11 @@ export default {
     },
 
     likes: {
+        gone: {
+            title: "지금은 만날 수 없는 사용자예요",
+            next: "다음 카드를 보여드릴게요.",
+            noCharge: "별사탕은 차감되지 않았어요.",
+        },
         headerTitle: "받은 좋아요",
         empty: {
             title: "아직 받은 좋아요가 없어요",
@@ -199,9 +204,8 @@ export default {
             cta: "지금 탐색하기",
         },
         locked: {
-            freeReveal: "무료로 공개하기",
-            paidReveal: "별사탕 2개로 공개하기",
-            nextFree: "다음 무료 공개까지 {{time}}",
+            paidReveal: "지금 오픈하기",
+            nextFree: "무료 카드 오픈까지 {{time}}",
             confirmPaid: "별사탕 2개를 사용해 공개할까요?",
         },
     },
@@ -209,12 +213,10 @@ export default {
     // 별사탕 (유료화 화폐). 일본어는 金平糖, 영어는 Stars.
     stars: {
         balance: "보유 별사탕 {{count}}개",
-        use: "별사탕 {{count}}개 사용",
         useConfirm: "사용하기",
         watchAd: "광고 보고 1개 받기",
         watchAdRemaining: "{{count}}회 남음",
         watchAdDone: "오늘 광고 보상을 모두 받았어요.",
-        charge: "충전하기",
         adsUnavailable: "지금은 광고를 불러올 수 없어요. 잠시 후 다시 시도해 주세요.",
         insufficient: "별사탕이 부족해요",
         shopTitle: "스토어",

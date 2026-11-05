@@ -197,6 +197,8 @@ export interface SwipeRequest {
   direction: 'like' | 'pass';
   // 'likes' = 받은 좋아요 탭 (유료화 ON 에서 카드·좋아요 차감 면제, 서버가 공개 여부 검증).
   source?: 'discover' | 'likes';
+  // 받은 좋아요 탭: 넘긴 직후 화면에 나올 잠긴 카드. 서버가 맨 앞 카드로 고정한다.
+  next_card_id?: string;
   // 좋아요 한도 초과 시 사용자가 "별사탕 1개 사용" 을 확인한 경우만 true.
   pay_with_stars?: boolean;
 }
@@ -204,6 +206,8 @@ export interface SwipeRequest {
 export interface SwipeResponse {
   direction: 'like' | 'pass';
   match: Match | null;
+  // 상대가 그사이 탈퇴·정지·차단돼 기록 없이 넘어감 (차감 없음).
+  skipped?: boolean;
 }
 
 export interface DiscoverQuota {
@@ -224,7 +228,7 @@ export interface DiscoverQuota {
   stars?: { free: number; paid: number; total: number };
   // 오늘 탐색 카드 사용/한도 (화면 비표시).
   cards?: { used: number; limit: number };
-  // null = 지금 무료 공개 가능.
+  // null = 지금 무료 카드 사용 가능.
   next_free_reveal_at?: string | null;
   // 오늘(KST) 남은 광고 보상 횟수.
   ads_remaining?: number;

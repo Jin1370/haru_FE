@@ -171,13 +171,13 @@ export default {
             confirmFreeNote: "今日のカード枚数にカウントされません。",
             confirmButton: "もう一度見る",
         },
+        likeMoreTitle: "いいねを送る",
         likeMore: "追加でいいねを送りますか？",
         cardsLeft: "カード{{count}}枚",
         likesLeft: "残りいいね{{count}}回",
         cardsOut: {
-            title: "今日のカードをすべて見ました",
-            nextFree: "次のカード公開まで {{time}}",
-            resetButton: "カードをもっと見る",
+            nextFree: "無料カード公開まで {{time}}",
+            resetButton: "今すぐ公開する",
             confirmTitle: "カードをもっと見る",
             confirm: "あと{{count}}枚見られます。",
             confirmOne: "あと{{count}}枚見られます。",
@@ -190,6 +190,11 @@ export default {
     },
 
     likes: {
+        gone: {
+            title: "現在お会いできないユーザーです",
+            next: "次のカードをお見せします。",
+            noCharge: "金平糖は消費されていません。",
+        },
         headerTitle: "もらったいいね",
         empty: {
             title: "まだ「いいね」を受け取っていません",
@@ -197,21 +202,18 @@ export default {
             cta: "今すぐ探す",
         },
         locked: {
-            freeReveal: "無料で公開する",
-            paidReveal: "金平糖2個で公開する",
-            nextFree: "次の無料公開まで {{time}}",
+            paidReveal: "今すぐ公開する",
+            nextFree: "無料カード公開まで {{time}}",
             confirmPaid: "金平糖を2個使って公開しますか？",
         },
     },
 
     stars: {
         balance: "所持金平糖 {{count}}個",
-        use: "金平糖{{count}}個を使う",
         useConfirm: "使う",
         watchAd: "広告を見て1個もらう",
         watchAdRemaining: "残り{{count}}回",
         watchAdDone: "今日の広告特典はすべて受け取りました。",
-        charge: "チャージする",
         adsUnavailable: "現在広告を読み込めません。しばらくしてからもう一度お試しください。",
         insufficient: "金平糖が足りません",
         shopTitle: "ストア",

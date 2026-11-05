@@ -173,13 +173,13 @@ export default {
       confirmFreeNote: "Won't count toward today's card limit.",
       confirmButton: 'See again',
     },
+    likeMoreTitle: 'Send a like',
     likeMore: 'Send another like?',
     cardsLeft: 'Cards {{count}}',
     likesLeft: 'Likes left {{count}}',
     cardsOut: {
-      title: "You've seen all of today's cards",
-      nextFree: 'Next cards open in {{time}}',
-      resetButton: 'See more cards',
+      nextFree: 'Free card opens in {{time}}',
+      resetButton: 'Open now',
       confirmTitle: 'See more cards',
       confirm: '{{count}} more cards available.',
       confirmOne: '{{count}} more card available.',
@@ -192,6 +192,11 @@ export default {
   },
 
   likes: {
+    gone: {
+      title: "This person isn't available right now",
+      next: "Here's the next one.",
+      noCharge: "You weren't charged any Stars.",
+    },
     headerTitle: 'Likes Received',
     empty: {
       title: "You haven't received any likes yet",
@@ -199,21 +204,18 @@ export default {
       cta: 'Discover now',
     },
     locked: {
-      freeReveal: 'Reveal for free',
-      paidReveal: 'Reveal for 2 Stars',
-      nextFree: 'Next free reveal in {{time}}',
+      paidReveal: 'Open now',
+      nextFree: 'Free card opens in {{time}}',
       confirmPaid: 'Use 2 Stars to reveal?',
     },
   },
 
   stars: {
     balance: 'Stars: {{count}}',
-    use: 'Use Stars ×{{count}}',
     useConfirm: 'Use',
     watchAd: 'Watch an ad, get 1 Star',
     watchAdRemaining: '{{count}} left',
     watchAdDone: "You've claimed all of today's ad rewards.",
-    charge: 'Get more',
     adsUnavailable: "Ads can't be loaded right now. Please try again later.",
     insufficient: 'Not enough Stars',
     shopTitle: 'Store',

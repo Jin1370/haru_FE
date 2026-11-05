@@ -18,7 +18,6 @@ import { showAlert } from '@/stores/alertStore';
 import { colors, radii } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { LockedCard, useCountdown } from '@/components/discover/LockedCard';
-import { showStarSheet } from '@/components/stars/StarSheet';
 import { ApiRequestError } from '@/services/api';
 
 // 받은 좋아요 탭 — 나를 like 한 사용자 카드 목록.
@@ -67,13 +66,15 @@ export default function LikesScreen() {
     }, [loadCandidates]),
   );
 
-  // 받은 좋아요 공개. 무료가 남았으면 바로, 아니면 확인 후 별사탕 2개 —
-  // 별사탕이 모자라면 별사탕 시트(광고 / 충전)로.
+  // 잠긴 카드 공개 — 확인 후 별사탕 2개. 별사탕이 모자라면 사용하기가 충전 화면으로
+  // 보낸다. 무료 카드는 서버가 일반 카드로 내려주므로 여기를 타지 않는다.
   const [revealing, setRevealing] = useState(false);
-  const runReveal = async (likerId: string, pay: boolean) => {
+  const runReveal = async (likerId: string) => {
     setRevealing(true);
     try {
-      await reveal(likerId, pay);
+      if (!(await reveal(likerId))) {
+        showAlert({ variant: 'info', title: t('likes.gone.title'), message: t('likes.gone.noCharge') });
+      }
     } catch (e) {
       const code = e instanceof ApiRequestError ? e.code : undefined;
       showAlert({
@@ -86,24 +87,13 @@ export default function LikesScreen() {
   };
 
   const onReveal = (likerId: string) => {
-    if (!nextFreeRevealAt) {
-      runReveal(likerId, false);
-      return;
-    }
-    if (starsTotal < 2) {
-      showStarSheet({
-        title: t('likes.locked.paidReveal'),
-        cost: 2,
-        onUse: () => runReveal(likerId, true),
-      });
-      return;
-    }
     showAlert({
       variant: 'confirm',
       title: t('likes.locked.confirmPaid'),
+      starCost: 2,
       cancelText: t('common.cancel'),
       confirmText: t('stars.useConfirm'),
-      onConfirm: () => runReveal(likerId, true),
+      onConfirm: () => (starsTotal < 2 ? router.push('/(main)/settings/stars') : runReveal(likerId)),
     });
   };
 
@@ -122,10 +112,19 @@ export default function LikesScreen() {
     // 매치 완성 like = 예산 면제다. 따라서 디스커버에서 예산을 소진했더라도 여기서는
     // 사전 차단하지 않는다(결정 #4). 희귀 unlike 레이스로 BE 가 429 를 주면
     // 아래 consumeLikeLimitHit 가 방어한다.
-    const res = await handleSwipe(candidate.id, direction);
+    // 다음이 잠긴 카드면 화면에 나올 그 카드를 서버에 고정한다.
+    const next = candidates[1];
+    const res = await handleSwipe(candidate.id, direction, next?.locked ? next.id : undefined);
 
     if (consumeLikeLimitHit()) {
       showLikeLimit(t);
+      return;
+    }
+
+    // 상대가 그사이 탈퇴·정지·차단됐다. 사유를 말하지 않는다 — 차단·정지가 드러나면 안
+    // 된다. 공개할 때 쓴 별사탕은 이미 나갔으므로 여기서는 차감 안내를 하지 않는다.
+    if (res?.skipped) {
+      showAlert({ variant: 'info', title: t('likes.gone.title'), message: t('likes.gone.next') });
       return;
     }
 
@@ -175,7 +174,7 @@ export default function LikesScreen() {
             nextFreeRevealAt={nextFreeRevealAt}
             revealing={revealing}
             onReveal={() => onReveal(current.id)}
-            onFreeAgain={syncQuota}
+            onFreeAgain={handleRefresh}
           />
         </LockedCard>
       ) : current ? (
@@ -223,8 +222,8 @@ export default function LikesScreen() {
   );
 }
 
-// 잠긴 카드 위 공개 버튼. 무료 공개가 남았으면 "무료로 공개하기", 아니면 다음 무료
-// 공개까지 타이머 + "별사탕 2개로 공개하기". 타이머가 끝나면 quota 를 다시 읽어 무료로 전환.
+// 잠긴 카드 위 공개 버튼. 다음 무료 카드까지 타이머 + "별사탕 2개로 공개하기".
+// 타이머가 끝나면 목록을 다시 읽어 이 카드가 무료 카드로 열린다.
 function RevealPanel({
   nextFreeRevealAt,
   revealing,
@@ -243,7 +242,7 @@ function RevealPanel({
     <>
       {target ? <Text style={styles.lockedTimer}>{t('likes.locked.nextFree', { time: left })}</Text> : null}
       <Button
-        title={target ? t('likes.locked.paidReveal') : t('likes.locked.freeReveal')}
+        title={t('likes.locked.paidReveal')}
         onPress={onReveal}
         loading={revealing}
         disabled={revealing}
@@ -255,13 +254,14 @@ function RevealPanel({
 
 const styles = StyleSheet.create({
   lockedTimer: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: colors.white,
     opacity: 0.85,
     textAlign: 'center',
   },
   lockedBtn: {
+    marginTop: 8,
     borderRadius: radii.pill,
   },
   resetBtn: {

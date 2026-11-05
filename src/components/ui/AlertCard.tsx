@@ -39,7 +39,7 @@ const VARIANT_ACCENTS: Record<AlertCardVariant, string> = {
 };
 
 // text 안의 highlight 첫 위치만 분홍색으로 감싼다. 없으면 text 그대로.
-export function highlightText(text: string, highlight?: string) {
+function highlightText(text: string, highlight?: string) {
   const at = highlight ? text.indexOf(highlight) : -1;
   if (!highlight || at < 0) return text;
   return (

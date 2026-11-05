@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SwipeCard } from '@/components/discover/SwipeCard';
 import { LaunchPromoCard } from '@/components/discover/LaunchPromoCard';
@@ -11,7 +12,6 @@ import {
   showMatchAlert,
 } from '@/components/discover/DiscoverGate';
 import { LockedCard, useCountdown, nextLocalMidnightMs } from '@/components/discover/LockedCard';
-import { showStarSheet } from '@/components/stars/StarSheet';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useDiscover } from '@/hooks/useDiscover';
@@ -103,22 +103,35 @@ export default function DiscoverScreen() {
       return;
     }
 
+    // 상대가 그사이 탈퇴·정지·차단됐다. 사유를 말하지 않는다 — 차단·정지가 드러나면 안 된다.
+    if (res?.skipped) {
+      showAlert({
+        variant: 'info',
+        title: t('likes.gone.title'),
+        message: t(pay ? 'likes.gone.noCharge' : 'likes.gone.next'),
+      });
+      return;
+    }
+
     if (res?.match) showMatchAlert(t, res.match.id);
   };
 
-  // 좋아요 무료 한도 소진. 유료화 ON 이면 별사탕 시트(1개 사용 / 광고 / 충전),
-  // OFF 면 기존 안내 모달.
+  // 좋아요 무료 한도 소진. 유료화 ON 이면 별사탕 1개 사용 모달, OFF 면 기존 안내 모달.
   const showLikeOut = (candidateId: string) => {
     if (!monetizationEnabled) {
       showLikeLimit(t);
       return;
     }
-    // 질문 + 아이콘·잔액 + "확인" 만 (부족하면 광고·충전이 함께 뜬다).
-    showStarSheet({
+    // 카드 더보기와 같은 구성. 별사탕이 모자라면 사용하기가 충전 화면으로 보낸다.
+    showAlert({
+      variant: 'confirm',
+      title: t('discover.likeMoreTitle'),
       message: t('discover.likeMore'),
-      useLabel: t('common.confirm'),
-      cost: 1,
-      onUse: () => sendSwipe(candidateId, 'like', true),
+      starCost: 1,
+      cancelText: t('common.cancel'),
+      confirmText: t('stars.useConfirm'),
+      onConfirm: () =>
+        starsTotal < 1 ? router.push('/(main)/settings/stars') : sendSwipe(candidateId, 'like', true),
     });
   };
 
@@ -140,7 +153,7 @@ export default function DiscoverScreen() {
     // 즉시 매치되게 한다(결정 #4). liked_you 가 stale(로드 후 상대가 unlike)이라
     // BE 가 non-reciprocal 로 429 를 주면 sendSwipe 의 consumeLikeLimitHit 가 방어한다.
     // 유료화 ON 에선 BE 가 liked_you 를 보내지 않는다 — 탐색 좋아요는 전부 차감이라
-    // 한도 소진 후엔 모든 카드에서 별사탕 시트가 뜬다.
+    // 한도 소진 후엔 모든 카드에서 별사탕 사용 모달이 뜬다.
     if (direction === 'like' && dailyLimitReached && !candidate.liked_you) {
       showLikeOut(candidate.id);
       return;
@@ -150,7 +163,7 @@ export default function DiscoverScreen() {
   };
 
   // 볼 수 있는 카드 장수만큼 구매. 항상 확인 모달이고, 별사탕이 모자라면
-  // 확인 대신 별사탕 시트(광고 / 충전)로.
+  // 사용하기가 충전 화면으로 보낸다.
   const runCardReset = async (cards: number) => {
     setBuyingCards(true);
     try {
@@ -168,23 +181,20 @@ export default function DiscoverScreen() {
     }
   };
 
-  const onCardReset = (locked: DiscoverCandidate) => {
+  const onCardReset = async (shown: DiscoverCandidate) => {
+    // 받아둔 장수가 낡았을 수 있어(탈퇴·차단 등으로 후보가 줄어든 경우) 다시 받아 확인한다.
+    // 맨 앞이 더 이상 잠긴 카드가 아니면 화면이 새 카드로 바뀐 것이니 구매를 묻지 않는다.
+    setBuyingCards(true);
+    const fresh = await loadCandidates();
+    setBuyingCards(false);
+    const locked = fresh ? fresh[0] : shown;
+    if (!locked?.locked) return;
     // 서버가 최대 10 으로 잘라 보낸다.
     const title = t('discover.cardsOut.confirmTitle');
     const count = locked.available_count ?? 0;
     // 영어만 단수·복수가 갈린다. ko·ja 의 confirmOne 은 confirm 과 같다.
     const message = t(count === 1 ? 'discover.cardsOut.confirmOne' : 'discover.cardsOut.confirm', { count });
     const cost = cardResetCost(count);
-    if (starsTotal < cost) {
-      showStarSheet({
-        title,
-        message,
-        messageHighlight: String(count),
-        cost,
-        onUse: () => runCardReset(count),
-      });
-      return;
-    }
     showAlert({
       variant: 'confirm',
       title,
@@ -193,7 +203,7 @@ export default function DiscoverScreen() {
       starCost: cost,
       cancelText: t('common.cancel'),
       confirmText: t('stars.useConfirm'),
-      onConfirm: () => runCardReset(count),
+      onConfirm: () => (starsTotal < cost ? router.push('/(main)/settings/stars') : runCardReset(count)),
     });
   };
 
@@ -297,7 +307,6 @@ function CardsOutPanel({ onReset, onMidnight }: { onReset: () => void; onMidnigh
   const left = useCountdown(target, onMidnight);
   return (
     <>
-      <Text style={styles.lockedTitle}>{t('discover.cardsOut.title')}</Text>
       <Text style={styles.lockedTimer}>{t('discover.cardsOut.nextFree', { time: left })}</Text>
       <Button title={t('discover.cardsOut.resetButton')} onPress={onReset} style={styles.lockedBtn} />
     </>
@@ -305,14 +314,8 @@ function CardsOutPanel({ onReset, onMidnight }: { onReset: () => void; onMidnigh
 }
 
 const styles = StyleSheet.create({
-  lockedTitle: {
-    fontSize: 16,
-    fontFamily: fonts.bold,
-    color: colors.white,
-    textAlign: 'center',
-  },
   lockedTimer: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: fonts.medium,
     color: colors.white,
     opacity: 0.85,

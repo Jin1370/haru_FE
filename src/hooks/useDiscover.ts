@@ -77,9 +77,12 @@ export function useDiscover() {
       const data = await discoverService.getDiscoverCandidates(BATCH_SIZE);
       // Filter out anything swiped this session — guards against the BE
       // returning a just-swiped user whose POST hasn't committed yet.
-      setCandidates(data.filter((c) => !swipedSession.has(c.id)));
+      const fresh = data.filter((c) => !swipedSession.has(c.id));
+      setCandidates(fresh);
+      return fresh;
     } catch (e: any) {
       setError(e.message);
+      return null;
     } finally {
       const wasFirst = !initializedRef.current;
       initializedRef.current = true;
@@ -131,7 +134,7 @@ export function useDiscover() {
   const handleSwipe = useCallback(async (
     swipedId: string,
     direction: 'like' | 'pass',
-    // 좋아요 한도 소진 후 사용자가 별사탕 시트에서 "1개 사용" 을 누른 경우.
+    // 좋아요 한도 소진 후 사용자가 별사탕 모달에서 사용하기를 누른 경우.
     payWithStars = false,
   ): Promise<SwipeResponse | null> => {
     // Optimistic: drop the swiped card and bump the count immediately so the
@@ -160,6 +163,11 @@ export function useDiscover() {
         direction,
         ...(payWithStars ? { pay_with_stars: true } : {}),
       });
+      // 상대가 그사이 탈퇴·정지·차단돼 기록 없이 지나갔다. 낙관적으로 줄인 수를 맞춘다.
+      if (res.skipped) {
+        syncQuota();
+        return res;
+      }
       // 별사탕을 썼으면 잔액이 바뀌었다.
       if (payWithStars) syncQuota();
       // 방금 pass 행이 생겼으므로 "다시 보기" 버튼 노출 조건을 즉시 충족시킨다

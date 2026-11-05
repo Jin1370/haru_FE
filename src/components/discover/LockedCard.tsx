@@ -30,7 +30,7 @@ export function LockedCard({ candidate, children }: { candidate: DiscoverCandida
       </View>
       {BlurView ? (
         <BlurView
-          intensity={45}
+          intensity={38}
           tint="dark"
           // Android 는 기본값이 반투명 막이라 실제 블러를 쓰려면 이 옵션이 필요하다.
           experimentalBlurMethod="dimezisBlurView"

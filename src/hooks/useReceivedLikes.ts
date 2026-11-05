@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { Image } from 'react-native';
 import useSWR, { useSWRConfig } from 'swr';
 import * as discoverService from '@/services/discover';
 import { ApiRequestError } from '@/services/api';
@@ -39,6 +40,19 @@ export function useReceivedLikes() {
   useEffect(() => swipedSession.subscribe(rerender), []);
   const candidates = (data ?? []).filter((c) => !swipedSession.has(c.id));
 
+  // 다음 카드 사진을 미리 받아 넘기는 즉시 그린다 (디스커버와 동일). 실패하면 다시 시도.
+  const prefetchedPhotosRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const c of (data ?? []).slice(0, 3)) {
+      const url = c.photos?.[0];
+      if (!url || prefetchedPhotosRef.current.has(url)) continue;
+      prefetchedPhotosRef.current.add(url);
+      Image.prefetch(url).catch(() => {
+        prefetchedPhotosRef.current.delete(url);
+      });
+    }
+  }, [data]);
+
   // 호출 시점은 화면이 결정 — 받은 좋아요 화면은 useFocusEffect 로 탭 focus 마다 호출.
   // 받은 좋아요는 비동기 알림으로 도착하기 때문에 stale 가능성 높음 — focus refetch +
   // pull-to-refresh 조합으로 사용자 인지 가능한 한도 내에서 fresh 유지.
@@ -46,20 +60,33 @@ export function useReceivedLikes() {
     await mutate();
   }, [mutate]);
 
-  const { markLimitReached, markHasPasses } = quota;
+  const { markLimitReached, markHasPasses, syncQuota } = quota;
   const handleSwipe = useCallback(
     async (
       swipedId: string,
       direction: 'like' | 'pass',
+      nextLockedId?: string,
     ): Promise<SwipeResponse | null> => {
       try {
         // source=likes: 유료화 ON 에서 카드·좋아요 차감 면제 (서버가 공개 여부 검증).
-        const res = await discoverService.swipe({ swiped_id: swipedId, direction, source: 'likes' });
+        const res = await discoverService.swipe({
+          swiped_id: swipedId,
+          direction,
+          source: 'likes',
+          next_card_id: nextLockedId,
+        });
         // 방금 pass 행이 생겼으면 "다시 보기" 버튼 노출 조건을 즉시 충족.
         if (direction === 'pass') markHasPasses();
         // 공유 세션 집합에 등록 → 디스커버 탭이 같은 카드를 즉시 덱에서 제거(구독 알림).
         // 본 탭은 렌더 필터가 같은 집합을 보므로 함께 사라진다.
         swipedSession.add(swipedId);
+        // 사라진 카드가 무료 카드였으면 무료분이 남아 있다 — 다음 카드가 무료로 열리게 다시 받는다.
+        if (res.skipped) {
+          mutate();
+          return res;
+        }
+        // 무료 카드를 넘겼으면 다음 잠긴 카드에 24시간 타이머가 떠야 한다.
+        syncQuota();
         // 받은 좋아요의 like 는 항상 reciprocal(=매치 완성) 이라 예산을 소모하지
         // 않는다(면제). 따라서 낙관적 +1 을 하지 않는다 — like 도 pass 도 카운트 불변.
         // (드문 엣지: 로드~스와이프 사이 상대가 unlike → BE 는 예산 count 하나 FE
@@ -82,7 +109,7 @@ export function useReceivedLikes() {
         return null;
       }
     },
-    [userId, globalMutate, markLimitReached, markHasPasses],
+    [userId, globalMutate, mutate, markLimitReached, markHasPasses, syncQuota],
   );
 
   // 화면 onSwipe 가 handleSwipe 직후 동기 호출해 429(예산 소진) 신호를 소비한다.
@@ -98,13 +125,13 @@ export function useReceivedLikes() {
     swipedSession.add(id);
   }, []);
 
-  // 받은 좋아요 1명 공개 (유료화 ON). 무료 공개가 남았으면 무료, 아니면 별사탕 2개.
-  // 성공하면 목록을 다시 불러 잠긴 카드를 실제 카드로 바꾼다. 실패는 호출처로.
-  const { syncQuota } = quota;
+  // 잠긴 카드 공개 (유료화 ON, 별사탕 2개). 목록을 다시 불러 실제 카드로 바꾼다.
+  // 상대가 그사이 사라졌으면 false (차감 없음, 카드는 목록에서 빠진다). 실패는 호출처로.
   const reveal = useCallback(
-    async (likerId: string, payWithStars: boolean) => {
-      await discoverService.revealLike(likerId, payWithStars);
+    async (likerId: string) => {
+      const { revealed } = await discoverService.revealLike(likerId);
       await Promise.all([mutate(), syncQuota()]);
+      return revealed;
     },
     [mutate, syncQuota],
   );
