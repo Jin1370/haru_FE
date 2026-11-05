@@ -15,6 +15,10 @@ jest.mock('@expo/vector-icons', () => ({
   Ionicons: () => null,
 }));
 
+jest.mock('./HaruIcon', () => ({
+  HaruIcon: () => null,
+}));
+
 describe('EmptyState', () => {
   it('is a function component that accepts the documented props', () => {
     expect(typeof EmptyState).toBe('function');

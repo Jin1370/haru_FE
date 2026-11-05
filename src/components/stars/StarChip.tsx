@@ -1,6 +1,6 @@
-import { useEffect, useRef, type ComponentProps } from 'react';
+import { useEffect, useRef } from 'react';
 import { Pressable, Text, StyleSheet, View, Animated, Easing } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { HaruIcon } from '@/components/ui/HaruIcon';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
@@ -9,6 +9,12 @@ import { fonts } from '@/constants/fonts';
 
 // BE 무제한 계정 한도(999999) — 이 이상이면 남은 수를 숨긴다.
 const UNLIMITED_LIMIT = 999_999;
+// 아이콘마다 여백이 달라서, 실제 도형 높이가 14.5px 로 같아지는 크기를 쓴다.
+const CHIP_ICON_SIZES = {
+  cards: 19.1,
+  'likes-left': 25.84,
+  'star-candy': 17.7,
+} as const;
 
 // 헤더 잔여량 칩 공용 껍데기. 숫자가 바뀌는 순간 칩이 살짝 커졌다 돌아오고
 // 배경이 브랜드 핑크로 한 번 반짝인다 — 조용히 줄어들면 사용자가 못 알아채서.
@@ -20,7 +26,7 @@ function CountChip({
   onPress,
   last = false,
 }: {
-  icon: ComponentProps<typeof Ionicons>['name'];
+  icon: keyof typeof CHIP_ICON_SIZES;
   value: number;
   label: string;
   onPress?: () => void;
@@ -55,7 +61,11 @@ function CountChip({
   const content = (
     <Animated.View style={{ transform: [{ scale }] }}>
       <Animated.View style={[styles.chip, { backgroundColor }]}>
-        <Ionicons name={icon} size={15} color={colors.primary} />
+        <HaruIcon
+          name={icon}
+          size={CHIP_ICON_SIZES[icon]}
+          color={colors.primary}
+        />
         <Text style={styles.text}>{value}</Text>
       </Animated.View>
     </Animated.View>
@@ -86,7 +96,7 @@ export function StarChip() {
   if (!monetizationEnabled) return null;
   return (
     <CountChip
-      icon="sparkles"
+      icon="star-candy"
       value={starsTotal}
       label={t('stars.balance', { count: starsTotal })}
       onPress={() => router.push('/(main)/settings/stars')}
@@ -102,7 +112,7 @@ export function CardCountChip() {
   if (cardsRemaining === null) return null;
   return (
     <CountChip
-      icon="albums-outline"
+      icon="cards"
       value={cardsRemaining}
       label={t('discover.cardsLeft', { count: cardsRemaining })}
     />
@@ -116,7 +126,7 @@ export function LikeCountChip() {
   const { monetizationEnabled, dailyCount, dailyLimit } = useDiscoverQuota();
   if (!monetizationEnabled || dailyLimit >= UNLIMITED_LIMIT) return null;
   const left = Math.max(0, dailyLimit - dailyCount);
-  return <CountChip icon="heart" value={left} label={t('discover.likesLeft', { count: left })} />;
+  return <CountChip icon="likes-left" value={left} label={t('discover.likesLeft', { count: left })} />;
 }
 
 // 탐색 탭 headerRight — 남은 카드 + 남은 좋아요 + 별사탕.
@@ -140,9 +150,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   text: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: fonts.bold,
     color: colors.text,
+    // 글꼴의 줄 상자 안에서 숫자가 아래쪽에 놓여, 가운데 정렬해도 아이콘보다 낮아 보인다.
+    transform: [{ translateY: -1 }],
   },
   pressed: { opacity: 0.7 },
   gap: { marginRight: 8 },

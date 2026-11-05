@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from './Button';
+import { HaruIcon, type HaruIconName } from './HaruIcon';
 import { colors, gradients, shadows } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 
@@ -9,6 +10,8 @@ interface EmptyStateProps {
   title: string;
   subtitle?: string;
   iconName?: React.ComponentProps<typeof Ionicons>['name'];
+  /** iconName 대신 쓰는 haru 전용 아이콘. */
+  haruIcon?: HaruIconName;
   ctaLabel?: string;
   onCtaPress?: () => void;
   style?: ViewStyle;
@@ -20,6 +23,7 @@ export function EmptyState({
   title,
   subtitle,
   iconName,
+  haruIcon,
   ctaLabel,
   onCtaPress,
   style,
@@ -28,14 +32,22 @@ export function EmptyState({
   const showCta = Boolean(ctaLabel && onCtaPress);
   return (
     <View style={[styles.container, style]}>
-      {iconName ? (
+      {iconName || haruIcon ? (
         <LinearGradient
           colors={[...gradients.glow]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[styles.iconHalo, shadows.glow]}
         >
-          <Ionicons name={iconName} size={40} color={colors.white} />
+          {haruIcon ? (
+            <HaruIcon
+              name={haruIcon}
+              size={haruIcon === 'tab-likes-outline' ? 56 : 40}
+              color={colors.white}
+            />
+          ) : (
+            <Ionicons name={iconName} size={40} color={colors.white} />
+          )}
         </LinearGradient>
       ) : null}
       <Text style={styles.title}>{title}</Text>

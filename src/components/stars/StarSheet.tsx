@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, Modal, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { HaruIcon } from '@/components/ui/HaruIcon';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
@@ -83,7 +84,7 @@ export function StarSheetHost() {
             <>
               {spec.message ? <Text style={styles.question}>{spec.message}</Text> : null}
               <View style={styles.balanceRow} accessibilityLabel={t('stars.balance', { count: starsTotal })}>
-                <Ionicons name="sparkles" size={18} color={colors.primary} />
+                <HaruIcon name="star-candy" size={18} color={colors.primary} />
                 <Text style={styles.balanceNumber}>{starsTotal}</Text>
               </View>
             </>
@@ -130,7 +131,7 @@ export function StarSheetHost() {
               router.push('/(main)/settings/stars');
             }}
           >
-            <Ionicons name="sparkles-outline" size={20} color={colors.primary} />
+            <HaruIcon name="star-candy" size={20} color={colors.primary} />
             <Text style={styles.rowText}>{t('stars.charge')}</Text>
           </Pressable>
             </>

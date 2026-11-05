@@ -1,37 +1,16 @@
 import { StarChip, DiscoverHeaderRight } from '@/components/stars/StarChip';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { HaruIcon } from '@/components/ui/HaruIcon';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
 import { fonts } from '@/constants/fonts';
 import { NavCat } from '@/components/cat/NavCat';
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
-
-function HeaderTitle({ icon, label }: { icon: IoniconName; label: string }) {
-  return (
-    <View style={headerTitleStyles.row}>
-      <Ionicons name={icon} size={20} color={colors.text} />
-      <Text style={headerTitleStyles.label}>{label}</Text>
-    </View>
-  );
-}
-
-const headerTitleStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  label: {
-    fontFamily: fonts.bold,
-    color: colors.text,
-    fontSize: 19,
-    letterSpacing: 0.3,
-  },
-});
+// 화살표가 폭을 차지해 하트가 작게 그려지므로 다른 아이콘보다 크게 표시한다.
+const LIKES_ICON_SCALE = 1.4;
 
 export default function TabLayout() {
   const { t } = useTranslation();
@@ -39,7 +18,10 @@ export default function TabLayout() {
   // Pad above the phone's gesture/nav bar. Android edge-to-edge can report 0;
   // keep a small floor so touch targets never sit right on the system bar.
   const bottomInset = Math.max(insets.bottom, 8);
-  const tabBarHeight = 60 + 8 + bottomInset;
+  const tabBarHeight = 52 + bottomInset;
+  // react-navigation 기본 헤더 높이(iOS 44, Dynamic Island 기기 38.67, Android 64)보다 3 낮게.
+  const defaultHeaderBar = Platform.OS === 'ios' ? (insets.top > 50 ? 38.67 : 44) : 64;
+  const headerHeight = insets.top + defaultHeaderBar - 3;
 
   return (
     <View style={styles.container}>
@@ -47,6 +29,7 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.textLight,
+          tabBarShowLabel: false,
           headerShown: true,
           // react-navigation 헤더 타이틀 기본 정렬이 iOS='center' / Android='left' 라
           // 같은 headerTitle 컴포넌트가 플랫폼마다 다른 위치에 떴다. 양쪽 'left' 로 고정.
@@ -56,8 +39,10 @@ export default function TabLayout() {
             color: colors.text,
             fontSize: 19,
             letterSpacing: 0.3,
+            transform: [{ translateY: -1 }],
           },
           headerStyle: {
+            height: headerHeight,
             backgroundColor: colors.background,
             shadowColor: 'transparent',
             elevation: 0,
@@ -68,17 +53,11 @@ export default function TabLayout() {
             borderTopWidth: 0.5,
             backgroundColor: colors.card,
             // 가시 영역 = 총 height - bottomInset (홈 인디케이터 safe area).
-            // paddingTop / paddingBottom 가 가시 영역 안에서 대칭(8/8)이어야 아이콘+레이블이
-            // 시각적으로 중앙 정렬됨. 이전 (paddingBottom: bottomInset) 은 가시 영역 안에서
-            // 하단 패딩 0 이라 콘텐츠가 위로 치우쳐 보였음.
-            height: 60 + 8 + bottomInset,
-            paddingTop: 8,
-            paddingBottom: 8 + bottomInset,
-          },
-          tabBarLabelStyle: {
-            fontFamily: fonts.medium,
-            fontSize: 11,
-            letterSpacing: 0.3,
+            // 탭 항목은 위쪽 정렬 + 패딩 5 + 아이콘 칸 28 이라, 아이콘 중심이 가시 영역
+            // 가운데(26)에 오도록 패딩을 계산했다 (테두리 0.5 + 6.5 + 5 + 14 = 26).
+            height: tabBarHeight,
+            paddingTop: 6.5,
+            paddingBottom: 7.5 + bottomInset,
           },
           sceneStyle: {
             // Each tab screen paints its own PhotoBackground; keep the scene
@@ -91,10 +70,10 @@ export default function TabLayout() {
           name="discover"
           options={{
             title: t('tabs.discover'),
-            headerTitle: () => <HeaderTitle icon="compass" label={t('tabs.discover')} />,
+            headerTitle: t('tabs.discover'),
             headerRight: () => <DiscoverHeaderRight />,
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? 'compass' : 'compass-outline'} size={size} color={color} />
+              <HaruIcon name={focused ? 'tab-discover-filled' : 'tab-discover-outline'} size={size} color={color} />
             ),
           }}
         />
@@ -102,10 +81,14 @@ export default function TabLayout() {
           name="likes"
           options={{
             title: t('tabs.likes'),
-            headerTitle: () => <HeaderTitle icon="heart" label={t('likes.headerTitle')} />,
+            headerTitle: t('likes.headerTitle'),
             headerRight: () => <StarChip />,
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name={focused ? 'heart' : 'heart-outline'} size={size} color={color} />
+              <HaruIcon
+                name={focused ? 'tab-likes-filled' : 'tab-likes-outline'}
+                size={size * LIKES_ICON_SCALE}
+                color={color}
+              />
             ),
           }}
         />
@@ -113,7 +96,7 @@ export default function TabLayout() {
           name="matches"
           options={{
             title: t('tabs.matches'),
-            headerTitle: () => <HeaderTitle icon="chatbubbles" label={t('tabs.matches')} />,
+            headerTitle: t('tabs.matches'),
             tabBarIcon: ({ color, size, focused }) => (
               <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} />
             ),
@@ -123,7 +106,7 @@ export default function TabLayout() {
           name="profile"
           options={{
             title: t('tabs.profile'),
-            headerTitle: () => <HeaderTitle icon="person" label={t('tabs.profile')} />,
+            headerTitle: t('tabs.profile'),
             tabBarIcon: ({ color, size, focused }) => (
               <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
             ),

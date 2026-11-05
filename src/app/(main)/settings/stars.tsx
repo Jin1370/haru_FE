@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { HaruIcon } from '@/components/ui/HaruIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { WizardHeader } from '@/components/setup/WizardHeader';
@@ -84,7 +85,7 @@ export default function StarsScreen() {
       <WizardHeader compact title={t('stars.shopTitle')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom }]}>
         <View style={styles.balanceCard}>
-          <Ionicons name="sparkles" size={22} color={colors.primary} />
+          <HaruIcon name="star-candy" size={22} color={colors.primary} />
           <Text style={styles.balanceText}>{t('stars.balance', { count: starsTotal })}</Text>
         </View>
 
@@ -102,7 +103,7 @@ export default function StarsScreen() {
                 disabled={busy !== null}
               >
                 <View style={styles.labelRow}>
-                  <Ionicons name="sparkles" size={18} color={colors.primary} />
+                  <HaruIcon name="star-candy" size={18} color={colors.primary} />
                   <Text style={styles.label}>
                     {t('stars.shopProduct', { count: COUNT_BY_PRODUCT[p.id] ?? 0 })}
                   </Text>

@@ -254,7 +254,7 @@ export default function DiscoverScreen() {
         // 않는다 — 카드는 계속 흐르고 pass 는 무제한이며, non-reciprocal like 소진은
         // onSwipe 사전 게이트로 안내한다. pass-reset 버튼은 여기 탈출구로 유지.
         <EmptyState
-          iconName="sparkles"
+          haruIcon="tab-discover-outline"
           title={t('discover.noMoreProfiles')}
           subtitle={t('discover.checkBackLater')}
         >

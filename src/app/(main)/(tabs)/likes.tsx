@@ -202,7 +202,7 @@ export default function LikesScreen() {
         // 받은 좋아요 0개 — 디스커버로 유도하는 CTA. 출시 초기엔 사용자 풀이 작아
         // 자주 보일 화면이라 카피 + CTA 톤이 retention 에 직결.
         <EmptyState
-          iconName="heart-outline"
+          haruIcon="tab-likes-outline"
           title={t('likes.empty.title')}
           subtitle={t('likes.empty.text')}
           ctaLabel={t('likes.empty.cta')}
