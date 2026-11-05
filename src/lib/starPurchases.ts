@@ -88,8 +88,7 @@ export async function watchRewardedAd(userId: string): Promise<boolean> {
 
 // ── 스토어 구매 ────────────────────────────────────────────────────
 
-// iOS 는 star_*, Android 는 stars_* 로 등록됨 (스토어 제품 ID 는 변경 불가).
-export const STAR_PRODUCT_IDS = ['stars_30', 'stars_80', 'star_30', 'star_80'] as const;
+export const STAR_PRODUCT_IDS = ['star_30', 'star_80'] as const;
 
 export interface StarProduct {
   id: string;
