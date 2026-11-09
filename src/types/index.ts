@@ -203,6 +203,8 @@ export interface PlaylistSlot {
 export interface PlaylistsResponse {
   // 지금 열면 담길 곡 수 (0~10).
   available_count: number;
+  // 자르지 않은 남은 후보 수. 옛 BE 는 안 보낸다.
+  candidate_count?: number;
   playlists: PlaylistSlot[];
 }
 

@@ -15,10 +15,8 @@ interface CatState {
 
 export const useCatStore = create<CatState>((set) => ({
   celebrating: false,
-  // 저장된 값을 비동기로 읽어오기 전까지의 기본값. 대부분 켜둔 채 쓸 거라
-  // 가정해 true 로 시작 — 껐다가 하이드레이션 지연으로 잠깐 다시 보이는 것보다
-  // (드묾) 켜져 있다가 잠깐의 지연 후 꺼지는 편이 덜 튄다.
-  enabled: true,
+  // 기본은 꺼짐. 설정에서 직접 켠 사용자만 보인다.
+  enabled: false,
   celebrate: () => set({ celebrating: true }),
   reset: () => set({ celebrating: false }),
   setEnabled: (value) => {
@@ -27,9 +25,9 @@ export const useCatStore = create<CatState>((set) => ({
   },
 }));
 
-// 부팅 시 1회 하이드레이션. 저장된 값이 없으면(최초 실행) 기본값(true) 유지.
+// 부팅 시 1회 하이드레이션. 저장된 값이 없으면(한 번도 안 바꿈) 기본값(false) 유지.
 SecureStore.getItemAsync(CAT_ENABLED_KEY)
   .then((v) => {
-    if (v === '0') useCatStore.setState({ enabled: false });
+    if (v === '1') useCatStore.setState({ enabled: true });
   })
   .catch(() => {});

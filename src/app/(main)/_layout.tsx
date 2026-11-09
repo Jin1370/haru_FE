@@ -72,7 +72,8 @@ export default function MainLayout() {
       <Stack.Screen name="setup/voice" />
       <Stack.Screen name="setup/intro" />
       {/* 탐색 탭 2단계 — 연 플레이리스트의 카드. 헤더는 화면 안에서 켠다. */}
-      <Stack.Screen name="playlist/[idx]" />
+      {/* LP 재생 연출(탐색 탭) 뒤에 이어지게 밀기 대신 서서히 나타난다. */}
+      <Stack.Screen name="playlist/[idx]" options={{ animation: "fade" }} />
       <Stack.Screen name="settings/index" />
       <Stack.Screen name="settings/edit-profile" />
       <Stack.Screen name="settings/edit-bio" />
