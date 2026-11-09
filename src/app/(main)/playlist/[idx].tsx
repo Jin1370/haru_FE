@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: fs(13),
     fontFamily: fonts.medium,
-    color: colors.textSecondary,
+    color: colors.onPhotoTextSecondary,
   },
   requestBtn: {
     marginTop: 14,

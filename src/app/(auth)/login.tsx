@@ -27,8 +27,9 @@ import { colors, radii, shadows } from "@/constants/colors";
 import { fonts, fs } from "@/constants/fonts";
 import { validateEmail, validatePassword } from "@/utils/validators";
 import { userFacingError } from "@/utils/errors";
+import { themeBackgrounds } from "@/constants/theme";
 
-const LOGIN_BG = require("../../../assets/images/login-day.png");
+const LOGIN_BG = themeBackgrounds.login;
 const LOGIN_BG_BLUR = 12;
 
 const isExpoGo = Constants.appOwnership === "expo";
@@ -480,7 +481,7 @@ const styles = StyleSheet.create({
         // 스플래시 직후 디코드 직전 한 순간 기본 윈도우 배경(흰/회색)이 비친다.
         // 노을 이미지 상단 톤과 맞는 따뜻한 핑크를 깔아 그 순간이 회색이 아니라
         // 배경과 자연스럽게 이어지도록 한다.
-        backgroundColor: colors.secondary,
+        backgroundColor: colors.photoBase,
     },
     container: {
         flex: 1,
@@ -507,7 +508,7 @@ const styles = StyleSheet.create({
         fontFamily: fonts.extrabold,
         color: colors.white,
         letterSpacing: 1,
-        textShadowColor: "rgba(226,122,160,0.45)",
+        textShadowColor: colors.titleShadow,
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 14,
     },
@@ -522,7 +523,7 @@ const styles = StyleSheet.create({
         textAlign: "center",
         // 기본 행간(≈18)은 두 줄이 붙어 보인다. 15px 기준 1.5배로 띄운다.
         lineHeight: fs(23),
-        textShadowColor: "rgba(226,122,160,0.45)",
+        textShadowColor: colors.titleShadow,
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 14,
     },

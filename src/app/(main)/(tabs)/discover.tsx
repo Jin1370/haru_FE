@@ -34,6 +34,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useDiscoverStore } from "@/stores/discoverStore";
 import { showAlert } from "@/stores/alertStore";
 import { colors } from "@/constants/colors";
+import { isNight } from "@/constants/theme";
 import { fonts, fs } from "@/constants/fonts";
 import { SUPABASE_URL } from "@/constants/config";
 
@@ -708,13 +709,22 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: colors.white,
         borderRadius: 6,
-        backgroundColor: "rgba(0,0,0,0.35)",
+        // 낮 테마는 바탕 없이 테두리만, 밤 테마는 어두운 막.
+        backgroundColor: isNight ? "rgba(0,0,0,0.35)" : "transparent",
     },
     dialogText: {
         fontSize: fs(14),
         lineHeight: fs(21),
         fontFamily: fonts.bold,
         color: colors.white,
+        // 바탕이 없는 낮 테마에서 밝은 노을 위 흰 글자가 묻히지 않게.
+        ...(isNight
+            ? null
+            : {
+                  textShadowColor: "rgba(0,0,0,0.45)",
+                  textShadowOffset: { width: 0, height: 1 },
+                  textShadowRadius: 3,
+              }),
     },
     dialogArrow: {
         position: "absolute",

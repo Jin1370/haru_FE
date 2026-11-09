@@ -644,8 +644,8 @@ export default {
     deleteAccountTitle: 'Delete Account',
     deleteAccountConfirm: "Are you sure you want to delete your account? This cannot be undone.",
     sections: {
-      matching: 'My info',
       app: 'General',
+      display: 'Display',
       account: 'Account',
     },
     notifications: {
@@ -657,7 +657,11 @@ export default {
     },
     catAnimation: 'Cat animation',
     pixelFont: 'Pixel font',
-    fontChangeTitle: 'Change font',
+    theme: 'Theme',
+    themeDay: 'Day theme',
+    themeNight: 'Night theme',
+    font: 'Font',
+    systemFont: 'Default font',
     fontChangeMessage: 'The app needs to restart.',
     fontChangeConfirm: 'Restart',
   },

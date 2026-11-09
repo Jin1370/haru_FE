@@ -6,13 +6,11 @@ import {
     View,
     ViewStyle,
 } from "react-native";
-
-type Preset = "daytimeCity";
+import { themeBackgrounds } from "@/constants/theme";
 
 interface PhotoBackgroundProps {
     children?: ReactNode;
-    /** Built-in source presets; falls back to `source` when provided. */
-    preset?: Preset;
+    /** 없으면 현재 테마(낮/밤)의 배경 사진. */
     source?: ImageSourcePropType;
     /** Pixel radius for Image.blurRadius. Defaults to a light blur (2). */
     blurRadius?: number;
@@ -26,18 +24,13 @@ interface PhotoBackgroundProps {
     overlayColors?: readonly [string, string, ...string[]];
 }
 
-const PRESETS: Record<Preset, ImageSourcePropType> = {
-    daytimeCity: require("../../../assets/images/daytime-city.png"),
-};
-
 export function PhotoBackground({
     children,
-    preset = "daytimeCity",
     source,
     blurRadius,
     style,
 }: PhotoBackgroundProps) {
-    const resolvedSource = source ?? PRESETS[preset];
+    const resolvedSource = source ?? themeBackgrounds.app;
     const resolvedBlur = blurRadius ?? 4;
 
     return (

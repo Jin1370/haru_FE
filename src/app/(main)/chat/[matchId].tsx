@@ -1851,7 +1851,7 @@ const styles = StyleSheet.create({
   },
   // 흰 버튼은 분홍 glow 로는 배경과 잘 안 갈린다 — 어두운 자주색으로 진하게.
   newMessagesBadgeJumped: {
-    shadowColor: '#3A2340',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.38,
     shadowRadius: 10,

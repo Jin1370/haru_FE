@@ -84,23 +84,23 @@ const styles = StyleSheet.create({
   title: {
     fontSize: fs(20),
     fontFamily: fonts.semibold,
-    color: colors.text,
+    color: colors.onPhotoText,
     textAlign: 'center',
     letterSpacing: 0.2,
     // Rescues contrast when the state sits directly on the photo background
     // without a card — the shadow is invisible on cream surfaces.
-    textShadowColor: 'rgba(255,244,238,0.9)',
+    textShadowColor: colors.onPhotoTextShadow,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
   },
   subtitle: {
     fontSize: fs(14),
     fontFamily: fonts.regular,
-    color: colors.textSecondary,
+    color: colors.onPhotoTextSecondary,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: fs(21),
-    textShadowColor: 'rgba(255,244,238,0.9)',
+    textShadowColor: colors.onPhotoTextShadow,
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,
   },

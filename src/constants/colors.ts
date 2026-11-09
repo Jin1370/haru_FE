@@ -1,4 +1,7 @@
-export const colors = {
+import { isNight } from './theme';
+
+// 낮 테마 — 노을. 밤 테마는 아래 nightColors 가 같은 키를 덮어쓴다.
+const dayColors = {
   // Brand primary: a dusty rose sunset — warm, romantic, nostalgic.
   primary: '#E27AA0',
   primaryLight: '#FBDCE6',
@@ -6,10 +9,7 @@ export const colors = {
   // 공용 버튼 배경 (옛 gradients.primary 의 중간색보다 살짝 진하게).
   primaryMid: '#E990AF',
 
-  // Accent pairs — peach/gold + soft lavender to echo twilight light.
   secondary: '#F6B5C8',
-  accent: '#FFCBA4',
-  lavender: '#B8A1C8',
 
   // Surfaces: warm blush cream so soft-white cards glow.
   background: '#FFF4EE',
@@ -28,31 +28,73 @@ export const colors = {
   warning: '#F7C787',
 
   like: '#FF5D87',
-  pass: '#D8C4CE',
 
   white: '#FFFFFF',
   black: '#000000',
   overlay: 'rgba(58,35,64,0.45)',
-} as const;
 
-// Gradient presets — used for signature surfaces (auth, hero headers, CTAs).
-// Stops are tuned to the lo-fi sunset palette: warm peach → rose → plum.
-export const gradients = {
-  // Signature daylight sunset (headers, onboarding hero).
-  sunset: ['#FFE8CC', '#FFC1A6', '#E27AA0', '#8A5A8C', '#3D2347'] as const,
-  // Deeper twilight for auth / dark surfaces.
-  dusk: ['#2D1B3D', '#5F3E73', '#A86696', '#F2A8BE'] as const,
-  // Older name kept for compatibility — routes through dusk.
-  night: ['#2D1B3D', '#5F3E73', '#A86696', '#F2A8BE'] as const,
-  // Gentle daybreak wash — great for empty states & light backgrounds.
-  dawn: ['#FFF4EE', '#FDE1E8', '#F3E0F0'] as const,
-  // Soft pink CTA gradient used on the Button primary + like controls.
-  primary: ['#F6B5C8', '#E27AA0'] as const,
-  // Blush surface — subtle warmth behind cards/sheets.
-  blush: ['#FFF6F1', '#FCE6EE'] as const,
-  // Warm glow for bubbles / highlights.
-  glow: ['#FFD9A8', '#F59EBF'] as const,
-} as const;
+  // 사진 배경이 그려지기 전 비치는 바탕 (사진 상단 톤).
+  photoBase: '#F6B5C8',
+  // 카드 없이 배경 사진 위에 바로 놓이는 글자.
+  onPhotoText: '#3A2340',
+  onPhotoTextSecondary: '#7A5F76',
+  onPhotoTextShadow: 'rgba(255,244,238,0.9)',
+  // 로그인 HARU 제목 글자 그림자.
+  titleShadow: 'rgba(226,122,160,0.45)',
+  // 그림자 색.
+  shadow: '#3A2340',
+};
+
+// 밤 테마 — 채도를 낮춘 슬레이트 블루 + 창문 불빛 같은 앰버 포인트.
+// 흰 배경 위 대비: primary 6.8:1, primaryMid 위 흰 글자 6.2:1.
+const nightColors: typeof dayColors = {
+  ...dayColors,
+  primary: '#3E5C8A',
+  primaryLight: '#E1E6EE',
+  primaryDark: '#263B5E',
+  primaryMid: '#46628F',
+
+  secondary: '#9AAAC3',
+
+  background: '#F2F4F7',
+  surface: '#E6EAF0',
+  card: '#FAFBFC',
+  cardAlt: '#EEF1F5',
+
+  text: '#1C2433',
+  textSecondary: '#5A6577',
+  textLight: '#A2AAB8',
+  border: '#D9DEE6',
+  borderSoft: '#E8EBF0',
+
+  like: '#B8862F',
+
+  overlay: 'rgba(18,24,38,0.5)',
+
+  photoBase: '#1C2380',
+  onPhotoText: '#FFFFFF',
+  onPhotoTextSecondary: '#E2E7EF',
+  onPhotoTextShadow: 'rgba(10,14,30,0.85)',
+  titleShadow: 'rgba(10,14,40,0.6)',
+  shadow: '#1C2433',
+};
+
+export const colors = isNight ? nightColors : dayColors;
+
+export const gradients = isNight
+  ? {
+      primary: ['#7F93B5', '#3E5C8A'] as const,
+      blush: ['#F7F8FA', '#E6EAF0'] as const,
+      glow: ['#9DB0CC', '#4A6390'] as const,
+    }
+  : {
+      // Soft pink CTA gradient used on the Button primary + like controls.
+      primary: ['#F6B5C8', '#E27AA0'] as const,
+      // Blush surface — subtle warmth behind cards/sheets.
+      blush: ['#FFF6F1', '#FCE6EE'] as const,
+      // Warm glow for bubbles / highlights.
+      glow: ['#FFD9A8', '#F59EBF'] as const,
+    };
 
 // Layout tokens kept alongside colors so screens can share a rhythm.
 export const radii = {
@@ -65,24 +107,25 @@ export const radii = {
 
 export const shadows = {
   soft: {
-    shadowColor: '#3A2340',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 14,
     elevation: 2,
   },
   card: {
-    shadowColor: '#3A2340',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 3,
   },
   glow: {
-    shadowColor: '#E27AA0',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 4,
   },
 } as const;
+

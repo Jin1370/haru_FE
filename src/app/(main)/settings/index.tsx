@@ -1,6 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, Switch, Linking, DevSettings } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, Linking } from 'react-native';
 import { router } from 'expo-router';
-import * as Updates from 'expo-updates';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { MenuCardButton } from '@/components/ui/MenuCardButton';
@@ -10,7 +9,7 @@ import { useCatStore } from '@/stores/catStore';
 import { showAlert } from '@/stores/alertStore';
 import { userFacingError } from '@/utils/errors';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts, fs, getAppFont, setAppFont } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { LEGAL_URLS } from '@/constants/legal';
 import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 
@@ -23,24 +22,6 @@ export default function SettingsScreen() {
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const catEnabled = useCatStore((s) => s.enabled);
   const setCatEnabled = useCatStore((s) => s.setEnabled);
-
-  // 현재 실행 중인 글꼴. 바꾸면 다시 시작해야 적용되므로 토글 값은 이 값으로 고정된다.
-  const pixelFont = getAppFont() === 'pixel';
-
-  const handleToggleFont = (next: boolean) => {
-    showAlert({
-      variant: 'confirm',
-      title: t('settings.fontChangeTitle'),
-      message: t('settings.fontChangeMessage'),
-      cancelText: t('common.cancel'),
-      confirmText: t('settings.fontChangeConfirm'),
-      onConfirm: () => {
-        setAppFont(next ? 'pixel' : 'system');
-        if (__DEV__) DevSettings.reload();
-        else Updates.reloadAsync();
-      },
-    });
-  };
 
   const handleLogout = () => {
     showAlert({
@@ -89,17 +70,17 @@ export default function SettingsScreen() {
       />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 8 + insets.bottom }]}>
         <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>
-          {t('settings.sections.matching')}
+          {t('settings.sections.app')}
         </Text>
         <View style={styles.group}>
           <MenuCardButton
-            label={t('profile.matchingPreferences')}
-            onPress={() => router.push('/(main)/settings/preferences')}
+            label={t('settings.notifications.title')}
+            onPress={() => router.push('/(main)/settings/notifications')}
           />
           <View style={styles.divider} />
           <MenuCardButton
-            label={t('profile.voiceSettings')}
-            onPress={() => router.push('/(main)/settings/voice')}
+            label={t('settings.languageSettings')}
+            onPress={() => router.push('/(main)/settings/language')}
           />
           {monetizationEnabled ? (
             <>
@@ -112,28 +93,17 @@ export default function SettingsScreen() {
           ) : null}
         </View>
 
-        <Text style={styles.sectionTitle}>{t('settings.sections.app')}</Text>
+        <Text style={styles.sectionTitle}>{t('settings.sections.display')}</Text>
         <View style={styles.group}>
           <MenuCardButton
-            label={t('settings.notifications.title')}
-            onPress={() => router.push('/(main)/settings/notifications')}
+            label={t('settings.theme')}
+            onPress={() => router.push('/(main)/settings/theme')}
           />
           <View style={styles.divider} />
           <MenuCardButton
-            label={t('settings.languageSettings')}
-            onPress={() => router.push('/(main)/settings/language')}
+            label={t('settings.font')}
+            onPress={() => router.push('/(main)/settings/font')}
           />
-          <View style={styles.divider} />
-          <View style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>{t('settings.pixelFont')}</Text>
-            <Switch
-              value={pixelFont}
-              onValueChange={handleToggleFont}
-              trackColor={{ false: colors.borderSoft, true: colors.primary }}
-              thumbColor="#FFFFFF"
-              ios_backgroundColor={colors.borderSoft}
-            />
-          </View>
           <View style={styles.divider} />
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>{t('settings.catAnimation')}</Text>
@@ -151,6 +121,11 @@ export default function SettingsScreen() {
             안내하므로 버튼 자체는 빨간색을 쓰지 않는다. */}
         <Text style={styles.sectionTitle}>{t('settings.sections.account')}</Text>
         <View style={styles.group}>
+          <MenuCardButton
+            label={t('profile.voiceSettings')}
+            onPress={() => router.push('/(main)/settings/voice')}
+          />
+          <View style={styles.divider} />
           {/* 구글·애플 전용 계정은 비밀번호가 없어 변경 자체가 불가능하다
               (BE 가 WRONG_CURRENT_PASSWORD 로 응답해 "틀렸다" 는 오해를 줌).
               has_password 가 undefined 인 옛 응답에서는 기존대로 노출. */}

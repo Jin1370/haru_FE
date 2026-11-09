@@ -644,8 +644,8 @@ export default {
         deleteAccountTitle: "회원 탈퇴",
         deleteAccountConfirm: "정말 탈퇴하시겠어요? 복구는 불가능합니다.",
         sections: {
-            matching: "내 정보",
             app: "일반",
+            display: "화면",
             account: "계정",
         },
         notifications: {
@@ -657,7 +657,11 @@ export default {
         },
         catAnimation: "고양이 애니메이션",
         pixelFont: "픽셀 글씨체",
-        fontChangeTitle: "글씨체 변경",
+        theme: "테마 변경",
+        themeDay: "낮 테마",
+        themeNight: "밤 테마",
+        font: "글씨체",
+        systemFont: "기본 글씨체",
         fontChangeMessage: "앱을 다시 시작해야 합니다.",
         fontChangeConfirm: "다시 시작",
     },

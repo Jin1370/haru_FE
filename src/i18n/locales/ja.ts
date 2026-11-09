@@ -640,8 +640,8 @@ export default {
         deleteAccountTitle: "退会する",
         deleteAccountConfirm: "本当に退会しますか？復元はできません。",
         sections: {
-            matching: "マイページ",
             app: "一般",
+            display: "表示",
             account: "アカウント",
         },
         notifications: {
@@ -653,7 +653,11 @@ export default {
         },
         catAnimation: "猫のアニメーション",
         pixelFont: "ドットフォント",
-        fontChangeTitle: "フォントの変更",
+        theme: "テーマ変更",
+        themeDay: "昼テーマ",
+        themeNight: "夜テーマ",
+        font: "フォント",
+        systemFont: "標準フォント",
         fontChangeMessage: "アプリを再起動する必要があります。",
         fontChangeConfirm: "再起動",
     },

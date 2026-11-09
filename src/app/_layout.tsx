@@ -30,6 +30,8 @@ import { useForceUpdate } from '@/hooks/useForceUpdate';
 import { showAlert } from '@/stores/alertStore';
 import { SWRConfigProvider } from '@/lib/swr';
 import { APP_FONT_ASSETS, DEFERRED_FONT_ASSETS } from '@/constants/fonts';
+import { colors } from '@/constants/colors';
+import { isNight } from '@/constants/theme';
 import * as Sentry from '@sentry/react-native';
 import i18n from '@/i18n';
 
@@ -319,7 +321,7 @@ function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#FEEEF0' },
+  root: { flex: 1, backgroundColor: isNight ? colors.photoBase : '#FEEEF0' },
 });
 
 export default Sentry.wrap(RootLayout);
