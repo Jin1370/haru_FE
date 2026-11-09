@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from './Button';
 import { HaruIcon, type HaruIconName } from './HaruIcon';
 import { colors, gradients, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 interface EmptyStateProps {
   title: string;
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   title: {
-    fontSize: 20,
+    fontSize: fs(20),
     fontFamily: fonts.semibold,
     color: colors.text,
     textAlign: 'center',
@@ -94,12 +94,12 @@ const styles = StyleSheet.create({
     textShadowRadius: 6,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginTop: 8,
     textAlign: 'center',
-    lineHeight: 21,
+    lineHeight: fs(21),
     textShadowColor: 'rgba(255,244,238,0.9)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 6,

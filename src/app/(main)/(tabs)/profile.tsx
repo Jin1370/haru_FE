@@ -34,7 +34,7 @@ import { showAlert } from '@/stores/alertStore';
 import { usePhotoPreviewStore } from '@/stores/photoPreviewStore';
 import { usePendingPhotoUploadsStore } from '@/stores/pendingPhotoUploadsStore';
 import { colors, gradients, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { calculateAge } from '@/utils/age';
 import { genderLabelKey } from '@/utils/gender';
 import { userFacingError } from '@/utils/errors';
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
     ...shadows.soft,
   },
   photoBusyText: {
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.primaryDark,
     fontFamily: fonts.medium,
   },
@@ -1087,14 +1087,14 @@ const styles = StyleSheet.create({
   },
   pendingBannerText: {
     flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: fs(13),
+    lineHeight: fs(18),
     letterSpacing: -0.3,
     color: colors.primaryDark,
     fontFamily: fonts.medium,
   },
   pendingBannerAction: {
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.primary,
     fontFamily: fonts.bold,
   },
@@ -1123,8 +1123,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,82,82,0.12)',
   },
   statusOverlayText: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: fs(10),
+    lineHeight: fs(13),
     textAlign: 'center',
     color: colors.text,
     fontFamily: fonts.medium,
@@ -1174,7 +1174,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   infoName: {
-    fontSize: 18,
+    fontSize: fs(18),
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.3,
@@ -1188,7 +1188,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     width: 64,
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.textLight,
     fontFamily: fonts.medium,
     letterSpacing: 0.4,
@@ -1199,7 +1199,7 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     flexShrink: 1,
-    fontSize: 14,
+    fontSize: fs(14),
     color: colors.text,
     fontFamily: fonts.semibold,
     letterSpacing: 0.2,
@@ -1231,7 +1231,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   infoTagText: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.primaryDark,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
@@ -1264,7 +1264,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   voiceCardTitle: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.3,
@@ -1286,10 +1286,10 @@ const styles = StyleSheet.create({
   },
   bio: {
     flex: 1,
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.text,
     fontFamily: fonts.medium,
-    lineHeight: 18,
+    lineHeight: fs(18),
   },
   bioEmpty: {
     color: colors.textLight,
@@ -1365,7 +1365,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardAlt,
   },
   sheetBtnText: {
-    fontSize: 16,
+    fontSize: fs(16),
     fontFamily: fonts.semibold,
     color: colors.text,
     letterSpacing: 0.2,

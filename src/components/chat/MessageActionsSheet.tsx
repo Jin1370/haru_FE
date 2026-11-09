@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { MESSAGE_REACTIONS } from '@/constants/messageReactions';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import type { Message, MessageReaction } from '@/types';
 
 interface MessageActionsSheetProps {
@@ -189,8 +189,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.06)',
   },
   reactionEmoji: {
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: fs(22),
+    lineHeight: fs(26),
   },
   divider: {
     height: 1,
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   itemText: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.medium,
     color: colors.text,
     letterSpacing: 0.2,

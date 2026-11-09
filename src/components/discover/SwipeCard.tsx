@@ -20,7 +20,7 @@ import {
 import { ProfilePhoto } from "@/components/ui/ProfilePhoto";
 import { ReportModal } from "@/components/moderation/ReportModal";
 import { colors, gradients, radii, shadows } from "@/constants/colors";
-import { fonts } from "@/constants/fonts";
+import { fonts, fs } from "@/constants/fonts";
 import { calculateAge } from "@/utils/age";
 import { genderIconName, genderLabelKey } from "@/utils/gender";
 import type { DiscoverCandidate } from "@/types";
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
         width: "100%",
     },
     name: {
-        fontSize: 21,
+        fontSize: fs(21),
         fontFamily: fonts.bold,
         color: colors.white,
         letterSpacing: 0.3,
@@ -531,13 +531,13 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     detail: {
-        fontSize: 13,
+        fontSize: fs(13),
         color: "rgba(255,255,255,0.75)",
         fontFamily: fonts.medium,
         letterSpacing: 0.3,
     },
     detailSep: {
-        fontSize: 13,
+        fontSize: fs(13),
         fontFamily: fonts.medium,
         color: "rgba(255,255,255,0.55)",
         marginHorizontal: 8,
@@ -580,7 +580,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
     },
     sideLabel: {
-        fontSize: 12,
+        fontSize: fs(12),
         fontFamily: fonts.medium,
         letterSpacing: 0.4,
     },
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
         borderColor: colors.white,
     },
     stampText: {
-        fontSize: 22,
+        fontSize: fs(22),
         fontFamily: fonts.bold,
         letterSpacing: 2,
     },

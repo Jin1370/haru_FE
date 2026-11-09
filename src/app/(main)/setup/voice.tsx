@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { WizardHeader } from '@/components/setup/WizardHeader';
 import { VoiceCloneCard } from '@/components/voice/VoiceCloneCard';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 // 녹음/업로드/재생성 흐름은 settings/voice.tsx 와 완전히 같은 컴포넌트
 // (VoiceCloneCard) 를 쓴다. 이 화면 고유한 것은 마법사 헤더와 다음/건너뛰기뿐.
@@ -81,8 +81,8 @@ const styles = StyleSheet.create({
   },
   skipWarnText: {
     flex: 1,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: fs(12),
+    lineHeight: fs(17),
     color: colors.primaryDark,
     fontFamily: fonts.medium,
   },

@@ -17,7 +17,7 @@ import { ApiRequestError } from '@/services/api';
 import { showAlert } from '@/stores/alertStore';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { validateReportDescription } from '@/utils/validators';
 import { userFacingError } from '@/utils/errors';
 import type { ReportReason } from '@/types';
@@ -243,18 +243,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    fontSize: 18,
+    fontSize: fs(18),
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.3,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginTop: 6,
     marginBottom: 12,
-    lineHeight: 18,
+    lineHeight: fs(18),
   },
   reasonsScroll: {
     maxHeight: 280,
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   },
   reasonText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.medium,
     color: colors.text,
     letterSpacing: 0.2,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.pixel,
     color: colors.text,
     textAlignVertical: 'top',
@@ -313,17 +313,17 @@ const styles = StyleSheet.create({
     right: 13,
   },
   textareaPlaceholderText: {
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.pixel,
     color: colors.textLight,
-    lineHeight: 17,
+    lineHeight: fs(17),
   },
   notice: {
     marginTop: 12,
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.regular,
     color: colors.textSecondary,
-    lineHeight: 17,
+    lineHeight: fs(17),
   },
   submit: {
     marginTop: 16,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   submitText: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.bold,
     color: colors.white,
     letterSpacing: 0.3,

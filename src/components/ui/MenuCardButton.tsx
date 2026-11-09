@@ -1,7 +1,7 @@
 import { Pressable, Text, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 interface MenuCardButtonProps {
   label: string;
@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   text: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.semibold,
     color: colors.text,
     letterSpacing: 0.2,

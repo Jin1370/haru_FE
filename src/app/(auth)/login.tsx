@@ -24,7 +24,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { showAlert } from "@/stores/alertStore";
 import { ApiRequestError } from "@/services/api";
 import { colors, radii, shadows } from "@/constants/colors";
-import { fonts } from "@/constants/fonts";
+import { fonts, fs } from "@/constants/fonts";
 import { validateEmail, validatePassword } from "@/utils/validators";
 import { userFacingError } from "@/utils/errors";
 
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
     },
     title: {
-        fontSize: 46,
+        fontSize: fs(46),
         fontFamily: fonts.extrabold,
         color: colors.white,
         letterSpacing: 1,
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
         textShadowRadius: 14,
     },
     subtitle: {
-        fontSize: 15,
+        fontSize: fs(15),
         color: colors.white,
         marginTop: 12,
         letterSpacing: 0.6,
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
         // 블록만 가운데 놓을 뿐, 블록 안 줄 정렬은 이 속성이 담당한다.
         textAlign: "center",
         // 기본 행간(≈18)은 두 줄이 붙어 보인다. 15px 기준 1.5배로 띄운다.
-        lineHeight: 23,
+        lineHeight: fs(23),
         textShadowColor: "rgba(226,122,160,0.45)",
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 14,
@@ -551,13 +551,13 @@ const styles = StyleSheet.create({
         // 세로 패딩은 FormField 가 height 52 + paddingVertical 0 + 중앙정렬로 관리하므로
         // 여기서 세로 패딩을 주면 내용영역이 줄어 글자가 잘린다 — 가로 패딩/배경만 오버라이드.
         paddingHorizontal: 16,
-        fontSize: 16,
+        fontSize: fs(16),
         backgroundColor: colors.surface,
     },
     toggleText: {
         textAlign: "center",
         color: colors.primary,
-        fontSize: 14,
+        fontSize: fs(14),
         fontFamily: fonts.semibold,
         marginTop: 8,
         letterSpacing: 0.3,
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
     },
     dividerText: {
         color: colors.textSecondary,
-        fontSize: 13,
+        fontSize: fs(13),
         fontFamily: fonts.regular,
         letterSpacing: 0.3,
     },

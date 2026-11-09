@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { LEGAL_URLS } from '@/constants/legal';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 // LAUNCH_CHECKLIST #5 — 약관동의 공용 화면.
 //
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 17,
+    fontSize: fs(17),
     fontFamily: fonts.semibold,
     color: colors.text,
   },
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   agreeAllText: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.semibold,
     color: colors.text,
   },
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemLabel: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.regular,
     color: colors.text,
     flexShrink: 1,

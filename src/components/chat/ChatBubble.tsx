@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
 import { colors, radii, shadows } from '@/constants/colors';
 import { reactionEmoji } from '@/constants/messageReactions';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import {
   playSharedAudio,
   playLocalAudio,
@@ -298,41 +298,8 @@ export function ChatBubble({
     onListened?.(message.id);
   }, [isMine, isListened, textOnlyReady, message.id, onListened]);
 
-  // 재생 완료(transition) 자체 감지. sharedAudioPlayer 의 status update 에서
-  //   * wasPlaying === true && nowPlaying === false  → stop transition
-  //   * currentTime >= duration - 0.2                 → end of track (자연 완료)
-  // 두 조건이 같이 성립할 때만 onListened 발화. 일시정지(중간에서 stop) 또는
-  // source 교체로 다른 메시지가 currentUrl 을 가져간 경우는 자연스럽게 분기
-  // 밖이라 미발화. fragile 한 sharedAudioPlayer 는 절대 손대지 않는 전제.
-  const prevPlayingRef = useRef(false);
-  useEffect(() => {
-    if (isMine || isListened || !isReady) return;
-    const isOurTrack = sharedState.currentUrl === message.audio_url;
-    if (!isOurTrack) {
-      prevPlayingRef.current = sharedState.isPlaying;
-      return;
-    }
-    const wasPlaying = prevPlayingRef.current;
-    const nowStopped = !sharedState.isPlaying;
-    const reachedEnd =
-      sharedState.duration > 0 &&
-      sharedState.currentTime >= sharedState.duration - 0.2;
-    if (wasPlaying && nowStopped && reachedEnd) {
-      onListened?.(message.id);
-    }
-    prevPlayingRef.current = sharedState.isPlaying;
-  }, [
-    sharedState.isPlaying,
-    sharedState.currentTime,
-    sharedState.duration,
-    sharedState.currentUrl,
-    message.id,
-    message.audio_url,
-    isMine,
-    isListened,
-    isReady,
-    onListened,
-  ]);
+  // 청취 처리는 편지 카드의 재생 버튼을 누르는 순간 한다 (gateInner onPress).
+  // 음성은 공용 player 에서 계속 재생되고, 텍스트 말풍선의 재생 버튼이 그 상태를 이어받는다.
 
   // chat-audio-async-insert sprint: audio_status 가 가질 수 있는 값은 세 가지.
   //   * 'pending' — 본인 발신 stub. BE 응답 직후, TTS 완료 전. realtime INSERT
@@ -443,6 +410,7 @@ export function ChatBubble({
           pauseSharedAudio();
         } else {
           playSharedAudio(message.audio_url);
+          onListened?.(message.id);
         }
       }}
       accessibilityRole="button"
@@ -874,9 +842,9 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSoft,
   },
   text: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.text,
-    lineHeight: 18,
+    lineHeight: fs(18),
     fontFamily: fonts.regular,
   },
   mineText: {
@@ -888,10 +856,10 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   translation: {
-    fontSize: 11,
+    fontSize: fs(11),
     color: colors.textSecondary,
     marginTop: 5,
-    lineHeight: 16,
+    lineHeight: fs(16),
     fontFamily: fonts.regular,
   },
   mineTranslation: {
@@ -930,7 +898,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   retryText: {
-    fontSize: 10,
+    fontSize: fs(10),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
@@ -939,7 +907,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
   },
   time: {
-    fontSize: 9,
+    fontSize: fs(9),
     color: colors.textSecondary,
     fontFamily: fonts.regular,
   },
@@ -973,7 +941,7 @@ const styles = StyleSheet.create({
     // 한 줄 문구가 길어 말풍선(최대 78%) 밖으로 삐져나오던 것 — 남는 폭 안에서
     // 줄바꿈되게 한다.
     flexShrink: 1,
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.textSecondary,
     fontFamily: fonts.regular,
   },
@@ -1016,8 +984,8 @@ const styles = StyleSheet.create({
   },
   quoteText: {
     flexShrink: 1,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: fs(11),
+    lineHeight: fs(15),
     color: colors.text,
     fontFamily: fonts.regular,
   },
@@ -1054,8 +1022,8 @@ const styles = StyleSheet.create({
     ...shadows.soft,
   },
   reactionBadgeText: {
-    fontSize: 13,
-    lineHeight: 15,
+    fontSize: fs(13),
+    lineHeight: fs(15),
   },
   // voice-first-message-gate sprint: 편지 카드(수신자 게이팅). 기존
   // theirsBubble 안에 들어가는 children 이므로 배경/보더는 부모가 담당,
@@ -1071,14 +1039,14 @@ const styles = StyleSheet.create({
   },
   letterText: {
     flexShrink: 1,
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.text,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
   },
   letterTime: {
     marginLeft: 'auto',
-    fontSize: 9,
+    fontSize: fs(9),
     color: colors.textSecondary,
     fontFamily: fonts.regular,
   },

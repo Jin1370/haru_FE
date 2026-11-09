@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors, gradients, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { UNLOCK_ALL_PHOTOS_AT } from '@/utils/chat';
 
 interface IntimacyGaugeProps {
@@ -72,13 +72,13 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   label: {
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.semibold,
     color: colors.text,
     letterSpacing: 0.2,
   },
   hint: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
     flexShrink: 1,

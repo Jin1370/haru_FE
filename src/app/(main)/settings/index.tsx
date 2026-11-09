@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, ScrollView, Switch, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, Linking, DevSettings } from 'react-native';
 import { router } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { MenuCardButton } from '@/components/ui/MenuCardButton';
@@ -9,7 +10,7 @@ import { useCatStore } from '@/stores/catStore';
 import { showAlert } from '@/stores/alertStore';
 import { userFacingError } from '@/utils/errors';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs, getAppFont, setAppFont } from '@/constants/fonts';
 import { LEGAL_URLS } from '@/constants/legal';
 import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 
@@ -22,6 +23,24 @@ export default function SettingsScreen() {
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const catEnabled = useCatStore((s) => s.enabled);
   const setCatEnabled = useCatStore((s) => s.setEnabled);
+
+  // 현재 실행 중인 글꼴. 바꾸면 다시 시작해야 적용되므로 토글 값은 이 값으로 고정된다.
+  const pixelFont = getAppFont() === 'pixel';
+
+  const handleToggleFont = (next: boolean) => {
+    showAlert({
+      variant: 'confirm',
+      title: t('settings.fontChangeTitle'),
+      message: t('settings.fontChangeMessage'),
+      cancelText: t('common.cancel'),
+      confirmText: t('settings.fontChangeConfirm'),
+      onConfirm: () => {
+        setAppFont(next ? 'pixel' : 'system');
+        if (__DEV__) DevSettings.reload();
+        else Updates.reloadAsync();
+      },
+    });
+  };
 
   const handleLogout = () => {
     showAlert({
@@ -106,6 +125,17 @@ export default function SettingsScreen() {
           />
           <View style={styles.divider} />
           <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>{t('settings.pixelFont')}</Text>
+            <Switch
+              value={pixelFont}
+              onValueChange={handleToggleFont}
+              trackColor={{ false: colors.borderSoft, true: colors.primary }}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor={colors.borderSoft}
+            />
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>{t('settings.catAnimation')}</Text>
             <Switch
               value={catEnabled}
@@ -184,7 +214,7 @@ const styles = StyleSheet.create({
     marginLeft: 18,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.semibold,
     color: colors.textSecondary,
     letterSpacing: 0.4,
@@ -202,7 +232,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   toggleLabel: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.semibold,
     color: colors.text,
     letterSpacing: 0.2,
@@ -218,13 +248,13 @@ const styles = StyleSheet.create({
   // (_layout 의 applyDefaultFont) 지정 안 하면 시스템 폰트로 폴백된다.
   legalLink: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.regular,
     textDecorationLine: 'underline',
   },
   legalSeparator: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.regular,
   },
 });

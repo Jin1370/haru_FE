@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs, HEADER_FONT_WEIGHT } from '@/constants/fonts';
 
 interface WizardHeaderProps {
   step?: 1 | 2 | 3 | 4 | 5;
@@ -77,8 +77,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flexShrink: 1,
-    fontSize: 17,
+    fontSize: fs(17),
     fontFamily: fonts.bold,
+    fontWeight: HEADER_FONT_WEIGHT,
     color: colors.text,
     letterSpacing: 0.3,
     textAlign: 'center',
@@ -90,21 +91,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   progress: {
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.semibold,
     color: colors.primary,
     letterSpacing: 0.3,
   },
   title: {
-    fontSize: 26,
+    fontSize: fs(26),
     fontFamily: fonts.bold,
+    fontWeight: HEADER_FONT_WEIGHT,
     color: colors.text,
     marginBottom: 6,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: fs(14),
     color: colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: fs(20),
     fontFamily: fonts.regular,
   },
 });

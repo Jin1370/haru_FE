@@ -19,7 +19,7 @@ import { RequiredLabel } from '@/components/ui/RequiredLabel';
 import { useAuthStore } from '@/stores/authStore';
 import { useSignupDraftStore, type Gender } from '@/stores/signupDraftStore';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import {
   SUPPORTED_NATIONALITIES,
   languageForNationality,
@@ -356,19 +356,19 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, paddingBottom: 40 },
   label: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.medium,
     color: colors.text,
     marginBottom: 8,
   },
   sectionGap: { marginTop: 16 },
   hintBlock: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     marginTop: -4,
     marginBottom: 10,
-    lineHeight: 18,
+    lineHeight: fs(18),
   },
   genderRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   genderBtn: {
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   },
   genderActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   genderText: {
-    fontSize: 11,
+    fontSize: fs(11),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
     textTransform: 'capitalize',
@@ -402,12 +402,12 @@ const styles = StyleSheet.create({
   selectBtnOpen: { borderColor: colors.primary, backgroundColor: colors.white },
   lockedNotice: {
     marginTop: 6,
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
-  inputCompact: { fontSize: 14 },
-  selectText: { fontSize: 14, color: colors.text, fontFamily: fonts.medium },
+  inputCompact: { fontSize: fs(14) },
+  selectText: { fontSize: fs(14), color: colors.text, fontFamily: fonts.medium },
   selectPlaceholder: { color: colors.textLight },
   dropdownPanel: {
     padding: 12,
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  chipText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.medium },
+  chipText: { fontSize: fs(11), color: colors.textSecondary, fontFamily: fonts.medium },
   chipActiveText: { color: colors.white },
   nationalityNoticeRow: {
     width: '100%',
@@ -439,8 +439,8 @@ const styles = StyleSheet.create({
   },
   nationalityNotice: {
     flex: 1,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: fs(12),
+    lineHeight: fs(17),
     letterSpacing: -0.6,
     color: colors.primaryDark,
     fontFamily: fonts.medium,

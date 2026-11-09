@@ -14,7 +14,7 @@ import {
   type SupportedLanguage,
 } from '@/i18n';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 // 'system' = follow the device language; otherwise an explicit override.
 type Selection = 'system' | SupportedLanguage;
@@ -112,10 +112,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20 },
   subtitle: {
-    fontSize: 14,
+    fontSize: fs(14),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
-    lineHeight: 20,
+    lineHeight: fs(20),
     marginBottom: 16,
   },
   list: { gap: 10 },
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   label: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.semibold,
     color: colors.text,
     letterSpacing: 0.2,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   sublabel: {
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.medium,
     color: colors.textSecondary,
   },

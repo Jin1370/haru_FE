@@ -1,6 +1,6 @@
 import { Pressable, Text, StyleSheet, ActivityIndicator, View, ViewStyle, TextStyle } from 'react-native';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 interface ButtonProps {
   title: string;
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   text: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.semibold,
     color: colors.white,
     letterSpacing: 0.3,

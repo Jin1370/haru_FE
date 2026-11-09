@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs, PIXEL_NUMBER_OFFSET_Y } from '@/constants/fonts';
 
 // BE 무제한 계정 한도(999999) — 이 이상이면 남은 수를 숨긴다.
 const UNLIMITED_LIMIT = 999_999;
@@ -17,7 +17,7 @@ const CHIP_ICON_SIZES = {
   'star-candy': 17.7,
 } as const;
 // 글꼴의 줄 상자 안에서 숫자가 아래쪽에 놓여, 가운데 정렬해도 아이콘보다 낮아 보인다.
-const NUMBER_OFFSET_Y = -1;
+const NUMBER_OFFSET_Y = PIXEL_NUMBER_OFFSET_Y;
 
 // 헤더 잔여량 칩 공용 껍데기. 숫자가 바뀌는 순간 숫자만 살짝 커졌다 돌아온다
 // — 조용히 줄어들면 사용자가 못 알아채서.
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   text: {
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.bold,
     color: colors.text,
   },

@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 export type AlertCardVariant = 'error' | 'confirm' | 'info';
 
@@ -124,28 +124,28 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   title: {
-    fontSize: 16,
+    fontSize: fs(16),
     fontFamily: fonts.bold,
     color: colors.text,
     textAlign: 'center',
     letterSpacing: 0.4,
-    lineHeight: 22,
+    lineHeight: fs(22),
   },
   message: {
     marginTop: 8,
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.regular,
     color: colors.textSecondary,
     textAlign: 'center',
     letterSpacing: 0.2,
-    lineHeight: 20,
+    lineHeight: fs(20),
   },
   // 제목 없는 모달: 본문이 맨 위라 간격 제거 + 본문 색을 제목처럼 진하게.
   messageOnly: {
     marginTop: 4,
-    fontSize: 15,
+    fontSize: fs(15),
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: fs(22),
   },
   highlight: {
     color: colors.primary,
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSoft,
   },
   btnText: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.bold,
     letterSpacing: 0.3,
   },

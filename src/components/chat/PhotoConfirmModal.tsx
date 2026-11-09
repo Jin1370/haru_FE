@@ -9,7 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 interface PhotoConfirmModalProps {
   visible: boolean;
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.16)',
   },
   cancelText: {
-    fontSize: 14,
+    fontSize: fs(14),
     color: colors.white,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   sendText: {
-    fontSize: 14,
+    fontSize: fs(14),
     color: colors.white,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,

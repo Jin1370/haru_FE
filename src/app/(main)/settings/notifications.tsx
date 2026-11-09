@@ -19,7 +19,7 @@ import {
   type NotificationPreferences,
 } from '@/services/notifications';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 export default function NotificationsSettingsScreen() {
   const { t } = useTranslation();
@@ -123,8 +123,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   permissionText: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: fs(13),
+    lineHeight: fs(18),
     color: colors.primaryDark,
     fontFamily: fonts.medium,
   },
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   label: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.semibold,
     color: colors.text,
     letterSpacing: 0.2,

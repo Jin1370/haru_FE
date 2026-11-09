@@ -7,7 +7,7 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 interface AgeRangeSliderProps {
   min: number;
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   valueLabel: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.semibold,
     color: colors.primaryDark,
     textAlign: 'center',
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   boundText: {
-    fontSize: 11,
+    fontSize: fs(11),
     color: colors.textSecondary,
     fontFamily: fonts.regular,
   },

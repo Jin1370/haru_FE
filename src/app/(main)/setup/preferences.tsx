@@ -15,7 +15,7 @@ import { AgeRangeSlider } from '@/components/ui/AgeRangeSlider';
 import { showAlert } from '@/stores/alertStore';
 import { usePreferences } from '@/hooks/usePreferences';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { selectableNationalities } from '@/constants/nationalities';
 import { useSignupDraftStore } from '@/stores/signupDraftStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -163,7 +163,7 @@ export default function SetupPreferences() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, paddingBottom: 40 },
-  label: { fontSize: 14, fontFamily: fonts.medium, color: colors.text, marginBottom: 8 },
+  label: { fontSize: fs(14), fontFamily: fonts.medium, color: colors.text, marginBottom: 8 },
   sectionGap: { marginTop: 16 },
   genderRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   genderBtn: {
@@ -177,19 +177,19 @@ const styles = StyleSheet.create({
   },
   genderActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   genderText: {
-    fontSize: 11,
+    fontSize: fs(11),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
     textTransform: 'capitalize',
   },
   genderActiveText: { color: colors.white },
   hintBlock: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     marginTop: -4,
     marginBottom: 10,
-    lineHeight: 18,
+    lineHeight: fs(18),
   },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   chip: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  chipText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.medium },
+  chipText: { fontSize: fs(11), color: colors.textSecondary, fontFamily: fonts.medium },
   chipActiveText: { color: colors.white },
   footer: {
     position: 'absolute',

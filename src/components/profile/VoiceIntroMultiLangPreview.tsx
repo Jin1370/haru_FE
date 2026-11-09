@@ -15,7 +15,7 @@ import {
     type VoiceIntroAudioStatus,
 } from "@/types";
 import { colors, radii } from "@/constants/colors";
-import { fonts } from "@/constants/fonts";
+import { fonts, fs } from "@/constants/fonts";
 
 interface VoiceIntroMultiLangPreviewProps {
     /**
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
         borderColor: colors.primary,
     },
     tabLabel: {
-        fontSize: 13,
+        fontSize: fs(13),
         fontFamily: fonts.medium,
         color: colors.textLight,
         letterSpacing: 0.2,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     },
     statusText: {
         flex: 1,
-        fontSize: 12,
+        fontSize: fs(12),
         color: colors.textLight,
         fontFamily: fonts.medium,
         letterSpacing: 0.2,

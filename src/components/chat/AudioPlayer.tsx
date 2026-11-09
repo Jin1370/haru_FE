@@ -6,7 +6,7 @@ import { useRecoverableAudioPlayer } from './sharedAudioPlayer';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 interface AudioPlayerProps {
   url: string;
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   label: {
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.primary,
     fontFamily: fonts.medium,
   },
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   barTime: {
-    fontSize: 11,
+    fontSize: fs(11),
     fontFamily: fonts.medium,
     letterSpacing: 0.3,
     minWidth: 56,

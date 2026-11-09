@@ -70,7 +70,7 @@ import { setActiveChatMatchId } from '@/lib/activeChat';
 import { showAlert } from '@/stores/alertStore';
 import { ApiRequestError } from '@/services/api';
 import { colors, gradients, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { DEFAULT_EMOTION } from '@/constants/emotions';
 import * as matchService from '@/services/matches';
 import { CHAT_PROMPTS_SEEN_KEY_PREFIX } from '@/constants/chatPrompts';
@@ -1628,7 +1628,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: fonts.bold,
-    fontSize: 19,
+    fontSize: fs(19),
     color: colors.text,
     flexShrink: 1,
   },
@@ -1666,7 +1666,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   dateText: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
@@ -1722,8 +1722,8 @@ const styles = StyleSheet.create({
   },
   replyPreviewText: {
     flex: 1,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: fs(11),
+    lineHeight: fs(15),
     color: colors.textSecondary,
     fontFamily: fonts.regular,
   },
@@ -1751,7 +1751,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderSoft,
   },
   tombstoneNoticeText: {
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
@@ -1783,8 +1783,8 @@ const styles = StyleSheet.create({
     //     TextInput intrinsic height matches the rendered glyph height.
     //   * textAlignVertical:'center' + lineHeight — keeps single-line text
     //     visually centered in the 20-px content slot inside the wrap.
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: fs(13),
+    lineHeight: fs(18),
     color: colors.text,
     fontFamily: fonts.pixel,
     padding: 0,
@@ -1798,7 +1798,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 18,
     right: 18,
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.textLight,
     fontFamily: fonts.pixel,
   },
@@ -1832,7 +1832,7 @@ const styles = StyleSheet.create({
   // 하나뿐이라 날짜 구분선 톤이면 안 읽힌다. 색은 회원가입 사진 등록 단계의
   // 안내 박스(setup/photos.tsx warnBox/warnText)와 같은 조합.
   pendingNoticeText: {
-    fontSize: 14,
+    fontSize: fs(14),
     color: colors.primaryDark,
     fontFamily: fonts.bold,
     letterSpacing: 0.2,
@@ -1885,7 +1885,7 @@ const styles = StyleSheet.create({
   newMessagesBadgeText: {
     color: colors.white,
     fontFamily: fonts.medium,
-    fontSize: 13,
+    fontSize: fs(13),
     letterSpacing: 0.2,
   },
   modalBackdrop: {
@@ -1935,7 +1935,7 @@ const styles = StyleSheet.create({
   },
   modalName: {
     flexShrink: 1,
-    fontSize: 20,
+    fontSize: fs(20),
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.3,
@@ -1951,7 +1951,7 @@ const styles = StyleSheet.create({
   },
   sheetLabel: {
     width: 56,
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.textLight,
     fontFamily: fonts.medium,
     letterSpacing: 0.5,
@@ -1959,7 +1959,7 @@ const styles = StyleSheet.create({
   },
   sheetValueText: {
     flexShrink: 1,
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.text,
     fontFamily: fonts.medium,
     letterSpacing: 0.3,
@@ -1991,7 +1991,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   modalTagText: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.primaryDark,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,

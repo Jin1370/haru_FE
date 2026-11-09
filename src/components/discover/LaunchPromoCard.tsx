@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
 import { colors, gradients, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 // 출시 기념 "지금은 모든 프리미엄 기능 무료" 1회성 안내 카드.
 // 디스커버 상단에 노출되며 X 로 닫으면 다시 뜨지 않는다. dismissed 상태는
@@ -108,17 +108,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.2,
   },
   text: {
-    fontSize: 12.5,
+    fontSize: fs(12.5),
     fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginTop: 4,
-    lineHeight: 19,
+    lineHeight: fs(19),
   },
   closeBtn: {
     alignSelf: 'flex-start',

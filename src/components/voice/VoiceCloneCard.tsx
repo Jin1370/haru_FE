@@ -10,7 +10,7 @@ import { useVoiceCloneRecorder, MAX_DURATION_MS } from '@/hooks/useVoiceCloneRec
 import { useAuthStore } from '@/stores/authStore';
 import { showAlert } from '@/stores/alertStore';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { userFacingError } from '@/utils/errors';
 
 // 보이스 클론 녹음/등록 카드 — 가입 마법사(setup/voice)와 설정(settings/voice)이
@@ -325,14 +325,14 @@ const styles = StyleSheet.create({
     ...shadows.soft,
   },
   statusText: {
-    fontSize: 16,
+    fontSize: fs(16),
     fontFamily: fonts.medium,
     color: colors.text,
     textAlign: 'center',
   },
   readyRow: { alignItems: 'center', gap: 8 },
   timerText: {
-    fontSize: 22,
+    fontSize: fs(22),
     fontFamily: fonts.bold,
     color: RECORD_ORANGE,
     fontVariant: ['tabular-nums'],
@@ -348,9 +348,9 @@ const styles = StyleSheet.create({
   recordSection: { gap: 12 },
   regenSection: { gap: 8 },
   guideText: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.textSecondary,
-    lineHeight: 18,
+    lineHeight: fs(18),
     marginTop: 4,
     fontFamily: fonts.regular,
   },
@@ -370,15 +370,15 @@ const styles = StyleSheet.create({
   },
   scriptScroll: { maxHeight: 420, borderTopWidth: 1, borderTopColor: colors.border },
   scriptContent: { padding: 14 },
-  scriptTitle: { fontSize: 13, fontFamily: fonts.semibold, color: colors.primary },
+  scriptTitle: { fontSize: fs(13), fontFamily: fonts.semibold, color: colors.primary },
   scriptText: {
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.text,
-    lineHeight: 22,
+    lineHeight: fs(22),
     fontFamily: fonts.regular,
   },
   hint: {
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.textSecondary,
     textAlign: 'center',
     fontFamily: fonts.regular,
@@ -396,8 +396,8 @@ const styles = StyleSheet.create({
   },
   warnText: {
     flex: 1,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: fs(12),
+    lineHeight: fs(17),
     letterSpacing: -0.6,
     color: colors.primaryDark,
     fontFamily: fonts.medium,

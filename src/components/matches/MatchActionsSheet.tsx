@@ -7,7 +7,7 @@ import { hideMatch } from '@/services/matches';
 import { ReportModal } from '@/components/moderation/ReportModal';
 import { showAlert } from '@/stores/alertStore';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { userFacingError } from '@/utils/errors';
 
 interface MatchActionsSheetProps {
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     ...shadows.card,
   },
   sheetHeader: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.3,
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   sheetItemText: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.medium,
     color: colors.text,
     letterSpacing: 0.2,

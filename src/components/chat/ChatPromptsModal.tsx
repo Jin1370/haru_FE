@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { CHAT_PROMPT_STEPS } from '@/constants/chatPrompts';
 
 interface ChatPromptsModalProps {
@@ -171,18 +171,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.2,
-    lineHeight: 20,
+    lineHeight: fs(20),
     textAlign: 'center',
   },
   body: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
-    lineHeight: 18,
+    lineHeight: fs(18),
     letterSpacing: 0.1,
     textAlign: 'center',
   },

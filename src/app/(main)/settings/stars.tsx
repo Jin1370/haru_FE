@@ -16,7 +16,7 @@ import {
   type StarProduct,
 } from '@/lib/starPurchases';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 // 별사탕 충전 — 스토어 상품 2개 + 보상형 광고. 지급은 서버(웹훅/광고 콜백)가 하므로
 // 결제·시청 뒤엔 잔액을 몇 초 간격으로 다시 읽는다.
@@ -156,14 +156,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   balanceText: {
-    fontSize: 17,
+    fontSize: fs(17),
     fontFamily: fonts.bold,
     color: colors.text,
   },
   list: { gap: 10 },
   loader: { marginVertical: 20 },
   empty: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.medium,
     color: colors.textSecondary,
     textAlign: 'center',
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.semibold,
     color: colors.text,
   },
@@ -194,12 +194,12 @@ const styles = StyleSheet.create({
   adText: { flexShrink: 1, marginRight: 12 },
   subLabel: {
     marginTop: 3,
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   price: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.bold,
     color: colors.primaryDark,
   },

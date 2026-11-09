@@ -1,6 +1,6 @@
 import { Text, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 interface ErrorTextProps {
   children?: string | null;
@@ -24,11 +24,11 @@ export function ErrorText({ children, style, testID }: ErrorTextProps) {
 
 const styles = StyleSheet.create({
   text: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.error,
     fontFamily: fonts.regular,
     marginTop: 6,
-    lineHeight: 16,
+    lineHeight: fs(16),
     letterSpacing: 0.2,
   },
 });

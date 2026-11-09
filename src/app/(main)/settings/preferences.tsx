@@ -17,7 +17,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useDiscoverStore } from '@/stores/discoverStore';
 import { showAlert } from '@/stores/alertStore';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { selectableNationalities } from '@/constants/nationalities';
 import { MIN_AGE, MAX_AGE } from '@/utils/preferences';
 import { userFacingError } from '@/utils/errors';
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   label: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.medium,
     color: colors.text,
     marginBottom: 8,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   genderText: {
-    fontSize: 11,
+    fontSize: fs(11),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
     textTransform: 'capitalize',
@@ -206,12 +206,12 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   hintBlock: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     marginTop: -4,
     marginBottom: 10,
-    lineHeight: 18,
+    lineHeight: fs(18),
   },
   chipRow: {
     flexDirection: 'row',
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  chipText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.medium },
+  chipText: { fontSize: fs(11), color: colors.textSecondary, fontFamily: fonts.medium },
   chipActiveText: { color: colors.white },
   footer: {
     position: 'absolute',

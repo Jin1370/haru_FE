@@ -11,7 +11,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { showAlert } from '@/stores/alertStore';
 import { ApiRequestError } from '@/services/api';
 import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { validateVoiceIntro } from '@/utils/validators';
 import { buildVoiceIntroPayload } from '@/utils/voiceIntroPayload';
 import { userFacingError } from '@/utils/errors';
@@ -141,10 +141,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 20, paddingBottom: 40 },
   subtitle: {
-    fontSize: 14,
+    fontSize: fs(14),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
-    lineHeight: 20,
+    lineHeight: fs(20),
     marginBottom: 16,
   },
   footer: {

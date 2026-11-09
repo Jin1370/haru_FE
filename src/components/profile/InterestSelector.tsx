@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { INTEREST_SECTIONS, MAX_INTERESTS } from '@/constants/interests';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 // 관심사 선택을 항목별 아코디언으로 표시한다. 태그가 100개 가까이라 전부 펼쳐
 // 두면 부담스러워, 섹션 헤더만 보여주고 탭하면 해당 섹션 태그만 아래로 펼친다.
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardAlt,
   },
   title: {
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.text,
     fontFamily: fonts.semibold,
     letterSpacing: 0.2,
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   chipDisabled: { opacity: 0.4 },
-  chipText: { fontSize: 11, color: colors.textSecondary, fontFamily: fonts.medium },
+  chipText: { fontSize: fs(11), color: colors.textSecondary, fontFamily: fonts.medium },
   chipActiveText: { color: colors.white },
   chipDisabledText: { color: colors.textLight },
 });

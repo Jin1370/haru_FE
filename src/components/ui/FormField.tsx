@@ -10,7 +10,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { ErrorText } from './ErrorText';
 
 export interface FormFieldProps extends TextInputProps {
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   label: {
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.medium,
     color: colors.textSecondary,
     marginBottom: 8,
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radii.md,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: fs(16),
     color: colors.text,
     backgroundColor: colors.white,
     fontFamily: fonts.regular,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: fs(16),
     lineHeight: 52,
     color: colors.textLight,
     fontFamily: fonts.pixel,

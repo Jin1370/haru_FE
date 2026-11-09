@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { BIO_PHRASES, findPresetByText, getBioPhraseText } from '@/constants/bioPhrases';
 
 interface BioPhrasePickerProps {
@@ -309,13 +309,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   tagText: {
-    fontSize: 10,
+    fontSize: fs(10),
     fontFamily: fonts.semibold,
     color: colors.white,
     letterSpacing: 0.4,
   },
   charCounter: {
-    fontSize: 11,
+    fontSize: fs(11),
     color: colors.textLight,
     fontFamily: fonts.regular,
     letterSpacing: 0.2,
@@ -328,8 +328,8 @@ const styles = StyleSheet.create({
     // 직접 입력 카드와 같은 높이로 시작한다 (CARD_CONTENT_MIN_HEIGHT 공유).
     // 문구가 길면 그만큼 자연스럽게 늘어난다.
     minHeight: CARD_CONTENT_MIN_HEIGHT,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: fs(13),
+    lineHeight: fs(19),
     color: colors.text,
     fontFamily: fonts.regular,
   },
@@ -345,8 +345,8 @@ const styles = StyleSheet.create({
     // 전환되고 캐럿을 따라 자동 스크롤한다). 프리셋 카드와 높이를 맞추는 값이라
     // 바꾸려면 CARD_CONTENT_MIN_HEIGHT 를 조정한다.
     height: CARD_CONTENT_MIN_HEIGHT,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: fs(13),
+    lineHeight: fs(19),
     color: colors.text,
     fontFamily: fonts.regular,
     textAlignVertical: 'top',
@@ -357,8 +357,8 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: fs(13),
+    lineHeight: fs(19),
     color: colors.textLight,
     fontFamily: fonts.pixel,
   },
@@ -376,8 +376,8 @@ const styles = StyleSheet.create({
   },
   lockHintText: {
     flex: 1,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: fs(12),
+    lineHeight: fs(17),
     color: colors.primaryDark,
     fontFamily: fonts.medium,
   },

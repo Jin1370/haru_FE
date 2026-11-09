@@ -6,7 +6,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs, PIXEL_NUMBER_OFFSET_Y, HEADER_FONT_WEIGHT } from '@/constants/fonts';
 import { NavCat } from '@/components/cat/NavCat';
 
 // 화살표가 폭을 차지해 하트가 작게 그려지므로 다른 아이콘보다 크게 표시한다.
@@ -36,10 +36,11 @@ export default function TabLayout() {
           headerTitleAlign: 'left',
           headerTitleStyle: {
             fontFamily: fonts.bold,
+            fontWeight: HEADER_FONT_WEIGHT,
             color: colors.text,
-            fontSize: 19,
+            fontSize: fs(19),
             letterSpacing: 0.3,
-            transform: [{ translateY: -1 }],
+            transform: [{ translateY: PIXEL_NUMBER_OFFSET_Y }],
           },
           headerStyle: {
             height: headerHeight,

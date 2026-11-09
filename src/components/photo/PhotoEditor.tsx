@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 // Custom cross-platform photo editor: 3:4 crop (pan + pinch-zoom over a fixed
 // frame) + 90° rotate + horizontal/vertical flip. Replaces expo-image-picker's
@@ -376,19 +376,19 @@ const styles = StyleSheet.create({
   },
   headerBtn: { minWidth: 56, justifyContent: 'center' },
   headerCancel: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.regular,
     color: TOOL_FG,
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: fs(16),
     fontFamily: fonts.semibold,
     color: TOOL_FG,
     flex: 1,
     textAlign: 'center',
   },
   headerDone: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.bold,
     color: colors.primary,
     textAlign: 'right',
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.45)',
     gap: 10,
   },
-  busyText: { color: TOOL_FG, fontSize: 13, fontFamily: fonts.regular },
+  busyText: { color: TOOL_FG, fontSize: fs(13), fontFamily: fonts.regular },
   errorBanner: {
     marginHorizontal: 16,
     marginBottom: 8,
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#FFD2D7',
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.regular,
     textAlign: 'center',
   },
@@ -451,5 +451,5 @@ const styles = StyleSheet.create({
   },
   tool: { alignItems: 'center', gap: 6, minWidth: 72, paddingVertical: 6 },
   toolPressed: { opacity: 0.6 },
-  toolLabel: { color: TOOL_FG, fontSize: 12, fontFamily: fonts.regular },
+  toolLabel: { color: TOOL_FG, fontSize: fs(12), fontFamily: fonts.regular },
 });

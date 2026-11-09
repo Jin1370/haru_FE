@@ -16,7 +16,7 @@ import { useReceivedLikes } from '@/hooks/useReceivedLikes';
 import { useAuthStore } from '@/stores/authStore';
 import { showAlert } from '@/stores/alertStore';
 import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import { LockedCard, useCountdown } from '@/components/discover/LockedCard';
 import { ApiRequestError } from '@/services/api';
 
@@ -254,7 +254,7 @@ function RevealPanel({
 
 const styles = StyleSheet.create({
   lockedTimer: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.medium,
     color: colors.white,
     opacity: 0.85,

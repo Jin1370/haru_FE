@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs, getAppFont } from '@/constants/fonts';
 import { formatRelativeTime } from '@/utils/age';
 import type { MatchListItem } from '@/types';
 
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   name: {
-    fontSize: 16,
+    fontSize: fs(16),
     fontFamily: fonts.semibold,
     color: colors.text,
     flex: 1,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   time: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.textSecondary,
     marginLeft: 8,
     fontFamily: fonts.regular,
@@ -195,11 +195,12 @@ const styles = StyleSheet.create({
     minHeight: 22,
   },
   lastMessage: {
-    fontSize: 12,
+    // 픽셀체는 같은 크기에서 작아 보여 0.5 키운다. 기본 글씨체는 fs() 배율 그대로.
+    fontSize: getAppFont() === 'pixel' ? 12.5 : fs(12),
     // Pin the rendered line height — `regular` and `medium` ship slightly
     // different intrinsic line metrics, so an explicit value keeps the row
     // height consistent across read/unread states.
-    lineHeight: 18,
+    lineHeight: fs(18),
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     flex: 1,
@@ -229,8 +230,8 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: colors.white,
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: fs(11),
+    lineHeight: fs(14),
     // 앱 전역은 Galmuri11(픽셀 폰트)이지만, 그 숫자 글리프는 advance 셀 안에서
     // 좌측에 그려져 원 안에서 왼쪽으로 치우친다 (textAlign 으로도 폰트 내부
     // side-bearing 은 못 고침). 배지 숫자에만 예외로 Pretendard(비픽셀,

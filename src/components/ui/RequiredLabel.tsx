@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 // Field label with a small pink asterisk superscripted at the top-right to mark
 // a required field. The row shrinks to its content (alignSelf flex-start) and
@@ -23,11 +23,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   gap: { marginTop: 16 },
-  label: { fontSize: 14, fontFamily: fonts.medium, color: colors.text },
+  label: { fontSize: fs(14), fontFamily: fonts.medium, color: colors.text },
   star: {
     color: colors.primary,
-    fontSize: 12,
-    lineHeight: 14,
+    fontSize: fs(12),
+    lineHeight: fs(14),
     marginLeft: 2,
     marginTop: 2,
   },

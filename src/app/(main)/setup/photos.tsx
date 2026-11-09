@@ -29,7 +29,7 @@ import { usePhotoPreviewStore } from "@/stores/photoPreviewStore";
 import { usePendingPhotoUploadsStore } from "@/stores/pendingPhotoUploadsStore";
 import { showAlert } from "@/stores/alertStore";
 import { colors, radii, shadows } from "@/constants/colors";
-import { fonts } from "@/constants/fonts";
+import { fonts, fs } from "@/constants/fonts";
 import { userFacingError } from "@/utils/errors";
 
 // Layout constants mirror (tabs)/profile.tsx so the registered photo grid
@@ -637,8 +637,8 @@ const styles = StyleSheet.create({
     },
     lockText: {
         textAlign: "center",
-        fontSize: 14,
-        lineHeight: 20,
+        fontSize: fs(14),
+        lineHeight: fs(20),
         letterSpacing: -0.3,
         color: colors.primaryDark,
         fontFamily: fonts.semibold,
@@ -691,8 +691,8 @@ const styles = StyleSheet.create({
     },
     warnText: {
         flex: 1,
-        fontSize: 12,
-        lineHeight: 17,
+        fontSize: fs(12),
+        lineHeight: fs(17),
         letterSpacing: -0.6,
         color: colors.primaryDark,
         fontFamily: fonts.medium,
@@ -751,7 +751,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.cardAlt,
     },
     sheetBtnText: {
-        fontSize: 16,
+        fontSize: fs(16),
         fontFamily: fonts.semibold,
         color: colors.text,
         letterSpacing: 0.2,

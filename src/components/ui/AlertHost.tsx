@@ -4,7 +4,7 @@ import { useAlertStore, AlertSpec } from '@/stores/alertStore';
 import { AlertCard } from './AlertCard';
 import { HaruIcon } from './HaruIcon';
 import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs, PIXEL_NUMBER_OFFSET_Y } from '@/constants/fonts';
 
 // Root-level host. Mounted once in `_layout.tsx`. Renders the topmost queued
 // alert as a Modal — replaces `Alert.alert` at every existing call site via
@@ -106,10 +106,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   costText: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.bold,
     color: colors.text,
     // 글꼴의 줄 상자 안에서 숫자가 아래쪽에 놓여 아이콘보다 낮아 보인다.
-    transform: [{ translateY: -1 }],
+    transform: [{ translateY: PIXEL_NUMBER_OFFSET_Y }],
   },
 });

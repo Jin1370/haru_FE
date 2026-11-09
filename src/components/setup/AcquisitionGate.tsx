@@ -17,7 +17,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { recordAcquisition } from '@/services/profile';
 import { ACQUISITION_OPTIONS, SNS_PLATFORMS } from '@/constants/acquisition';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 // 유입 경로 모달 (mig 051) — 앱 진입 시 1회 노출, 건너뛸 수 있다.
 // 디자인은 사용자 신고 모달(components/moderation/ReportModal)과 동일한 골격:
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.bold,
     color: colors.text,
     letterSpacing: 0.3,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   backText: {
-    fontSize: 13,
+    fontSize: fs(13),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
   },
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   rowPressed: { opacity: 0.85 },
   rowText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.medium,
     color: colors.text,
     letterSpacing: 0.2,
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.pixel,
     color: colors.text,
   },
@@ -319,17 +319,17 @@ const styles = StyleSheet.create({
     right: 13,
   },
   inputPlaceholderText: {
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.pixel,
     color: colors.textLight,
-    lineHeight: 17,
+    lineHeight: fs(17),
   },
   error: {
     marginTop: 12,
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.medium,
     color: colors.error,
-    lineHeight: 17,
+    lineHeight: fs(17),
   },
   submit: {
     marginTop: 16,
@@ -343,13 +343,13 @@ const styles = StyleSheet.create({
   submitPressed: { transform: [{ scale: 0.98 }] },
   skip: { alignSelf: 'center', paddingTop: 12, paddingHorizontal: 12 },
   skipText: {
-    fontSize: 12,
+    fontSize: fs(12),
     fontFamily: fonts.regular,
     color: colors.textLight,
     letterSpacing: 0.2,
   },
   submitText: {
-    fontSize: 15,
+    fontSize: fs(15),
     fontFamily: fonts.bold,
     color: colors.white,
     letterSpacing: 0.3,

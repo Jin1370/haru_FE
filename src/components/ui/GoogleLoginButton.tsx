@@ -1,7 +1,7 @@
 import { Pressable, Text, StyleSheet, ActivityIndicator, View, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 interface GoogleLoginButtonProps {
   onPress: () => void;
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   label: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.medium,
     letterSpacing: 0.25,
     color: '#5f6368',

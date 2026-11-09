@@ -2,7 +2,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 import {
   SELECTABLE_EMOTIONS,
   getEmotionMeta,
@@ -135,8 +135,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
   },
   toggleEmoji: {
-    fontSize: 17,
-    lineHeight: 19,
+    fontSize: fs(17),
+    lineHeight: fs(19),
   },
   header: {
     flexDirection: 'row',
@@ -148,8 +148,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   headerText: {
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: fs(13),
+    lineHeight: fs(16),
     color: colors.text,
     fontFamily: fonts.medium,
     letterSpacing: 0.3,
@@ -187,11 +187,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   chipEmoji: {
-    fontSize: 14,
-    lineHeight: 16,
+    fontSize: fs(14),
+    lineHeight: fs(16),
   },
   chipLabel: {
-    fontSize: 12,
+    fontSize: fs(12),
     color: colors.text,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,

@@ -19,7 +19,7 @@ import { showAlert } from '@/stores/alertStore';
 import { ApiRequestError } from '@/services/api';
 import { userFacingError } from '@/utils/errors';
 import { colors } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { fonts, fs } from '@/constants/fonts';
 
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN_SEC = 60;
@@ -182,10 +182,10 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: 12,
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.regular,
     color: colors.textSecondary,
-    lineHeight: 21,
+    lineHeight: fs(21),
   },
   field: {
     marginTop: 32,
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   timer: {
     marginTop: 4,
     marginBottom: 20,
-    fontSize: 13,
+    fontSize: fs(13),
     fontFamily: fonts.medium,
     color: colors.textSecondary,
     textAlign: 'center',
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   codeInput: {
-    fontSize: 22,
+    fontSize: fs(22),
     letterSpacing: 8,
     textAlign: 'center',
     // 높이 고정 — 비었을 때(내용 0)와 입력했을 때(22px 한 줄)의 높이 차이로
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   resendText: {
-    fontSize: 14,
+    fontSize: fs(14),
     fontFamily: fonts.medium,
     color: colors.primary,
     letterSpacing: 0.3,
