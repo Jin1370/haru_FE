@@ -1,18 +1,15 @@
-import { useCallback, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 import { SwipeCard } from '@/components/discover/SwipeCard';
 import { CardDeck } from '@/components/discover/CardDeck';
-import {
-  computeDiscoverGate,
-  showLikeGate,
-  showLikeLimit,
-  showMatchAlert,
-} from '@/components/discover/DiscoverGate';
+import { computeDiscoverGate, showLikeGate, showMatchAlert } from '@/components/discover/DiscoverGate';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useReceivedLikes } from '@/hooks/useReceivedLikes';
+import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 import { useAuthStore } from '@/stores/authStore';
 import { showAlert } from '@/stores/alertStore';
 import { colors, radii } from '@/constants/colors';
@@ -20,31 +17,28 @@ import { fonts, fs } from '@/constants/fonts';
 import { LockedCard, useCountdown } from '@/components/discover/LockedCard';
 import { ApiRequestError } from '@/services/api';
 
-// 받은 좋아요 탭 — 나를 like 한 사용자 카드 목록.
-// 디스커버와 동일한 SwipeCard/CardDeck 을 재사용해 UX 일관성 유지. 차이점은
-// 카드 풀 엔드포인트와 빈 화면 CTA 뿐이며, 일일 좋아요 예산은 디스커버와 공유한다
-// (useDiscoverQuota — 두 탭이 같은 SWR 캐시를 본다).
+// 받은 좋아요 탭 — 나를 like 한 사람. 넘기기는 없고 좌우 버튼으로 오가며, 대화 신청으로
+// 매치되면 목록에서 빠진다. 유료화 ON 이면 본(공개한) 순서대로 왼쪽부터 놓이고 맨
+// 오른쪽에 잠긴 카드가 있다 — 탭에 들어오면 항상 맨 오른쪽에서 시작하고, 왼쪽 버튼은
+// 가장 최근에 본 카드부터 거슬러 간다. 무료 카드는 잠긴 카드가 화면에 나오는 순간 열린다.
 export default function LikesScreen() {
   const { t } = useTranslation();
   const profile = useAuthStore((s) => s.profile);
   const gate = computeDiscoverGate(profile);
+  const { monetizationEnabled } = useDiscoverQuota();
   const {
     candidates,
     loading,
     error,
     loadCandidates,
     syncQuota,
-    handleSwipe,
-    consumeLikeLimitHit,
+    request,
     reveal,
+    removeCandidate,
     starsTotal,
     nextFreeRevealAt,
-    removeCandidate,
-    passResetEnabled,
-    hasPasses,
-    resetting,
-    handleResetPasses,
   } = useReceivedLikes();
+  const [pos, setPos] = useState(0);
 
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = useCallback(async () => {
@@ -56,18 +50,37 @@ export default function LikesScreen() {
     }
   }, [loadCandidates, syncQuota]);
 
-  // 탭 focus 마다 refetch — 푸시 알림으로 새 좋아요가 도착했거나, 다른 탭에 머무는
-  // 사이 누군가 like 했을 때 탭 진입 시 자동 반영. Realtime 채널은 안 씀
-  // (swipes publication 미포함 + RLS 변경 부담).
-  // 캐시가 이미 있으면 화면은 즉시 그려지고 이 refetch 는 뒤에서 조용히 갱신한다.
+  // 탭 focus 마다 refetch — 다른 탭에 머무는 사이 새 좋아요가 왔을 수 있다. 들어올 때마다
+  // 맨 오른쪽(유료화 ON: 잠긴 카드 / OFF: 첫 카드)에서 시작한다.
+  const jumpOnLoad = useRef(true);
   useFocusEffect(
     useCallback(() => {
+      jumpOnLoad.current = true;
       loadCandidates();
     }, [loadCandidates]),
   );
+  useEffect(() => {
+    if (candidates.length === 0) return;
+    if (jumpOnLoad.current) {
+      jumpOnLoad.current = false;
+      setPos(monetizationEnabled ? candidates.length - 1 : 0);
+    } else if (pos > candidates.length - 1) {
+      setPos(candidates.length - 1);
+    }
+  }, [candidates, monetizationEnabled, pos]);
 
-  // 잠긴 카드 공개 — 확인 후 별사탕 2개. 별사탕이 모자라면 사용하기가 충전 화면으로
-  // 보낸다. 무료 카드는 서버가 일반 카드로 내려주므로 여기를 타지 않는다.
+  const current = candidates[pos];
+
+  // 무료 카드 — 잠긴 카드가 화면에 나온 순간 서버에 열기를 요청한다 (그때 사용 처리).
+  // 열린 카드는 공개 순서상 같은 자리에 오고 그 뒤에 새 잠긴 카드가 붙는다.
+  const freeTried = useRef(new Set<string>());
+  useEffect(() => {
+    if (!current?.locked || !current.free_available || freeTried.current.has(current.id)) return;
+    freeTried.current.add(current.id);
+    reveal(current.id, true).catch(() => loadCandidates());
+  }, [current, reveal, loadCandidates]);
+
+  // 잠긴 카드 공개 — 확인 후 별사탕 2개. 별사탕이 모자라면 사용하기가 충전 화면으로 보낸다.
   const [revealing, setRevealing] = useState(false);
   const runReveal = async (likerId: string) => {
     setRevealing(true);
@@ -97,52 +110,35 @@ export default function LikesScreen() {
     });
   };
 
-  const onSwipe = async (direction: 'like' | 'pass') => {
-    const candidate = candidates[0];
-    if (!candidate || candidate.locked) return;
-
-    // like-wall: 미등록 사용자의 좋아요는 기능하지 않으므로(상대 피드 비노출 →
-    // 매치 불가) 좋아요는 기록하지 않고 등록을 유도한다. pass 는 그대로 처리.
-    if (direction === 'like' && gate.gated) {
+  const [sending, setSending] = useState(false);
+  const onRequest = async () => {
+    if (!current || current.locked || sending) return;
+    // 미등록 사용자의 신청은 상대 피드에 안 보여 매치가 안 된다 — 등록을 유도한다.
+    if (gate.gated) {
       showLikeGate(gate, t);
       return;
     }
-
-    // 받은 좋아요 like 는 상대가 이미 나를 like 한 상태 → 항상 reciprocal → 항상
-    // 매치 완성 like = 예산 면제다. 따라서 디스커버에서 예산을 소진했더라도 여기서는
-    // 사전 차단하지 않는다(결정 #4). 희귀 unlike 레이스로 BE 가 429 를 주면
-    // 아래 consumeLikeLimitHit 가 방어한다.
-    // 다음이 잠긴 카드면 화면에 나올 그 카드를 서버에 고정한다.
-    const next = candidates[1];
-    const res = await handleSwipe(candidate.id, direction, next?.locked ? next.id : undefined);
-
-    if (consumeLikeLimitHit()) {
-      showLikeLimit(t);
-      return;
-    }
-
-    // 상대가 그사이 탈퇴·정지·차단됐다. 사유를 말하지 않는다 — 차단·정지가 드러나면 안
-    // 된다. 공개할 때 쓴 별사탕은 이미 나갔으므로 여기서는 차감 안내를 하지 않는다.
-    if (res?.skipped) {
-      showAlert({ variant: 'info', title: t('likes.gone.title'), message: t('likes.gone.next') });
-      return;
-    }
-
-    // 받은 좋아요에서 like → 상대가 이미 like 한 상태이므로 거의 항상 즉시 match.
-    if (res?.match) showMatchAlert(t, res.match.id);
-  };
-
-  // "넘긴 사람 다시 보기" — 디스커버와 동일 핸들러(같은 DELETE /api/discover/passes).
-  // 두 탭이 pass 풀을 공유하므로 한쪽에서 리셋하면 양쪽에 반영된다.
-  const onReset = async () => {
-    const resetCount = await handleResetPasses();
-    if (resetCount === null) return;
-    if (resetCount === 0) {
-      showAlert({
-        variant: 'info',
-        title: t('discover.passReset.button'),
-        message: t('discover.passReset.empty_zero'),
-      });
+    setSending(true);
+    try {
+      const res = await request(current.id);
+      // 상대가 그사이 탈퇴·정지·차단됐다. 사유를 말하지 않는다 — 차단·정지가 드러나면 안
+      // 된다. 별사탕으로 공개한 카드였으면 서버가 공개에 쓴 별사탕을 돌려준다.
+      if (res.skipped) {
+        showAlert({
+          variant: 'info',
+          title: t('likes.gone.title'),
+          message: res.refunded_stars
+            ? t('likes.gone.refunded', { count: res.refunded_stars })
+            : t('likes.gone.next'),
+        });
+        return;
+      }
+      if (res.match) showMatchAlert(t, res.match.id);
+    } catch {
+      loadCandidates();
+      showAlert({ variant: 'info', title: t('common.tryAgainLater') });
+    } finally {
+      setSending(false);
     }
   };
 
@@ -156,7 +152,8 @@ export default function LikesScreen() {
     }
   };
 
-  const current = candidates[0];
+  const goPrev = () => setPos((p) => Math.max(0, p - 1));
+  const goNext = () => setPos((p) => Math.min(candidates.length - 1, p + 1));
 
   return (
     <CardDeck
@@ -164,32 +161,56 @@ export default function LikesScreen() {
       onRefresh={handleRefresh}
       // 오류 중엔 자동 재시도(SWR errorRetry)가 로딩 화면을 띄우지 않게 한다 —
       // 띄우면 오류 화면 ↔ "불러오는 중..." 이 수 초마다 번갈아 깜빡이고 재시도
-      // 버튼이 누르는 순간 사라진다. 자동 재시도는 뒤에서 조용히 돌다 성공하면
-      // 카드로 바뀌고, 사용자가 버튼을 누른 경우(retrying)만 로딩을 보여준다.
+      // 버튼이 누르는 순간 사라진다. 사용자가 버튼을 누른 경우(retrying)만 로딩을 보여준다.
       loading={(loading && candidates.length === 0 && !error) || retrying}
     >
       {current?.locked ? (
-        <LockedCard candidate={current}>
-          <RevealPanel
-            nextFreeRevealAt={nextFreeRevealAt}
-            revealing={revealing}
-            onReveal={() => onReveal(current.id)}
-            onFreeAgain={handleRefresh}
-          />
-        </LockedCard>
+        <>
+          <LockedCard candidate={current}>
+            {current.free_available ? (
+              <ActivityIndicator size="large" color={colors.white} />
+            ) : (
+              <RevealPanel
+                nextFreeRevealAt={nextFreeRevealAt}
+                revealing={revealing}
+                onReveal={() => onReveal(current.id)}
+                onFreeAgain={handleRefresh}
+              />
+            )}
+          </LockedCard>
+          {pos > 0 ? (
+            // 잠긴 카드는 카드 안 버튼이 블러에 덮여 있어 이전 카드 버튼을 아래에 둔다.
+            <Pressable
+              onPress={goPrev}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('discover.playlist.prev')}
+              style={({ pressed }) => [styles.prevBtn, pressed && styles.pressed]}
+            >
+              <Ionicons name="play-back" size={30} color={colors.textSecondary} />
+            </Pressable>
+          ) : null}
+        </>
       ) : current ? (
-        <SwipeCard
-          key={current.id}
-          candidate={current}
-          // 등록 게이트만 like 스프링백. 받은 좋아요 like 는 항상 면제라 예산
-          // 소진으로 막지 않는다 — BE 가 권위(희귀 unlike 레이스만 429).
-          gated={gate.gated}
-          onLike={() => onSwipe('like')}
-          onPass={() => onSwipe('pass')}
-          onReported={() => removeCandidate(current.id)}
-        />
+        <>
+          <SwipeCard
+            key={current.id}
+            candidate={current}
+            onPrev={goPrev}
+            onNext={goNext}
+            canPrev={pos > 0}
+            canNext={pos < candidates.length - 1}
+            onReported={() => removeCandidate(current.id)}
+          />
+          <Button
+            title={t('discover.playlist.request')}
+            onPress={onRequest}
+            loading={sending}
+            style={styles.requestBtn}
+          />
+        </>
       ) : error ? (
-        // 로드 실패 — "받은 좋아요 0개" 와 구분 (디스커버와 동일).
+        // 로드 실패 — "받은 좋아요 0개" 와 구분.
         <EmptyState
           iconName="cloud-offline-outline"
           title={t('common.loadFailed')}
@@ -198,32 +219,21 @@ export default function LikesScreen() {
           onCtaPress={onRetry}
         />
       ) : (
-        // 받은 좋아요 0개 — 디스커버로 유도하는 CTA. 출시 초기엔 사용자 풀이 작아
-        // 자주 보일 화면이라 카피 + CTA 톤이 retention 에 직결.
+        // 받은 좋아요 0개 — 탐색으로 유도하는 CTA.
         <EmptyState
           haruIcon="tab-likes-outline"
           title={t('likes.empty.title')}
           subtitle={t('likes.empty.text')}
           ctaLabel={t('likes.empty.cta')}
           onCtaPress={() => router.push('/(main)/(tabs)/discover')}
-        >
-          {passResetEnabled && hasPasses ? (
-            <Button
-              title={t('discover.passReset.button')}
-              onPress={onReset}
-              loading={resetting}
-              disabled={resetting}
-              style={styles.resetBtn}
-            />
-          ) : null}
-        </EmptyState>
+        />
       )}
     </CardDeck>
   );
 }
 
 // 잠긴 카드 위 공개 버튼. 다음 무료 카드까지 타이머 + "별사탕 2개로 공개하기".
-// 타이머가 끝나면 목록을 다시 읽어 이 카드가 무료 카드로 열린다.
+// 타이머가 끝나면 목록을 다시 읽어 이 카드가 무료로 열린다.
 function RevealPanel({
   nextFreeRevealAt,
   revealing,
@@ -264,8 +274,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: radii.pill,
   },
-  resetBtn: {
-    marginTop: 12,
+  requestBtn: {
+    marginTop: 14,
+    minWidth: 200,
     borderRadius: radii.pill,
+  },
+  prevBtn: {
+    marginTop: 14,
+    padding: 6,
+  },
+  pressed: {
+    transform: [{ scale: 0.92 }],
   },
 });

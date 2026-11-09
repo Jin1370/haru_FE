@@ -8,12 +8,8 @@ import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 import { colors, radii } from '@/constants/colors';
 import { fonts, fs, PIXEL_NUMBER_OFFSET_Y } from '@/constants/fonts';
 
-// BE 무제한 계정 한도(999999) — 이 이상이면 남은 수를 숨긴다.
-const UNLIMITED_LIMIT = 999_999;
 // 아이콘마다 여백이 달라서, 실제 도형 높이가 14.5px 로 같아지는 크기를 쓴다.
 const CHIP_ICON_SIZES = {
-  cards: 19.1,
-  'likes-left': 25.84,
   'star-candy': 17.7,
 } as const;
 // 글꼴의 줄 상자 안에서 숫자가 아래쪽에 놓여, 가운데 정렬해도 아이콘보다 낮아 보인다.
@@ -92,47 +88,6 @@ export function StarChip() {
   );
 }
 
-// 탐색 탭 헤더: 오늘 남은 카드 수. 무제한 계정·유료화 OFF 면 숨김.
-function CardCountChip() {
-  const { t } = useTranslation();
-  const { cardsRemaining } = useDiscoverQuota();
-  if (cardsRemaining === null) return null;
-  return (
-    <CountChip
-      icon="cards"
-      value={cardsRemaining}
-      label={t('discover.cardsLeft', { count: cardsRemaining })}
-    />
-  );
-}
-
-// 탐색 탭 헤더: 오늘 남은 좋아요 수 (무료 한도). 받은 좋아요 탭 좋아요는 무료라 탐색 전용.
-// 무제한 계정·유료화 OFF 면 숨김.
-function LikeCountChip() {
-  const { t } = useTranslation();
-  const { monetizationEnabled, dailyCount, dailyLimit } = useDiscoverQuota();
-  if (!monetizationEnabled || dailyLimit >= UNLIMITED_LIMIT) return null;
-  const left = Math.max(0, dailyLimit - dailyCount);
-  return <CountChip icon="likes-left" value={left} label={t('discover.likesLeft', { count: left })} />;
-}
-
-// 탐색 탭 headerRight — 오늘 남은 수량 묶음과, 그것을 충전하는 별사탕을 분리해 보여준다.
-export function DiscoverHeaderRight() {
-  const { monetizationEnabled, cardsRemaining, dailyLimit } = useDiscoverQuota();
-  const showLikes = monetizationEnabled && dailyLimit < UNLIMITED_LIMIT;
-  return (
-    <View style={styles.row}>
-      {cardsRemaining !== null || showLikes ? (
-        <View style={styles.quotaGroup}>
-          <CardCountChip />
-          <LikeCountChip />
-        </View>
-      ) : null}
-      <StarChip />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
@@ -144,15 +99,6 @@ const styles = StyleSheet.create({
   },
   quotaChip: { paddingHorizontal: 8 },
   chargeChip: { paddingLeft: 10, paddingRight: 7, backgroundColor: colors.primaryLight },
-  quotaGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 32,
-    paddingHorizontal: 2,
-    marginRight: 8,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surface,
-  },
   text: {
     fontSize: fs(13),
     fontFamily: fonts.bold,
@@ -160,5 +106,4 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.7 },
   lastGap: { marginRight: 16 },
-  row: { flexDirection: 'row', alignItems: 'center' },
 });

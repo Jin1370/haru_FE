@@ -132,8 +132,15 @@ function WaveBar({ height, index, played, isPlaying }: WaveBarProps) {
 
 interface SwipeCardProps {
     candidate: DiscoverCandidate;
-    onLike: () => void;
-    onPass: () => void;
+    // 받은 좋아요 탭: 오른쪽 = 좋아요, 왼쪽 = 패스로 카드를 날려 보낸다.
+    onLike?: () => void;
+    onPass?: () => void;
+    // 탐색 플레이리스트: 좌우 버튼·스와이프가 이전/다음 카드 이동이다 (onNext 가 있으면
+    // 이 모드). 좋아요는 카드 밖의 대화 신청 버튼이 맡는다.
+    onPrev?: () => void;
+    onNext?: () => void;
+    canPrev?: boolean;
+    canNext?: boolean;
     // 게이트 상태(미등록)에서는 like 가 카드를 넘기지 않고 등록 유도 모달만 띄운다.
     // 이 경우 카드를 화면 밖으로 날려보내면 모달을 닫아도 빈 화면이 남으므로,
     // like-스와이프 시 fly-out 대신 제자리로 스프링백한다.
@@ -144,7 +151,18 @@ interface SwipeCardProps {
     onReported?: () => void;
 }
 
-export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported }: SwipeCardProps) {
+export function SwipeCard({
+    candidate,
+    onLike,
+    onPass,
+    onPrev,
+    onNext,
+    canPrev = false,
+    canNext = false,
+    gated = false,
+    onReported,
+}: SwipeCardProps) {
+    const nav = !!onNext;
     const { t } = useTranslation();
     const [reportOpen, setReportOpen] = useState(false);
     const { width: SCREEN_WIDTH } = useWindowDimensions();
@@ -210,52 +228,59 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
         { useNativeDriver: true },
     );
 
+    const springBack = () => {
+        Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            damping: 18,
+            stiffness: 180,
+        }).start();
+        Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            damping: 18,
+            stiffness: 180,
+        }).start();
+    };
+
     const onHandlerStateChange = (event: PanGestureHandlerStateChangeEvent) => {
         if (event.nativeEvent.state !== State.END) return;
         const tx = event.nativeEvent.translationX;
+        if (nav) {
+            // 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전. 끝에서는 제자리로 돌아온다.
+            const go = tx < -SWIPE_THRESHOLD && canNext ? onNext : tx > SWIPE_THRESHOLD && canPrev ? onPrev : null;
+            if (!go) {
+                springBack();
+                return;
+            }
+            Animated.timing(translateX, {
+                toValue: go === onNext ? -FLY_OUT_DISTANCE : FLY_OUT_DISTANCE,
+                duration: 240,
+                useNativeDriver: true,
+            }).start(() => go());
+            return;
+        }
         if (tx > SWIPE_THRESHOLD) {
             if (gated) {
                 // 게이트 상태의 like: 카드를 넘기지 않으므로 fly-out 하지 않고
                 // 제자리로 되돌린 뒤 모달만 띄운다(닫으면 카드가 그대로 보임).
-                Animated.spring(translateX, {
-                    toValue: 0,
-                    useNativeDriver: true,
-                    damping: 18,
-                    stiffness: 180,
-                }).start();
-                Animated.spring(translateY, {
-                    toValue: 0,
-                    useNativeDriver: true,
-                    damping: 18,
-                    stiffness: 180,
-                }).start();
-                onLike();
+                springBack();
+                onLike?.();
                 return;
             }
             Animated.timing(translateX, {
                 toValue: FLY_OUT_DISTANCE,
                 duration: 240,
                 useNativeDriver: true,
-            }).start(() => onLike());
+            }).start(() => onLike?.());
         } else if (tx < -SWIPE_THRESHOLD) {
             Animated.timing(translateX, {
                 toValue: -FLY_OUT_DISTANCE,
                 duration: 240,
                 useNativeDriver: true,
-            }).start(() => onPass());
+            }).start(() => onPass?.());
         } else {
-            Animated.spring(translateX, {
-                toValue: 0,
-                useNativeDriver: true,
-                damping: 18,
-                stiffness: 180,
-            }).start();
-            Animated.spring(translateY, {
-                toValue: 0,
-                useNativeDriver: true,
-                damping: 18,
-                stiffness: 180,
-            }).start();
+            springBack();
         }
     };
 
@@ -316,28 +341,32 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
                         color={colors.white}
                     />
                 </Pressable>
-                <Animated.View
-                    style={[
-                        styles.stamp,
-                        styles.likeStamp,
-                        { opacity: likeOpacity },
-                    ]}
-                >
-                    <Text style={[styles.stampText, { color: colors.like }]}>
-                        LIKE
-                    </Text>
-                </Animated.View>
-                <Animated.View
-                    style={[
-                        styles.stamp,
-                        styles.skipStamp,
-                        { opacity: skipOpacity },
-                    ]}
-                >
-                    <Text style={[styles.stampText, { color: colors.white }]}>
-                        PASS
-                    </Text>
-                </Animated.View>
+                {nav ? null : (
+                    <>
+                        <Animated.View
+                            style={[
+                                styles.stamp,
+                                styles.likeStamp,
+                                { opacity: likeOpacity },
+                            ]}
+                        >
+                            <Text style={[styles.stampText, { color: colors.like }]}>
+                                LIKE
+                            </Text>
+                        </Animated.View>
+                        <Animated.View
+                            style={[
+                                styles.stamp,
+                                styles.skipStamp,
+                                { opacity: skipOpacity },
+                            ]}
+                        >
+                            <Text style={[styles.stampText, { color: colors.white }]}>
+                                PASS
+                            </Text>
+                        </Animated.View>
+                    </>
+                )}
                 <View style={[styles.cover, { width: COVER_SIZE, height: COVER_SIZE }]}>
                     {/* photo-watercolor-pipeline sprint: 디스커버 응답은 BE 가 변환본
                         (gpt-image-2 수채화 톤 스타일라이즈) 1장을 노출하므로 블러를
@@ -413,18 +442,22 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
 
                 <View style={styles.controls}>
                     <Pressable
-                        onPress={onPass}
-                        accessibilityLabel="pass"
+                        onPress={nav ? onPrev : onPass}
+                        disabled={nav && !canPrev}
+                        accessibilityLabel={nav ? t("discover.playlist.prev") : "pass"}
                         style={({ pressed }) => [
                             styles.sideBtn,
+                            nav && !canPrev && styles.sideBtnDisabled,
                             pressed && styles.pressed,
                         ]}
                     >
-                        <Text
-                            style={[styles.sideLabel, { color: colors.white }]}
-                        >
-                            Pass
-                        </Text>
+                        {nav ? null : (
+                            <Text
+                                style={[styles.sideLabel, { color: colors.white }]}
+                            >
+                                Pass
+                            </Text>
+                        )}
                         <Ionicons
                             name="play-back"
                             size={30}
@@ -464,23 +497,27 @@ export function SwipeCard({ candidate, onLike, onPass, gated = false, onReported
                     </Pressable>
 
                     <Pressable
-                        onPress={onLike}
-                        accessibilityLabel="like"
+                        onPress={nav ? onNext : onLike}
+                        disabled={nav && !canNext}
+                        accessibilityLabel={nav ? t("discover.playlist.next") : "like"}
                         style={({ pressed }) => [
                             styles.sideBtn,
+                            nav && !canNext && styles.sideBtnDisabled,
                             pressed && styles.pressed,
                         ]}
                     >
                         <Ionicons
                             name="play-forward"
                             size={30}
-                            color={colors.like}
+                            color={nav ? colors.white : colors.like}
                         />
-                        <Text
-                            style={[styles.sideLabel, { color: colors.like }]}
-                        >
-                            Like
-                        </Text>
+                        {nav ? null : (
+                            <Text
+                                style={[styles.sideLabel, { color: colors.like }]}
+                            >
+                                Like
+                            </Text>
+                        )}
                     </Pressable>
                 </View>
             </Animated.View>
@@ -578,6 +615,9 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         gap: 8,
         paddingHorizontal: 8,
+    },
+    sideBtnDisabled: {
+        opacity: 0.3,
     },
     sideLabel: {
         fontSize: fs(12),

@@ -1,7 +1,14 @@
 import { api } from './api';
 import { photoAccessStore } from '@/stores/photoAccess';
 import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
-import type { DiscoverCandidate, SwipeRequest, SwipeResponse, DiscoverQuota } from '@/types';
+import type {
+  DiscoverCandidate,
+  SwipeRequest,
+  SwipeResponse,
+  DiscoverQuota,
+  PlaylistsResponse,
+  PlaylistCards,
+} from '@/types';
 
 // 카드 응답이 오면 photo_access 레지스트리를 채운다 — 디스커버/받은 좋아요 두
 // 훅이 각자 복사해 갖고 있던 ingest 를 응답 지점 한 곳으로 모았다. undefined →
@@ -44,23 +51,44 @@ export async function getDiscoverQuota(): Promise<DiscoverQuota> {
   return api.get<DiscoverQuota>(`/api/discover/quota?tz_offset_minutes=${tz}`);
 }
 
-// 넘긴(pass) 스와이프 행을 일괄 삭제해 지나친 프로필을 디스커버에 다시 노출한다.
-// 성공 시 삭제된 pass 행 수(reset_count)를 반환 — "N명 다시 보기" 토스트에 사용.
-// env 비활성 시 BE 가 403 { code:'pass_reset_disabled' } 응답(버튼이 숨겨져 정상
-// 경로에선 도달 안 함), account_frozen 은 글로벌 ApiRequestError 핸들러가 모달 처리.
-export async function resetPasses(): Promise<{ reset_count: number }> {
-  return api.delete<{ reset_count: number }>('/api/discover/passes');
-}
-
 // ── 별사탕 유료화 (BE mig 059) ──────────────────────────────────────
 
-// 탐색 카드 n장 구매. 가격은 서버가 장수로 계산한다. 402 = 별사탕 부족.
-export async function cardReset(cards: number): Promise<{ stars_total: number }> {
-  return api.post<{ stars_total: number }>('/api/discover/card-reset', { cards });
+// 오늘의 탐색 플레이리스트 3칸 (BE mig 063). tz = 사용자 로컬 자정 경계.
+export async function getPlaylists(): Promise<PlaylistsResponse> {
+  const tz = new Date().getTimezoneOffset();
+  return api.get<PlaylistsResponse>(`/api/discover/playlists?tz_offset_minutes=${tz}`);
 }
 
-// 잠긴 받은 좋아요 카드 공개 (별사탕 2개). 모자라면 402 insufficient_stars.
+// 오늘 연 플레이리스트의 카드. 오늘 열지 않았거나 자정이 지났으면 404.
+export async function getPlaylistCards(idx: number): Promise<PlaylistCards> {
+  const tz = new Date().getTimezoneOffset();
+  const res = await api.get<PlaylistCards>(`/api/discover/playlists/${idx}?tz_offset_minutes=${tz}`);
+  ingest(res.cards);
+  return res;
+}
+
+// 플레이리스트 열기. 유료 칸은 사용자가 확인한 곡 수(expectedCount)를 보낸다.
+// 402 = 별사탕 부족, 409 cards_changed = 곡 수가 줄어 차감 없이 거절,
+// 409 playlist_changed = 다른 기기에서 첫 칸을 열어 가격이 바뀜.
+export async function openPlaylist(idx: number, expectedCount?: number): Promise<PlaylistCards> {
+  const tz = new Date().getTimezoneOffset();
+  const res = await api.post<PlaylistCards>(
+    `/api/discover/playlists/${idx}/open?tz_offset_minutes=${tz}`,
+    expectedCount ? { expected_count: expectedCount } : {},
+  );
+  ingest(res.cards);
+  return res;
+}
+
+// 잠긴 받은 좋아요 카드 공개 — 별사탕 2개 (모자라면 402 insufficient_stars), 또는
+// free=true 면 무료 카드 (화면에 띄우는 순간 부른다, 없으면 409 free_unavailable).
 // 상대가 그사이 탈퇴·정지·차단됐으면 차감 없이 revealed=false.
-export async function revealLike(likerId: string): Promise<{ revealed: boolean }> {
-  return api.post('/api/discover/likes-received/reveal', { liker_id: likerId });
+export async function revealLike(likerId: string, free = false): Promise<{ revealed: boolean }> {
+  return api.post('/api/discover/likes-received/reveal', { liker_id: likerId, free });
+}
+
+// 플레이리스트에서 처음 화면에 나온 카드. 자정에 본 카드만 pass 로 기록된다.
+export async function markPlaylistSeen(idx: number, candidateIds: string[]): Promise<void> {
+  const tz = new Date().getTimezoneOffset();
+  await api.post(`/api/discover/playlists/${idx}/seen?tz_offset_minutes=${tz}`, { candidate_ids: candidateIds });
 }

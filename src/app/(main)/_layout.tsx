@@ -37,8 +37,8 @@ export default function MainLayout() {
   }, [isAuthenticated, hasProfile, profileLoaded, loadProfile]);
 
   // 다른 탭(채팅 목록 / 받은 좋아요) 데이터 프리로드는 여기서 하지 않는다 —
-  // 첫 화면인 디스커버의 첫 후보/이미지와 대역폭을 다투기 때문. 디스커버가 첫
-  // 응답을 받은 뒤 useDiscover 가 lib/swr 의 preloadTabData 를 부른다.
+  // 첫 화면인 디스커버의 첫 응답과 대역폭을 다투기 때문. 디스커버가 첫
+  // 응답을 받은 뒤 탐색 탭(플레이리스트 화면)이 lib/swr 의 preloadTabData 를 부른다.
 
   // 로그인 직후 내 프로필 사진을 prefetch 한다. 목적 두 가지:
   //  (1) Supabase storage 호스트로의 TLS 연결을 미리 warm — 탐색 첫 카드가
@@ -71,6 +71,8 @@ export default function MainLayout() {
       <Stack.Screen name="setup/preferences" />
       <Stack.Screen name="setup/voice" />
       <Stack.Screen name="setup/intro" />
+      {/* 탐색 탭 2단계 — 연 플레이리스트의 카드. 헤더는 화면 안에서 켠다. */}
+      <Stack.Screen name="playlist/[idx]" />
       <Stack.Screen name="settings/index" />
       <Stack.Screen name="settings/edit-profile" />
       <Stack.Screen name="settings/edit-bio" />

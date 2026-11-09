@@ -186,21 +186,37 @@ export interface DiscoverCandidate {
   // 사진은 서버가 만든 블러본, 이름·소개는 가짜 문자열, 보이스 없음 — FE 는 카드
   // 전체에 블러를 씌우고 스와이프를 막는다. 탐색 잠긴 카드의 id 는 'locked'.
   locked?: boolean;
-  // 탐색 잠긴 카드만: 초기화하면 지금 볼 수 있는 새 카드 수 (최대 10).
-  available_count?: number;
-  // 카드 수에서 차감되지 않는 카드 (다시보기 카드·캠페인 봇). 남은 카드 수 표시용.
-  free_card?: boolean;
+  // 탐색 플레이리스트 카드만: 이미 대화 신청함.
+  requested?: boolean;
+  // 받은 좋아요 잠긴 카드만: 지금 무료로 열 수 있다 (화면에 띄우는 순간 연다).
+  free_available?: boolean;
+}
+
+// 탐색 플레이리스트 (BE mig 063). 안 연 칸의 price = 지금 열면 낼 별사탕 (0 = 무료).
+export interface PlaylistSlot {
+  idx: number;
+  opened: boolean;
+  count?: number;
+  price?: number;
+}
+
+export interface PlaylistsResponse {
+  // 지금 열면 담길 곡 수 (0~10).
+  available_count: number;
+  playlists: PlaylistSlot[];
+}
+
+export interface PlaylistCards {
+  idx: number;
+  cards: DiscoverCandidate[];
 }
 
 export interface SwipeRequest {
   swiped_id: string;
   direction: 'like' | 'pass';
-  // 'likes' = 받은 좋아요 탭 (유료화 ON 에서 카드·좋아요 차감 면제, 서버가 공개 여부 검증).
-  source?: 'discover' | 'likes';
-  // 받은 좋아요 탭: 넘긴 직후 화면에 나올 잠긴 카드. 서버가 맨 앞 카드로 고정한다.
-  next_card_id?: string;
-  // 좋아요 한도 초과 시 사용자가 "별사탕 1개 사용" 을 확인한 경우만 true.
-  pay_with_stars?: boolean;
+  // 'likes' = 받은 좋아요 탭 (유료화 ON 이면 서버가 공개 여부 검증).
+  // 'playlist' = 탐색 플레이리스트의 대화 신청 (서버가 내 플레이리스트에 든 상대인지 검증).
+  source?: 'likes' | 'playlist';
 }
 
 export interface SwipeResponse {
@@ -208,26 +224,14 @@ export interface SwipeResponse {
   match: Match | null;
   // 상대가 그사이 탈퇴·정지·차단돼 기록 없이 넘어감 (차감 없음).
   skipped?: boolean;
+  // skipped 이고 별사탕으로 공개한 받은 좋아요 카드에 좋아요했으면, 공개에 쓴 별사탕을 돌려준 개수.
+  refunded_stars?: number;
 }
 
 export interface DiscoverQuota {
-  // count/limit/remaining 의미: 오늘(로컬 자정 이후) 보낸 좋아요(non-reciprocal like)
-  // 예산 소모/한도/잔여. pass(넘기기)와 매치 완성 like(면제)는 세지 않는다.
-  count: number;
-  limit: number;
-  remaining: number;
-  date: string; // YYYY-MM-DD (사용자 로컬 자정 기준 BE 가 계산)
-  // env 게이트(DISCOVER_PASS_RESET_ENABLED) 상태. false 면 FE 가 "다시 보기"
-  // 버튼을 렌더하지 않는다(일몰 시 자동 소멸). 구버전 BE 응답엔 없을 수 있어 옵셔널.
-  pass_reset_enabled?: boolean;
-  // 넘긴(pass) 사람이 실제로 있는지. false 면 버튼을 숨겨 "넘긴 적 없는데 다시 보기
-  // 버튼이 뜨는" 어색함을 제거. 구버전 BE 응답엔 없을 수 있어 옵셔널.
-  has_passes?: boolean;
   // 별사탕 유료화. false/미제공이면 아래 필드 없음 — 지금 UI 그대로.
   monetization_enabled?: boolean;
   stars?: { free: number; paid: number; total: number };
-  // 오늘 탐색 카드 사용/한도 (화면 비표시).
-  cards?: { used: number; limit: number };
   // null = 지금 무료 카드 사용 가능.
   next_free_reveal_at?: string | null;
   // 오늘(KST) 남은 광고 보상 횟수.

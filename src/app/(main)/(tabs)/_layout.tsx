@@ -1,4 +1,4 @@
-import { StarChip, DiscoverHeaderRight } from '@/components/stars/StarChip';
+import { StarChip } from '@/components/stars/StarChip';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { HaruIcon } from '@/components/ui/HaruIcon';
@@ -72,7 +72,7 @@ export default function TabLayout() {
           options={{
             title: t('tabs.discover'),
             headerTitle: t('tabs.discover'),
-            headerRight: () => <DiscoverHeaderRight />,
+            headerRight: () => <StarChip />,
             tabBarIcon: ({ color, size, focused }) => (
               <HaruIcon name={focused ? 'tab-discover-filled' : 'tab-discover-outline'} size={size} color={color} />
             ),

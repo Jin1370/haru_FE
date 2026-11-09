@@ -23,7 +23,7 @@ export const quotaFetcher = () => discoverService.getDiscoverQuota();
 // 호출 시점이 중요하다: 사용자가 가장 먼저 보는 화면은 디스커버이므로, 앱 부팅과
 // 동시에 쏘면 디스커버 첫 카드와 대역폭을 다툰다(특히 likes-received 는 BE 에서
 // liker 최대 300 명 + 프로필/사진 조인이라 무겁다). 그래서 디스커버의 첫 후보
-// 응답이 도착한 뒤에 useDiscover 가 이 함수를 부른다. 세션당 계정별 1회.
+// 응답이 도착한 뒤에 탐색 탭(플레이리스트 화면)이 이 함수를 부른다. 세션당 계정별 1회.
 let preloadedFor: string | null = null;
 export function preloadTabData(userId: string) {
   if (preloadedFor === userId) return;

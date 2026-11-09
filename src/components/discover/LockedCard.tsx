@@ -65,12 +65,6 @@ export function useCountdown(targetMs: number | null, onDone?: () => void): stri
   return `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
 }
 
-// 다음 로컬 자정 (탐색 카드·좋아요 무료 한도 리셋 시각).
-export function nextLocalMidnightMs(): number {
-  const d = new Date();
-  d.setHours(24, 0, 0, 0);
-  return d.getTime();
-}
 
 const styles = StyleSheet.create({
   round: {

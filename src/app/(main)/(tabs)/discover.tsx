@@ -1,331 +1,313 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { router } from 'expo-router';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { SwipeCard } from '@/components/discover/SwipeCard';
-import { LaunchPromoCard } from '@/components/discover/LaunchPromoCard';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { CardDeck } from '@/components/discover/CardDeck';
-import {
-  computeDiscoverGate,
-  showLikeGate,
-  showLikeLimit,
-  showMatchAlert,
-} from '@/components/discover/DiscoverGate';
-import { LockedCard, useCountdown, nextLocalMidnightMs } from '@/components/discover/LockedCard';
-import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { useDiscover } from '@/hooks/useDiscover';
+import { HaruIcon } from '@/components/ui/HaruIcon';
+import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
+import { useMidnight } from '@/hooks/useMidnight';
 import * as discoverService from '@/services/discover';
 import { ApiRequestError } from '@/services/api';
-import { cardResetCost } from '@/utils/discoverDaily';
-import type { DiscoverCandidate } from '@/types';
+import { preloadTabData } from '@/lib/swr';
+import type { PlaylistsResponse } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiscoverStore } from '@/stores/discoverStore';
 import { showAlert } from '@/stores/alertStore';
-import { colors, radii } from '@/constants/colors';
-import { fonts } from '@/constants/fonts';
+import { colors, gradients, radii } from '@/constants/colors';
+import { fonts, fs, PIXEL_NUMBER_OFFSET_Y } from '@/constants/fonts';
 
+// 플레이리스트 커버는 순서만 구분하는 장식이다. 안에 든 사람을 암시하면 안 된다
+// (어느 칸을 먼저 열든 같은 상위 카드가 들어간다 — 유료 상품의 내용 오인 방지).
+const COVERS = [
+  { colors: gradients.glow, icon: 'musical-notes' },
+  { colors: ['#B8A1C8', '#5F3E73'] as const, icon: 'headset' },
+  { colors: gradients.primary, icon: 'radio' },
+] as const;
+
+// 탐색 탭 1단계 — 오늘의 플레이리스트 3칸. 처음 여는 칸은 무료, 나머지는 별사탕.
+// 유료화 OFF 면 하루 1칸이라, 고른 뒤엔 서버가 그 칸만 내려준다 (화면 가운데 1칸).
+// 칸을 열면 2단계(playlist/[idx]) 카드 화면으로 간다.
 export default function DiscoverScreen() {
   const { t } = useTranslation();
-  const profile = useAuthStore((s) => s.profile);
   const reloadVersion = useDiscoverStore((s) => s.reloadVersion);
-  const {
-    candidates,
-    loading,
-    error,
-    loadCandidates,
-    handleSwipe,
-    consumeLikeLimitHit,
-    consumeStarsShort,
-    syncQuota,
-    monetizationEnabled,
-    starsTotal,
-    removeCandidate,
-    dailyLimitReached,
-    passResetEnabled,
-    hasPasses,
-    resetting,
-    handleResetPasses,
-  } = useDiscover();
-
+  const { starsTotal, syncQuota } = useDiscoverQuota();
+  const [data, setData] = useState<PlaylistsResponse | null>(null);
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [buyingCards, setBuyingCards] = useState(false);
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
+  const [opening, setOpening] = useState<number | null>(null);
+
+  const load = useCallback(async () => {
     try {
-      await loadCandidates();
+      const d = await discoverService.getPlaylists();
+      setData(d);
+      setError(false);
+      return d;
+    } catch {
+      setError(true);
+      return null;
     } finally {
-      setRefreshing(false);
+      // 첫 응답 뒤에야 다른 탭 데이터를 미리 받는다 — 첫 화면의 대역폭을 뺏지 않게.
+      const uid = useAuthStore.getState().userId;
+      if (uid) preloadTabData(uid);
     }
-  }, [loadCandidates]);
+  }, []);
 
-  // 디스커버 참여 전제조건 게이트(클론/한마디/사진). 받은 좋아요 탭과 공유하는
-  // computeDiscoverGate 로 단일화 — 두 탭의 게이트 조건이 갈라지지 않게 한다.
-  // 디스커버는 더 이상 하드 게이트하지 않는다: 미등록 사용자도 카드를 "구경" 하게
-  // 두어 등록 동기를 만들고(클론 단계 이탈 완화), 실제 참여 행동인 "좋아요" 시점에만
-  // 등록을 유도한다(아래 onSwipe like-wall). pass 는 그대로 처리.
-  const gate = computeDiscoverGate(profile);
+  // 카드 화면에서 돌아오면 곡 수·가격이 바뀌었을 수 있다.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
-  // 초기 후보 fetch 는 quota 동기화와 병렬 — 직렬로 묶으면 첫 이미지 앞에 BE 왕복이
-  // 2개 쌓여 콜드 진입이 느려진다. 일일 한도는 swipe POST 에서 서버가 429 로 하드
-  // 캡하므로 over-fetch 는 무해하다. 초기 1회만 발화.
-  const didInitialFetchRef = useRef(false);
-  useEffect(() => {
-    if (didInitialFetchRef.current) return;
-    didInitialFetchRef.current = true;
-    loadCandidates();
-  }, [loadCandidates]);
-
-  // Auto-refresh trigger: the preferences screen bumps `reloadVersion` on
-  // save so the candidate list refetches with the new filters without the
-  // user having to pull-to-refresh. The initial mount already fetches via
-  // the effect above (reloadVersion=0), so we only fire on subsequent
-  // bumps to avoid a double request on first paint.
+  // 선호 설정을 저장하면 다음에 여는 플레이리스트부터 반영된다 — 가격·곡 수만 갱신.
   const lastSeenReloadRef = useRef(reloadVersion);
   useEffect(() => {
     if (lastSeenReloadRef.current === reloadVersion) return;
     lastSeenReloadRef.current = reloadVersion;
-    loadCandidates();
-  }, [reloadVersion, loadCandidates]);
+    load();
+  }, [reloadVersion, load]);
 
-  // 별사탕을 쓰거나(pay) 그냥 보내거나 공통 — 결과 신호(429/402)와 매치 알럿 처리.
-  const sendSwipe = async (candidateId: string, direction: 'like' | 'pass', pay = false) => {
-    const res = await handleSwipe(candidateId, direction, pay);
+  // 자정이 지나면 새 플레이리스트를 받는다.
+  useMidnight(load);
 
-    // 멀티기기 stale: 로컬 카운트로는 여유였지만 BE 가 429 로 캡한 경우, 훅이 세운
-    // one-shot 신호를 소비해 즉시 모달을 띄운다(다음 렌더의 stale 상태에 의존하지 않음).
-    if (consumeLikeLimitHit()) {
-      showLikeOut(candidateId);
-      return;
-    }
-    if (consumeStarsShort()) {
-      showAlert({ variant: 'info', title: t('stars.insufficient') });
-      return;
-    }
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
-    // 상대가 그사이 탈퇴·정지·차단됐다. 사유를 말하지 않는다 — 차단·정지가 드러나면 안 된다.
-    if (res?.skipped) {
-      showAlert({
-        variant: 'info',
-        title: t('likes.gone.title'),
-        message: t(pay ? 'likes.gone.noCharge' : 'likes.gone.next'),
-      });
-      return;
-    }
+  const goTo = (idx: number) =>
+    router.push({ pathname: '/(main)/playlist/[idx]', params: { idx: String(idx) } });
 
-    if (res?.match) showMatchAlert(t, res.match.id);
-  };
-
-  // 좋아요 무료 한도 소진. 유료화 ON 이면 별사탕 1개 사용 모달, OFF 면 기존 안내 모달.
-  const showLikeOut = (candidateId: string) => {
-    if (!monetizationEnabled) {
-      showLikeLimit(t);
-      return;
-    }
-    // 카드 더보기와 같은 구성. 별사탕이 모자라면 사용하기가 충전 화면으로 보낸다.
-    showAlert({
-      variant: 'confirm',
-      title: t('discover.likeMoreTitle'),
-      message: t('discover.likeMore'),
-      starCost: 1,
-      cancelText: t('common.cancel'),
-      confirmText: t('stars.useConfirm'),
-      onConfirm: () =>
-        starsTotal < 1 ? router.push('/(main)/settings/stars') : sendSwipe(candidateId, 'like', true),
-    });
-  };
-
-  const onSwipe = async (direction: 'like' | 'pass') => {
-    const candidate = candidates[0];
-    if (!candidate || candidate.locked) return;
-
-    // like-wall: 미등록 사용자의 좋아요는 어차피 기능하지 않는다(상대 피드에
-    // 안 보여 매치 불가). 좋아요는 기록하지 않고(=카드 유지, 돌아와 다시 좋아요)
-    // 부족한 단계로 등록을 유도한다. pass 는 그대로 기록/처리.
-    if (direction === 'like' && gate.gated) {
-      showLikeGate(gate, t);
-      return;
-    }
-
-    // 좋아요 예산 소진 시: 이 후보가 나를 아직 like 하지 않은(non-reciprocal =
-    // 예산 소모) 카드면 카드를 넘기지 않고 즉시 한도 모달만 띄운다(카드 그대로).
-    // 매치를 완성하는 like(candidate.liked_you=true = 면제)는 소진 후에도 통과시켜
-    // 즉시 매치되게 한다(결정 #4). liked_you 가 stale(로드 후 상대가 unlike)이라
-    // BE 가 non-reciprocal 로 429 를 주면 sendSwipe 의 consumeLikeLimitHit 가 방어한다.
-    // 유료화 ON 에선 BE 가 liked_you 를 보내지 않는다 — 탐색 좋아요는 전부 차감이라
-    // 한도 소진 후엔 모든 카드에서 별사탕 사용 모달이 뜬다.
-    if (direction === 'like' && dailyLimitReached && !candidate.liked_you) {
-      showLikeOut(candidate.id);
-      return;
-    }
-
-    await sendSwipe(candidate.id, direction);
-  };
-
-  // 볼 수 있는 카드 장수만큼 구매. 항상 확인 모달이고, 별사탕이 모자라면
-  // 사용하기가 충전 화면으로 보낸다.
-  const runCardReset = async (cards: number) => {
-    setBuyingCards(true);
+  const open = async (idx: number, expectedCount?: number) => {
+    setOpening(idx);
     try {
-      await discoverService.cardReset(cards);
-      await Promise.all([syncQuota(), loadCandidates()]);
+      await discoverService.openPlaylist(idx, expectedCount);
+      if (expectedCount) syncQuota();
+      goTo(idx);
     } catch (e) {
+      const code = e instanceof ApiRequestError ? e.code : undefined;
       if (e instanceof ApiRequestError && e.status === 402) {
         showAlert({ variant: 'info', title: t('stars.insufficient') });
         syncQuota();
-        return;
+      } else if (code === 'cards_changed' || code === 'playlist_changed') {
+        // 곡 수나 가격이 바뀌었다 (차감 없음). 새 값으로 다시 묻는다.
+        const fresh = await load();
+        if (fresh) confirmOpen(idx, fresh, expectedCount !== undefined);
+      } else {
+        showAlert({ variant: 'info', title: t('common.tryAgainLater') });
       }
-      showAlert({ variant: 'info', title: t('common.tryAgainLater') });
     } finally {
-      setBuyingCards(false);
+      setOpening(null);
     }
   };
 
-  const onCardReset = async (shown: DiscoverCandidate) => {
-    // 받아둔 장수가 낡았을 수 있어(탈퇴·차단 등으로 후보가 줄어든 경우) 다시 받아 확인한다.
-    // 맨 앞이 더 이상 잠긴 카드가 아니면 화면이 새 카드로 바뀐 것이니 구매를 묻지 않는다.
-    setBuyingCards(true);
-    const fresh = await loadCandidates();
-    setBuyingCards(false);
-    const locked = fresh ? fresh[0] : shown;
-    if (!locked?.locked) return;
-    // 서버가 최대 10 으로 잘라 보낸다.
-    const title = t('discover.cardsOut.confirmTitle');
-    const count = locked.available_count ?? 0;
-    // 영어만 단수·복수가 갈린다. ko·ja 의 confirmOne 은 confirm 과 같다.
-    const message = t(count === 1 ? 'discover.cardsOut.confirmOne' : 'discover.cardsOut.confirm', { count });
-    const cost = cardResetCost(count);
-    showAlert({
-      variant: 'confirm',
-      title,
-      message,
-      messageHighlight: String(count),
-      starCost: cost,
-      cancelText: t('common.cancel'),
-      confirmText: t('stars.useConfirm'),
-      onConfirm: () => (starsTotal < cost ? router.push('/(main)/settings/stars') : runCardReset(count)),
-    });
-  };
-
-  // "넘긴 사람 다시 보기" — 막힌 상태(빈 화면/한도 도달)에서만 노출되는 탈출구.
-  // 확인 모달 후 적용 — 다시 보는 카드는 카드 수에서 차감되지 않는다는 안내 포함.
-  // 모달은 다시 볼 사람이 없을 때(0명)만 띄운다.
-  const onReset = () => {
-    showAlert({
-      variant: 'confirm',
-      title: t('discover.passReset.confirmTitle'),
-      // 차감 안내는 유료화 ON 일 때만 의미가 있다 (OFF 면 제목만).
-      message: monetizationEnabled ? t('discover.passReset.confirmFreeNote') : undefined,
-      cancelText: t('common.cancel'),
-      confirmText: t('discover.passReset.confirmButton'),
-      onConfirm: runPassReset,
-    });
-  };
-
-  const runPassReset = async () => {
-    const resetCount = await handleResetPasses();
-    if (resetCount === null) return;
-    if (resetCount === 0) {
+  // changed = 유료 구매가 곡 수 변경으로 거절된 뒤 다시 묻는 경우.
+  const confirmOpen = (idx: number, d: PlaylistsResponse, changed = false) => {
+    const count = d.available_count;
+    const price = d.playlists.find((p) => p.idx === idx)?.price ?? 0;
+    if (count === 0) {
       showAlert({
         variant: 'info',
-        title: t('discover.passReset.button'),
-        message: t('discover.passReset.empty_zero'),
+        title: t('discover.noMoreProfiles'),
+        message: changed ? t('likes.gone.noCharge') : undefined,
       });
+      return;
     }
+    if (price === 0) {
+      open(idx);
+      return;
+    }
+    showAlert({
+      variant: 'confirm',
+      title: t(changed ? 'discover.playlist.changedTitle' : 'discover.playlist.buyTitle'),
+      // 영어만 단수·복수가 갈린다. ko·ja 의 buyOne 은 buy 와 같다.
+      message: t(count === 1 ? 'discover.playlist.buyOne' : 'discover.playlist.buy', { count }),
+      messageHighlight: String(count),
+      starCost: price,
+      cancelText: t('common.cancel'),
+      confirmText: t('stars.useConfirm'),
+      onConfirm: () => (starsTotal < price ? router.push('/(main)/settings/stars') : open(idx, count)),
+    });
   };
 
-  const current = candidates[0];
+  const onPressTile = (idx: number) => {
+    if (!data || opening !== null) return;
+    if (data.playlists.find((p) => p.idx === idx)?.opened) goTo(idx);
+    else confirmOpen(idx, data);
+  };
+
+  const noneOpened = data ? data.playlists.every((p) => !p.opened) : false;
 
   return (
-    <CardDeck
-      refreshing={refreshing}
-      onRefresh={handleRefresh}
-      loading={loading && candidates.length === 0}
-      overlay={current ? <LaunchPromoCard /> : null}
-    >
-      {current?.locked ? (
-        // 오늘 카드를 다 봤다 — 다음 후보를 블러로 보여주며 궁금증을 남긴다.
-        <LockedCard candidate={current}>
-          {buyingCards ? (
-            <ActivityIndicator size="large" color={colors.primary} />
-          ) : (
-            <CardsOutPanel onReset={() => onCardReset(current)} onMidnight={loadCandidates} />
-          )}
-        </LockedCard>
-      ) : current ? (
-        <SwipeCard
-          key={current.id}
-          candidate={current}
-          // like 게이트 = 등록 미완성 OR (예산 소진 AND 이 후보가 나를 아직 like
-          // 안 함=non-reciprocal). 게이트 시 like 제스처/버튼은 fly-out 대신 스프링백
-          // (카드 그대로) 후 onLike→onSwipe('like')→모달로 안내. 매치 완성
-          // like(liked_you=true, 면제)는 gated 아님 → fly-out 후 즉시 매치.
-          gated={gate.gated || (dailyLimitReached && !current.liked_you)}
-          onLike={() => onSwipe('like')}
-          onPass={() => onSwipe('pass')}
-          onReported={() => removeCandidate(current.id)}
-        />
-      ) : error ? (
-        // 로드 실패 — 빈 풀("더 이상 없어요")과 구분해야 한다. 서버 장애를 "사람이
-        // 없다" 로 보여주면 사용자가 앱을 떠난다.
+    <CardDeck refreshing={refreshing} onRefresh={handleRefresh} loading={!data && !error}>
+      {!data ? (
+        // 로드 실패 — 빈 풀("더 이상 없어요")과 구분한다. 서버 장애를 "사람이 없다" 로
+        // 보여주면 사용자가 앱을 떠난다.
         <EmptyState
           iconName="cloud-offline-outline"
           title={t('common.loadFailed')}
           subtitle={t('common.tryAgainLater')}
           ctaLabel={t('common.retry')}
-          onCtaPress={loadCandidates}
+          onCtaPress={load}
         />
-      ) : (
-        // 풀 소진(카드 0장)일 때만 empty-state. 좋아요 예산 소진은 화면을 교체하지
-        // 않는다 — 카드는 계속 흐르고 pass 는 무제한이며, non-reciprocal like 소진은
-        // onSwipe 사전 게이트로 안내한다. pass-reset 버튼은 여기 탈출구로 유지.
+      ) : noneOpened && data.available_count === 0 ? (
         <EmptyState
           haruIcon="tab-discover-outline"
           title={t('discover.noMoreProfiles')}
           subtitle={t('discover.checkBackLater')}
-        >
-          {passResetEnabled && hasPasses ? (
-            <Button
-              title={t('discover.passReset.button')}
-              onPress={onReset}
-              loading={resetting}
-              disabled={resetting}
-              style={styles.resetBtn}
+        />
+      ) : (
+        <View style={styles.list}>
+          {data.playlists.map((p) => (
+            <PlaylistTile
+              key={p.idx}
+              idx={p.idx}
+              status={
+                p.opened
+                  ? t(p.count === 1 ? 'discover.playlist.tracksOne' : 'discover.playlist.tracks', {
+                      count: p.count ?? 0,
+                    })
+                  : data.available_count === 0
+                    ? t('discover.playlist.soldOut')
+                    : p.price
+                      ? null
+                      : t('discover.playlist.free')
+              }
+              price={!p.opened && data.available_count > 0 && p.price ? p.price : null}
+              opened={p.opened}
+              disabled={!p.opened && data.available_count === 0}
+              loading={opening === p.idx}
+              onPress={() => onPressTile(p.idx)}
             />
-          ) : null}
-        </EmptyState>
+          ))}
+          <Text style={styles.note}>{t('discover.playlist.resetNote')}</Text>
+        </View>
       )}
     </CardDeck>
   );
 }
 
-// 잠긴 카드 위 안내 — 다음 무료 카드까지 남은 시간 + 별사탕으로 카드 더보기.
-// 자정이 지나면 onMidnight 로 다시 불러와 무료 카드를 받는다.
-function CardsOutPanel({ onReset, onMidnight }: { onReset: () => void; onMidnight: () => void }) {
+function PlaylistTile({
+  idx,
+  status,
+  price,
+  opened,
+  disabled,
+  loading,
+  onPress,
+}: {
+  idx: number;
+  status: string | null;
+  price: number | null;
+  opened: boolean;
+  disabled: boolean;
+  loading: boolean;
+  onPress: () => void;
+}) {
   const { t } = useTranslation();
-  const [target] = useState(nextLocalMidnightMs);
-  const left = useCountdown(target, onMidnight);
+  const cover = COVERS[idx % COVERS.length];
   return (
-    <>
-      <Text style={styles.lockedTimer}>{t('discover.cardsOut.nextFree', { time: left })}</Text>
-      <Button title={t('discover.cardsOut.resetButton')} onPress={onReset} style={styles.lockedBtn} />
-    </>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      style={({ pressed }) => [styles.tile, disabled && styles.tileDisabled, pressed && styles.pressed]}
+    >
+      <LinearGradient colors={[...cover.colors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cover}>
+        <Ionicons name={cover.icon} size={28} color={colors.white} />
+      </LinearGradient>
+      <View style={styles.tileText}>
+        <Text style={styles.title} numberOfLines={1}>
+          {t('discover.playlist.title', { n: idx + 1 })}
+        </Text>
+        <View style={styles.statusRow}>
+          {price !== null ? (
+            <>
+              <HaruIcon name="star-candy" size={15} color={colors.primary} />
+              <Text style={styles.price}>{price}</Text>
+            </>
+          ) : (
+            <Text style={[styles.status, opened && styles.statusOpened]}>{status}</Text>
+          )}
+        </View>
+      </View>
+      {loading ? (
+        <ActivityIndicator color={colors.white} />
+      ) : (
+        <Ionicons name={opened ? 'play' : 'chevron-forward'} size={20} color="rgba(255,255,255,0.75)" />
+      )}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  lockedTimer: {
-    fontSize: 14,
-    fontFamily: fonts.medium,
+  list: {
+    width: '100%',
+    paddingHorizontal: 24,
+    gap: 14,
+  },
+  tile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 14,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(20,10,25,0.62)',
+  },
+  tileDisabled: {
+    opacity: 0.5,
+  },
+  pressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  cover: {
+    width: 64,
+    height: 64,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileText: {
+    flex: 1,
+  },
+  title: {
+    fontSize: fs(16),
+    fontFamily: fonts.bold,
     color: colors.white,
-    opacity: 0.85,
   },
-  lockedBtn: {
-    marginTop: 8,
-    borderRadius: radii.pill,
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    height: 20,
   },
-  resetBtn: {
-    marginTop: 28,
-    borderRadius: radii.pill,
+  status: {
+    fontSize: fs(13),
+    fontFamily: fonts.medium,
+    color: 'rgba(255,255,255,0.75)',
+  },
+  statusOpened: {
+    color: colors.secondary,
+  },
+  price: {
+    fontSize: fs(14),
+    fontFamily: fonts.bold,
+    color: colors.white,
+    // Galmuri 숫자가 줄 상자 아래쪽에 놓여 아이콘보다 낮아 보인다 (haru_FE/CLAUDE.md).
+    transform: [{ translateY: PIXEL_NUMBER_OFFSET_Y }],
+  },
+  note: {
+    marginTop: 6,
+    textAlign: 'center',
+    fontSize: fs(12),
+    fontFamily: fonts.medium,
+    color: 'rgba(255,255,255,0.75)',
   },
 });
