@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { SwipeCard } from '@/components/discover/SwipeCard';
+import { PlaylistCard } from '@/components/discover/SwipeCard';
 import { radii } from '@/constants/colors';
 import type { DiscoverCandidate } from '@/types';
 
@@ -22,11 +22,32 @@ try {
 
 const noop = () => undefined;
 
-export function LockedCard({ candidate, children }: { candidate: DiscoverCandidate; children: ReactNode }) {
+export function LockedCard({
+  candidate,
+  width,
+  coverRatio,
+  children,
+}: {
+  candidate: DiscoverCandidate;
+  width: number;
+  coverRatio?: number;
+  children: ReactNode;
+}) {
   return (
     <View>
       <View pointerEvents="none">
-        <SwipeCard candidate={candidate} onLike={noop} onPass={noop} gated />
+        <PlaylistCard
+          candidate={candidate}
+          width={width}
+          active={false}
+          canPrev={false}
+          canNext={false}
+          onPrev={noop}
+          onNext={noop}
+          onReported={noop}
+          requested={false}
+          coverRatio={coverRatio}
+        />
       </View>
       {BlurView ? (
         <BlurView

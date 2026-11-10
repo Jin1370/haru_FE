@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    AccessibilityInfo,
     Animated,
     Easing,
     Image,
@@ -10,16 +9,7 @@ import {
     useWindowDimensions,
     View,
 } from "react-native";
-import Svg, {
-    Circle,
-    Defs,
-    LinearGradient as SvgGradient,
-    Polygon,
-    Stop,
-    Path,
-    Text as SvgText,
-    TextPath,
-} from "react-native-svg";
+import Svg, { Polygon } from "react-native-svg";
 import { router, useFocusEffect } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { CardDeck } from "@/components/discover/CardDeck";
@@ -36,50 +26,27 @@ import { showAlert } from "@/stores/alertStore";
 import { colors } from "@/constants/colors";
 import { isNight } from "@/constants/theme";
 import { fonts, fs } from "@/constants/fonts";
-import { SUPABASE_URL } from "@/constants/config";
+import { coverUrl } from "@/utils/playlistCover";
+import {
+    TILE_SHADOW,
+    VINYL_CENTER_OFFSET,
+    VINYL_SCALE,
+    Vinyl,
+} from "@/components/discover/LpRecord";
 
-// 플레이리스트 커버는 순서만 구분하는 장식이다. 안에 든 사람을 암시하면 안 된다
-// (어느 칸을 먼저 열든 같은 상위 카드가 들어간다 — 유료 상품의 내용 오인 방지).
-// 사진은 Storage playlist-covers 버킷의 0.jpg ~ COVER_COUNT-1.jpg (mig 065). 로컬 날짜로
-// 하루 3장을 연속 번호로 골라 하루 동안 고정, 자정에 다음 3장. 업로드 때 순서를 섞어 둬서
-// 이웃 번호끼리 비슷하지 않다. 사진을 늘리거나 줄이면 이 값도 같이 바꾼다.
-const COVER_COUNT = 45;
-
-function coverUrl(idx: number) {
-    const d = new Date();
-    const day = Math.floor(
-        Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000,
-    );
-    const n = (day * 3 + idx) % COVER_COUNT;
-    return `${SUPABASE_URL}/storage/v1/object/public/playlist-covers/${n}.jpg`;
-}
-
-const VINYL_SCALE = 0.96; // LP 지름 / 커버 한 변
-const VINYL_CENTER_OFFSET = 0.04; // LP 중심이 커버 오른쪽 끝보다 더 나간 거리 (커버 한 변 비율)
-// 홈 — 촘촘한 가는 선, 투명도를 들쭉날쭉하게 해 기계적으로 보이지 않게. 곡 사이 간격처럼
-// 몇 줄은 조금 더 밝다. 라벨 바깥(r 18~21)은 실제 LP 처럼 홈 없이 비운다.
-const GROOVES = Array.from({ length: 52 }, (_, i) => ({
-    r: 48.5 - i * 0.53,
-    o: i % 13 === 0 ? 0.14 : 0.03 + ((i * 7) % 5) * 0.01,
-}));
-// 회전·떨림 조절값. SPIN_MS = 한 바퀴 시간, WOBBLE_RATIO = 중심 어긋남(지름 비율),
-// SHAKE_* = 짧은 떨림 (값 순서대로 반복, 크기는 지름 비율).
-const SPIN_MS = 7000;
-// 라벨 글씨 — 라벨 반지름 18 안쪽 원을 따라 쓴다 (viewBox 100 기준).
-const LABEL_TEXT_R = 9;
-const LABEL_FONT_SIZE = 7;
-const WOBBLE_RATIO = 0.006;
-const SHAKE_RATIO = 0.003;
-const SHAKE_STEP_MS = 90;
-const SHAKE_STEPS = [1, -0.6, 0.8, -1, 0.4, -0.3, 0];
 // 고르기·재생 연출. SELECTED_SCALE = 고른 칸 확대, PLAY_MS = 선택 후 화면 전환까지,
 // PLAY_SLIDE = LP 가 커버 밖으로 더 나오는 거리(커버 한 변 비율), PLAY_TURN = 그동안 추가 회전.
 // 플레이리스트 한 칸에 담기는 최대 인원 (BE CARD_RESET_AMOUNT 와 같아야 한다).
 const PLAYLIST_SIZE = 10;
 const SELECTED_SCALE = 1.06;
-const PLAY_MS = 1000;
+const PLAY_MS = 600;
+// 재생 직전 눌림 — PRESS_SCALE 만큼 작아졌다 PRESS_MS 동안 돌아온다.
+const PRESS_SCALE = 0.92;
+const PRESS_MS = 240;
 const PLAY_SLIDE = 0.35;
-const PLAY_TURN = "540deg";
+const PLAY_TURN = "360deg";
+// 카드 화면 전환(fade)이 끝난 뒤 LP 를 커버 안으로 되돌리는 시점.
+const RESET_AFTER_LEAVE_MS = 600;
 
 // 탐색 탭 1단계 — 오늘의 플레이리스트 3칸. 처음 여는 칸은 무료, 나머지는 별사탕.
 // 유료화 OFF 면 하루 1칸이라, 고른 뒤엔 서버가 그 칸만 내려준다 (화면 가운데 1칸).
@@ -90,7 +57,6 @@ export default function DiscoverScreen() {
     const { starsTotal, syncQuota } = useDiscoverQuota();
     const [data, setData] = useState<PlaylistsResponse | null>(null);
     const [error, setError] = useState(false);
-    const [refreshing, setRefreshing] = useState(false);
     const [opening, setOpening] = useState<number | null>(null);
     // 고른 칸 (선택 버튼이 옆에 뜸) / 선택 버튼을 눌러 재생 연출 중인 칸.
     const [selected, setSelected] = useState<number | null>(null);
@@ -113,12 +79,25 @@ export default function DiscoverScreen() {
     }, []);
 
     // 카드 화면에서 돌아오면 곡 수·가격이 바뀌었을 수 있다.
-    // 돌아오면 고른 칸·재생 연출도 처음 상태로.
+    // 고른 칸·재생 연출은 떠날 때, 카드 화면이 다 덮은 뒤 되돌린다 — 돌아올 때 되돌리면
+    // 빠져나온 LP 가 잠깐 보였다가 커버 안으로 튄다. 그 전에 돌아오면 바로 되돌린다.
+    const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     useFocusEffect(
         useCallback(() => {
             load();
-            setSelected(null);
-            setPlaying(null);
+            if (resetTimer.current) {
+                clearTimeout(resetTimer.current);
+                resetTimer.current = null;
+                setSelected(null);
+                setPlaying(null);
+            }
+            return () => {
+                resetTimer.current = setTimeout(() => {
+                    resetTimer.current = null;
+                    setSelected(null);
+                    setPlaying(null);
+                }, RESET_AFTER_LEAVE_MS);
+            };
         }, [load]),
     );
 
@@ -133,12 +112,6 @@ export default function DiscoverScreen() {
     // 자정이 지나면 새 플레이리스트를 받는다.
     useMidnight(load);
 
-    const handleRefresh = useCallback(async () => {
-        setRefreshing(true);
-        await load();
-        setRefreshing(false);
-    }, [load]);
-
     const goTo = (idx: number) =>
         router.push({
             pathname: "/(main)/playlist/[idx]",
@@ -151,7 +124,14 @@ export default function DiscoverScreen() {
 
     const playAndGo = async (idx: number) => {
         setPlaying(idx);
-        await wait(PLAY_MS);
+        // 실패하면 카드 화면이 직접 받는다.
+        await Promise.all([
+            discoverService
+                .getPlaylistCards(idx)
+                .then((r) => discoverService.preloadPlaylistCards(idx, r.cards))
+                .catch(() => {}),
+            wait(PRESS_MS + PLAY_MS),
+        ]);
         goTo(idx);
     };
 
@@ -159,10 +139,11 @@ export default function DiscoverScreen() {
         setOpening(idx);
         setPlaying(idx);
         try {
-            await Promise.all([
+            const [res] = await Promise.all([
                 discoverService.openPlaylist(idx, expectedCount),
-                wait(PLAY_MS),
+                wait(PRESS_MS + PLAY_MS),
             ]);
+            discoverService.preloadPlaylistCards(idx, res.cards);
             if (expectedCount) syncQuota();
             goTo(idx);
         } catch (e) {
@@ -272,8 +253,6 @@ export default function DiscoverScreen() {
 
     return (
         <CardDeck
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
             loading={!data && !error}
         >
             {!data ? (
@@ -343,9 +322,7 @@ export default function DiscoverScreen() {
                             </View>
                         ))}
                     </View>
-                    <Text style={styles.note}>
-                        {t("discover.playlist.resetNote")}
-                    </Text>
+                    <ResetCountdown />
                 </Pressable>
             )}
         </CardDeck>
@@ -392,13 +369,30 @@ function PlaylistTile({
             out.setValue(0);
             return;
         }
-        Animated.timing(out, {
-            toValue: 1,
-            duration: PLAY_MS,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-        }).start();
-    }, [playing, out]);
+        // 버튼을 누른 것처럼 커버와 판이 살짝 작아졌다 돌아온 뒤 판이 빠져나온다.
+        const base = selected ? SELECTED_SCALE : 1;
+        Animated.sequence([
+            Animated.timing(scale, {
+                toValue: base * PRESS_SCALE,
+                duration: PRESS_MS / 2,
+                easing: Easing.out(Easing.quad),
+                useNativeDriver: true,
+            }),
+            Animated.timing(scale, {
+                toValue: base,
+                duration: PRESS_MS / 2,
+                easing: Easing.out(Easing.back(2)),
+                useNativeDriver: true,
+            }),
+            Animated.timing(out, {
+                toValue: 1,
+                duration: PLAY_MS,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+            }),
+        ]).start();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [playing, out, scale]);
 
     const dark = disabled || dimmed;
     return (
@@ -473,6 +467,22 @@ function PlaylistTile({
     );
 }
 
+// 하단 "플레이리스트 초기화까지 hh:mm:ss" — 로컬 자정까지 1초마다 줄어든다.
+function ResetCountdown() {
+    const { t } = useTranslation();
+    const [now, setNow] = useState(() => Date.now());
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, []);
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const left = Math.max(0, Math.floor((midnight.getTime() - now) / 1000));
+    const pad = (v: number) => String(v).padStart(2, "0");
+    const time = `${pad(Math.floor(left / 3600))}:${pad(Math.floor((left % 3600) / 60))}:${pad(left % 60)}`;
+    return <Text style={styles.note}>{t("discover.playlist.resetNote", { time })}</Text>;
+}
+
 // 게임 대화창 — 바탕 없이 흰 테두리, 오른쪽 아래 ▼.
 function DialogBox({ text }: { text: string }) {
     return (
@@ -490,142 +500,15 @@ function DialogBox({ text }: { text: string }) {
     );
 }
 
-// LP판 — viewBox 100 기준. 판(홈·굵은 호·라벨)은 돌고, 반사광은 실제 LP 처럼 제자리에 둔다.
-// 동심원만으론 돌아도 티가 안 나서, 라벨에 HARU 글씨를 넣어 회전이 보이게 한다.
-// 탭이 화면에 보일 때만 돈다 (떠나면 멈춤). 못 여는(흐린) 칸은 돌지 않는다. '동작 줄이기' 설정이면 돌지 않는다.
-function Vinyl({ size, spinning }: { size: number; spinning: boolean }) {
-    const spin = useRef(new Animated.Value(0)).current;
-    const shake = useRef(new Animated.Value(0)).current;
-
-    useFocusEffect(
-        useCallback(() => {
-            let loops: Animated.CompositeAnimation[] = [];
-            let cancelled = false;
-            if (!spinning) return;
-            AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-                if (reduce || cancelled) return;
-                loops = [
-                    Animated.loop(
-                        Animated.timing(spin, {
-                            toValue: 1,
-                            duration: SPIN_MS,
-                            easing: Easing.linear,
-                            useNativeDriver: true,
-                        }),
-                    ),
-                    Animated.loop(
-                        Animated.sequence(
-                            SHAKE_STEPS.map((v) =>
-                                Animated.timing(shake, {
-                                    toValue: v,
-                                    duration: SHAKE_STEP_MS,
-                                    easing: Easing.inOut(Easing.quad),
-                                    useNativeDriver: true,
-                                }),
-                            ),
-                        ),
-                    ),
-                ];
-                loops.forEach((l) => l.start());
-            });
-            return () => {
-                cancelled = true;
-                loops.forEach((l) => l.stop());
-            };
-        }, [spin, shake, spinning]),
-    );
-
-    const rotate = spin.interpolate({
-        inputRange: [0, 1],
-        outputRange: ["0deg", "360deg"],
-    });
-    // 판 중심이 살짝 어긋난 채 돌아 한 바퀴에 한 번 미세하게 출렁인다 + 짧은 떨림.
-    const wobble = size * WOBBLE_RATIO;
-    const shakeY = shake.interpolate({
-        inputRange: [-1, 1],
-        outputRange: [-size * SHAKE_RATIO, size * SHAKE_RATIO],
-    });
-
-    return (
-        <View style={{ width: size, height: size }}>
-            <Animated.View
-                style={{
-                    transform: [
-                        { translateY: shakeY },
-                        { rotate },
-                        { translateX: wobble },
-                    ],
-                }}
-            >
-                <Svg width={size} height={size} viewBox="0 0 100 100">
-                    <Circle cx="50" cy="50" r="50" fill="#0c0c0d" />
-                    {GROOVES.map(({ r, o }) => (
-                        <Circle
-                            key={r}
-                            cx="50"
-                            cy="50"
-                            r={r}
-                            fill="none"
-                            stroke="#fff"
-                            strokeOpacity={o}
-                            strokeWidth="0.18"
-                        />
-                    ))}
-                    <Circle cx="50" cy="50" r="18" fill="#f4f2ee" />
-                    {/* 라벨 둘레를 따라 쓴 글씨. 경로는 왼쪽(9시)에서 시계 방향으로 한 바퀴,
-                        startOffset 25% = 12시 위치를 글씨 가운데로. */}
-                    <Path
-                        id="labelRing"
-                        d={`M ${50 - LABEL_TEXT_R} 50 a ${LABEL_TEXT_R} ${LABEL_TEXT_R} 0 1 1 ${LABEL_TEXT_R * 2} 0 a ${LABEL_TEXT_R} ${LABEL_TEXT_R} 0 1 1 ${-LABEL_TEXT_R * 2} 0`}
-                        fill="none"
-                    />
-                    <SvgText
-                        fontSize={LABEL_FONT_SIZE}
-                        fontFamily={fonts.bold}
-                        fontWeight="bold"
-                        letterSpacing={1.2}
-                        fill="#3a3a3a"
-                        textAnchor="middle"
-                    >
-                        <TextPath href="#labelRing" startOffset="25%">
-                            HARU
-                        </TextPath>
-                    </SvgText>
-                    <Circle cx="50" cy="50" r="1.3" fill="#3a3a3a" />
-                </Svg>
-            </Animated.View>
-            <Svg
-                width={size}
-                height={size}
-                viewBox="0 0 100 100"
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
-            >
-                <Defs>
-                    <SvgGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
-                        <Stop offset="0.25" stopColor="#fff" stopOpacity="0" />
-                        <Stop
-                            offset="0.5"
-                            stopColor="#fff"
-                            stopOpacity="0.32"
-                        />
-                        <Stop offset="0.75" stopColor="#fff" stopOpacity="0" />
-                    </SvgGradient>
-                </Defs>
-                <Circle cx="50" cy="50" r="50" fill="url(#sheen)" />
-            </Svg>
-        </View>
-    );
-}
-
 const CURSOR_SLOT_W = 72;
-const TILE_SHADOW = {
-    shadowColor: "#000",
-    shadowOpacity: 0.85,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 20,
-} as const;
+// 바탕이 없는 낮 테마에서 밝은 노을 위 흰 글자가 묻히지 않게 (대화창·하단 안내).
+const DAY_TEXT_SHADOW = isNight
+    ? null
+    : {
+          textShadowColor: "rgba(0,0,0,0.45)",
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 3,
+      };
 
 const styles = StyleSheet.create({
     // 안내 문구는 위 끝, 초기화 안내는 아래 끝, 버튼은 그 사이 가운데.
@@ -717,14 +600,7 @@ const styles = StyleSheet.create({
         lineHeight: fs(21),
         fontFamily: fonts.bold,
         color: colors.white,
-        // 바탕이 없는 낮 테마에서 밝은 노을 위 흰 글자가 묻히지 않게.
-        ...(isNight
-            ? null
-            : {
-                  textShadowColor: "rgba(0,0,0,0.45)",
-                  textShadowOffset: { width: 0, height: 1 },
-                  textShadowRadius: 3,
-              }),
+        ...DAY_TEXT_SHADOW,
     },
     dialogArrow: {
         position: "absolute",
@@ -736,5 +612,6 @@ const styles = StyleSheet.create({
         fontSize: fs(13),
         fontFamily: fonts.medium,
         color: colors.white,
+        ...DAY_TEXT_SHADOW,
     },
 });

@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from './Button';
 import { HaruIcon, type HaruIconName } from './HaruIcon';
@@ -12,6 +12,8 @@ interface EmptyStateProps {
   iconName?: React.ComponentProps<typeof Ionicons>['name'];
   /** iconName 대신 쓰는 haru 전용 아이콘. */
   haruIcon?: HaruIconName;
+  /** iconName 대신 쓰는 MaterialCommunityIcons 아이콘 (받은 인사의 손 흔드는 손). */
+  mdiIcon?: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
   ctaLabel?: string;
   onCtaPress?: () => void;
   style?: ViewStyle;
@@ -24,6 +26,7 @@ export function EmptyState({
   subtitle,
   iconName,
   haruIcon,
+  mdiIcon,
   ctaLabel,
   onCtaPress,
   style,
@@ -32,7 +35,7 @@ export function EmptyState({
   const showCta = Boolean(ctaLabel && onCtaPress);
   return (
     <View style={[styles.container, style]}>
-      {iconName || haruIcon ? (
+      {iconName || haruIcon || mdiIcon ? (
         <LinearGradient
           colors={[...gradients.glow]}
           start={{ x: 0, y: 0 }}
@@ -40,11 +43,10 @@ export function EmptyState({
           style={[styles.iconHalo, shadows.glow]}
         >
           {haruIcon ? (
-            <HaruIcon
-              name={haruIcon}
-              size={haruIcon === 'tab-likes-outline' ? 56 : 40}
-              color={colors.white}
-            />
+            <HaruIcon name={haruIcon} size={40} color={colors.white} />
+          ) : mdiIcon ? (
+            // 손 흔드는 손은 받은 인사 탭 아이콘처럼 좌우 반전.
+            <MaterialCommunityIcons name={mdiIcon} size={40} color={colors.white} style={styles.mirror} />
           ) : (
             <Ionicons name={iconName} size={40} color={colors.white} />
           )}
@@ -66,6 +68,9 @@ export function EmptyState({
 }
 
 const styles = StyleSheet.create({
+  mirror: {
+    transform: [{ scaleX: -1 }],
+  },
   container: {
     flex: 1,
     justifyContent: 'center',

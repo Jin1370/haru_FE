@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import { SwipeCard } from '@/components/discover/SwipeCard';
+import { PlaylistCard } from '@/components/discover/SwipeCard';
+import { PlaylistCarousel, useDeckArea } from '@/components/discover/PlaylistCarousel';
 import { CardDeck } from '@/components/discover/CardDeck';
 import { computeDiscoverGate, showLikeGate, showMatchAlert } from '@/components/discover/DiscoverGate';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useReceivedLikes } from '@/hooks/useReceivedLikes';
-import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 import { useAuthStore } from '@/stores/authStore';
 import { showAlert } from '@/stores/alertStore';
 import { colors, radii } from '@/constants/colors';
@@ -17,17 +17,17 @@ import { fonts, fs } from '@/constants/fonts';
 import { LockedCard, useCountdown } from '@/components/discover/LockedCard';
 import { ApiRequestError } from '@/services/api';
 
-// 받은 좋아요 탭 — 나를 like 한 사람. 넘기기는 없고 좌우 버튼으로 오가며, 대화 신청으로
-// 매치되면 목록에서 빠진다. 유료화 ON 이면 본(공개한) 순서대로 왼쪽부터 놓이고 맨
-// 오른쪽에 잠긴 카드가 있다 — 탭에 들어오면 항상 맨 오른쪽에서 시작하고, 왼쪽 버튼은
-// 가장 최근에 본 카드부터 거슬러 간다. 무료 카드는 잠긴 카드가 화면에 나오는 순간 열린다.
+// 받은 인사 탭 — 나에게 인사한 사람. 탐색 플레이리스트와 같은 카드 고리로, 옆으로 밀어
+// 오가고(카드 아래 이전·다음 버튼도) 위로 밀어 인사 — 매치되면 목록에서 빠진다. 유료화 ON 이면
+// 연(공개한) 순서대로 앞에 놓이고 그 뒤에 아직 안 연 사람 전원이 모자이크 카드로 있다. 모자이크
+// 맨 앞 카드가 다음 무료 카드 — 시간이 되면 서버가 자동으로 연다(그 카드에만 타이머). 나머지는
+// 별사탕으로 연다. 탭에 들어오면 방금 무료로 열린 카드, 없으면 첫 모자이크 카드에서 시작한다.
 export default function LikesScreen() {
   const { t } = useTranslation();
   const profile = useAuthStore((s) => s.profile);
   const gate = computeDiscoverGate(profile);
-  const { monetizationEnabled } = useDiscoverQuota();
   const {
-    candidates,
+    candidates: serverCards,
     loading,
     error,
     loadCandidates,
@@ -40,50 +40,73 @@ export default function LikesScreen() {
   } = useReceivedLikes();
   const [pos, setPos] = useState(0);
 
-  const [refreshing, setRefreshing] = useState(false);
+  // 다음 무료 카드 시각이 지나면 목록·별사탕을 다시 받는다.
   const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await Promise.all([loadCandidates(), syncQuota()]);
-    } finally {
-      setRefreshing(false);
-    }
+    await Promise.all([loadCandidates(), syncQuota()]);
   }, [loadCandidates, syncQuota]);
 
-  // 탭 focus 마다 refetch — 다른 탭에 머무는 사이 새 좋아요가 왔을 수 있다. 들어올 때마다
-  // 맨 오른쪽(유료화 ON: 잠긴 카드 / OFF: 첫 카드)에서 시작한다.
-  const jumpOnLoad = useRef(true);
+  // 탭 focus 마다 refetch — 다른 탭에 머무는 사이 새 인사가 왔을 수 있다. 다 받으면 서버
+  // 순서(연 카드 앞, 모자이크 뒤)로 다시 정리하고 시작 위치를 정한다: 방금 무료로 열린 카드 →
+  // 첫 모자이크 카드 → 첫 카드.
+  // 탭에 머무는 동안에는 보이던 순서를 유지한다 — 별사탕으로 연 카드가 그 자리에서 모자이크만
+  // 벗겨지고, 양옆 카드와 번호가 갑자기 바뀌지 않게. 새로 온 카드는 뒤에 붙고 사라진 카드는 빠진다.
+  const [epoch, setEpoch] = useState(0);
   useFocusEffect(
     useCallback(() => {
-      jumpOnLoad.current = true;
-      loadCandidates();
+      loadCandidates().finally(() => setEpoch((e) => e + 1));
     }, [loadCandidates]),
   );
+  const order = useRef<{ epoch: number; ids: string[] }>({ epoch: -1, ids: [] });
+  const candidates = useMemo(() => {
+    const byId = new Map(serverCards.map((c) => [c.id, c]));
+    let ids = serverCards.map((c) => c.id);
+    if (order.current.epoch === epoch) {
+      const kept = order.current.ids.filter((id) => byId.has(id));
+      ids = [...kept, ...ids.filter((id) => !kept.includes(id))];
+    }
+    order.current = { epoch, ids };
+    return ids.map((id) => byId.get(id)!);
+  }, [serverCards, epoch]);
+
   useEffect(() => {
     if (candidates.length === 0) return;
-    if (jumpOnLoad.current) {
-      jumpOnLoad.current = false;
-      setPos(monetizationEnabled ? candidates.length - 1 : 0);
-    } else if (pos > candidates.length - 1) {
-      setPos(candidates.length - 1);
-    }
-  }, [candidates, monetizationEnabled, pos]);
+    const fresh = candidates.findIndex((c) => c.just_revealed);
+    setPos(fresh >= 0 ? fresh : Math.max(0, candidates.findIndex((c) => c.locked)));
+    // 시작 위치는 다시 정리할 때(epoch)만 정한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [epoch]);
+  useEffect(() => {
+    if (pos > candidates.length - 1) setPos(Math.max(0, candidates.length - 1));
+  }, [candidates.length, pos]);
 
   const current = candidates[pos];
 
-  // 무료 카드 — 잠긴 카드가 화면에 나온 순간 서버에 열기를 요청한다 (그때 사용 처리).
-  // 열린 카드는 공개 순서상 같은 자리에 오고 그 뒤에 새 잠긴 카드가 붙는다.
-  const freeTried = useRef(new Set<string>());
+  // 위로 밀어 인사하는 법을 기기마다 한 번만 안내한다 — 열린 카드가 처음 앞에 왔을 때.
+  // 본 기록은 토큰 저장에 쓰는 SecureStore 재사용 (탐색 플레이리스트 안내와 같은 패턴).
+  const hinted = useRef(false);
   useEffect(() => {
-    if (!current?.locked || !current.free_available || freeTried.current.has(current.id)) return;
-    freeTried.current.add(current.id);
-    reveal(current.id, true).catch(() => loadCandidates());
-  }, [current, reveal, loadCandidates]);
+    if (hinted.current || !current || current.locked) return;
+    hinted.current = true;
+    SecureStore.getItemAsync(LIKES_SWIPE_HINT_KEY)
+      .then((seen) => {
+        if (seen) return;
+        showAlert({ variant: 'info', title: t('discover.playlist.swipeHintTitle'), message: t('likes.swipeHint') });
+        SecureStore.setItemAsync(LIKES_SWIPE_HINT_KEY, '1').catch(() => {});
+      })
+      .catch(() => {});
+  }, [current, t]);
 
-  // 잠긴 카드 공개 — 확인 후 별사탕 2개. 별사탕이 모자라면 사용하기가 충전 화면으로 보낸다.
-  const [revealing, setRevealing] = useState(false);
+  // 서버가 무료 카드를 막 열었으면 다음 무료 시각이 바뀌었다 — 타이머용으로 다시 받는다.
+  const justRevealedId = candidates.find((c) => c.just_revealed)?.id;
+  useEffect(() => {
+    if (justRevealedId) syncQuota();
+  }, [justRevealedId, syncQuota]);
+
+  // 모자이크 카드 공개 — 확인 후 별사탕 2개. 별사탕이 모자라면 사용하기가 충전 화면으로 보낸다.
+  // 공개 중인 카드 — 버튼 대신 카드 위에 스피너를 띄운다.
+  const [revealingId, setRevealingId] = useState<string | null>(null);
   const runReveal = async (likerId: string) => {
-    setRevealing(true);
+    setRevealingId(likerId);
     try {
       if (!(await reveal(likerId))) {
         showAlert({ variant: 'info', title: t('likes.gone.title'), message: t('likes.gone.noCharge') });
@@ -95,7 +118,7 @@ export default function LikesScreen() {
         title: code === 'insufficient_stars' ? t('stars.insufficient') : t('common.tryAgainLater'),
       });
     } finally {
-      setRevealing(false);
+      setRevealingId(null);
     }
   };
 
@@ -152,96 +175,102 @@ export default function LikesScreen() {
     }
   };
 
-  const goPrev = () => setPos((p) => Math.max(0, p - 1));
-  const goNext = () => setPos((p) => Math.min(candidates.length - 1, p + 1));
+  // 탐색 플레이리스트와 같은 카드 고리 — 옆으로 밀어 넘기고(끝에서 처음으로 이어진다), 위로 밀어
+  // 인사 (모자이크 카드는 인사 못 한다). 카드 아래에 몇 번째인지.
+  const cardWidth = useWindowDimensions().width - 72;
+  const deck = useDeckArea();
 
   return (
-    <CardDeck
-      refreshing={refreshing}
-      onRefresh={handleRefresh}
-      // 오류 중엔 자동 재시도(SWR errorRetry)가 로딩 화면을 띄우지 않게 한다 —
-      // 띄우면 오류 화면 ↔ "불러오는 중..." 이 수 초마다 번갈아 깜빡이고 재시도
-      // 버튼이 누르는 순간 사라진다. 사용자가 버튼을 누른 경우(retrying)만 로딩을 보여준다.
-      loading={(loading && candidates.length === 0 && !error) || retrying}
-    >
-      {current?.locked ? (
-        <>
-          <LockedCard candidate={current}>
-            {current.free_available ? (
-              <ActivityIndicator size="large" color={colors.white} />
-            ) : (
-              <RevealPanel
-                nextFreeRevealAt={nextFreeRevealAt}
-                revealing={revealing}
-                onReveal={() => onReveal(current.id)}
-                onFreeAgain={handleRefresh}
-              />
-            )}
-          </LockedCard>
-          {pos > 0 ? (
-            // 잠긴 카드는 카드 안 버튼이 블러에 덮여 있어 이전 카드 버튼을 아래에 둔다.
-            <Pressable
-              onPress={goPrev}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel={t('discover.playlist.prev')}
-              style={({ pressed }) => [styles.prevBtn, pressed && styles.pressed]}
-            >
-              <Ionicons name="play-back" size={30} color={colors.textSecondary} />
-            </Pressable>
-          ) : null}
-        </>
-      ) : current ? (
-        <>
-          <SwipeCard
-            key={current.id}
-            candidate={current}
-            onPrev={goPrev}
-            onNext={goNext}
-            canPrev={pos > 0}
-            canNext={pos < candidates.length - 1}
-            onReported={() => removeCandidate(current.id)}
+    <View ref={deck.ref} collapsable={false} style={styles.deck} onLayout={deck.onLayout}>
+      <CardDeck
+        // 오류 중엔 자동 재시도(SWR errorRetry)가 로딩 화면을 띄우지 않게 한다 —
+        // 띄우면 오류 화면 ↔ "불러오는 중..." 이 수 초마다 번갈아 깜빡이고 재시도
+        // 버튼이 누르는 순간 사라진다. 사용자가 버튼을 누른 경우(retrying)만 로딩을 보여준다.
+        loading={(loading && candidates.length === 0 && !error) || retrying}
+      >
+        {current ? (
+          <View style={{ paddingBottom: deck.navOverlap, opacity: deck.measured ? 1 : 0 }}>
+            <PlaylistCarousel
+              cards={candidates}
+              pos={pos}
+              onSettle={setPos}
+              cardWidth={cardWidth}
+              showPosition
+              onSwipeUp={onRequest}
+              swipeUpLabel={t('discover.playlist.request')}
+              canSwipeUp={(card) => !card.locked}
+              compactHint
+              areaHeight={deck.areaHeight}
+              renderCard={(card, active, step) =>
+                card.locked ? (
+                  <LockedCard candidate={card} width={cardWidth} coverRatio={LIKES_COVER_RATIO}>
+                    {revealingId === card.id ? (
+                      <ActivityIndicator size="large" color={colors.white} />
+                    ) : (
+                      <RevealPanel
+                        nextFreeRevealAt={card.free_next ? nextFreeRevealAt : null}
+                        disabled={revealingId !== null}
+                        onReveal={() => onReveal(card.id)}
+                        onFreeAgain={handleRefresh}
+                      />
+                    )}
+                  </LockedCard>
+                ) : (
+                  <PlaylistCard
+                    candidate={card}
+                    width={cardWidth}
+                    active={active}
+                    canPrev={candidates.length > 1}
+                    canNext={candidates.length > 1}
+                    onPrev={() => step(-1)}
+                    onNext={() => step(1)}
+                    onReported={() => removeCandidate(card.id)}
+                    requested={false}
+                    coverRatio={LIKES_COVER_RATIO}
+                  />
+                )
+              }
+            />
+          </View>
+        ) : error ? (
+          // 로드 실패 — "받은 좋아요 0개" 와 구분.
+          <EmptyState
+            iconName="cloud-offline-outline"
+            title={t('common.loadFailed')}
+            subtitle={t('common.tryAgainLater')}
+            ctaLabel={t('common.retry')}
+            onCtaPress={onRetry}
           />
-          <Button
-            title={t('discover.playlist.request')}
-            onPress={onRequest}
-            loading={sending}
-            style={styles.requestBtn}
+        ) : (
+          // 받은 좋아요 0개 — 탐색으로 유도하는 CTA.
+          <EmptyState
+            mdiIcon="hand-wave-outline"
+            title={t('likes.empty.title')}
+            subtitle={t('likes.empty.text')}
+            ctaLabel={t('likes.empty.cta')}
+            onCtaPress={() => router.push('/(main)/(tabs)/discover')}
           />
-        </>
-      ) : error ? (
-        // 로드 실패 — "받은 좋아요 0개" 와 구분.
-        <EmptyState
-          iconName="cloud-offline-outline"
-          title={t('common.loadFailed')}
-          subtitle={t('common.tryAgainLater')}
-          ctaLabel={t('common.retry')}
-          onCtaPress={onRetry}
-        />
-      ) : (
-        // 받은 좋아요 0개 — 탐색으로 유도하는 CTA.
-        <EmptyState
-          haruIcon="tab-likes-outline"
-          title={t('likes.empty.title')}
-          subtitle={t('likes.empty.text')}
-          ctaLabel={t('likes.empty.cta')}
-          onCtaPress={() => router.push('/(main)/(tabs)/discover')}
-        />
-      )}
-    </CardDeck>
+        )}
+      </CardDeck>
+    </View>
   );
 }
 
-// 잠긴 카드 위 공개 버튼. 다음 무료 카드까지 타이머 + "별사탕 2개로 공개하기".
-// 타이머가 끝나면 목록을 다시 읽어 이 카드가 무료로 열린다.
+const LIKES_SWIPE_HINT_KEY = 'haru_likes_swipe_hint_v1';
+
+// 아래 탭 바만큼 세로 공간이 좁아 사진을 조금 줄여 카드를 낮춘다 (위쪽 화살표 자리 확보).
+const LIKES_COVER_RATIO = 0.8;
+
+// 모자이크 카드 위 별사탕 공개 버튼. 다음 무료 카드에는 무료 오픈까지 타이머도 — 끝나면 목록을
+// 다시 읽어 서버가 그 카드를 연다.
 function RevealPanel({
   nextFreeRevealAt,
-  revealing,
+  disabled,
   onReveal,
   onFreeAgain,
 }: {
   nextFreeRevealAt: string | null;
-  revealing: boolean;
+  disabled: boolean;
   onReveal: () => void;
   onFreeAgain: () => void;
 }) {
@@ -254,8 +283,7 @@ function RevealPanel({
       <Button
         title={t('likes.locked.paidReveal')}
         onPress={onReveal}
-        loading={revealing}
-        disabled={revealing}
+        disabled={disabled}
         style={styles.lockedBtn}
       />
     </>
@@ -274,16 +302,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: radii.pill,
   },
-  requestBtn: {
-    marginTop: 14,
-    minWidth: 200,
-    borderRadius: radii.pill,
-  },
-  prevBtn: {
-    marginTop: 14,
-    padding: 6,
-  },
-  pressed: {
-    transform: [{ scale: 0.92 }],
+  deck: {
+    flex: 1,
   },
 });

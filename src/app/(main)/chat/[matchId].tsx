@@ -10,11 +10,12 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
+  Platform,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CountryFlag from 'react-native-country-flag';
 import { useTranslation } from 'react-i18next';
@@ -1042,7 +1043,12 @@ export default function ChatScreen() {
                 pressed && { opacity: 0.6 },
               ]}
             >
-              <Ionicons name="chevron-back" size={28} color={colors.text} />
+              {/* 다른 화면의 기본 헤더 뒤로가기와 같은 모양 (Android ←, iOS ‹). */}
+              {Platform.OS === 'ios' ? (
+                <Ionicons name="chevron-back" size={28} color={colors.text} />
+              ) : (
+                <MaterialIcons name="arrow-back" size={24} color={colors.text} />
+              )}
             </Pressable>
             <View style={styles.headerRightRow}>
               {matchId && !partnerDeleted && !matchUnmatched && (

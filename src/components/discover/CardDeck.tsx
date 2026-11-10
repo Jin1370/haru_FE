@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ScrollView, RefreshControl, StyleSheet } from 'react-native';
+import { ScrollView, RefreshControl, StyleSheet, View } from 'react-native';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { colors } from '@/constants/colors';
@@ -18,8 +18,9 @@ export function CardDeck({
   overlay,
   children,
 }: {
-  refreshing: boolean;
-  onRefresh: () => void;
+  // 없으면 스크롤·당겨서 새로고침 없이 고정 (카드 위로 밀기와 세로 스크롤이 겹치지 않게).
+  refreshing?: boolean;
+  onRefresh?: () => void;
   /** 첫 로드(캐시 없음) — 배경은 유지한 채 가운데 "불러오는 중...". */
   loading?: boolean;
   /** 스크롤뷰 형제로 렌더되는 절대배치 오버레이(스크롤과 함께 움직이면 안 되는 것). */
@@ -30,13 +31,15 @@ export function CardDeck({
     <PhotoBackground variant="app">
       {loading ? (
         <LoadingState />
+      ) : !onRefresh ? (
+        <View style={[styles.scroll, styles.content]}>{children}</View>
       ) : (
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.content}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
+              refreshing={!!refreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
               colors={[colors.primary]}

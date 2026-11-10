@@ -188,8 +188,10 @@ export interface DiscoverCandidate {
   locked?: boolean;
   // 탐색 플레이리스트 카드만: 이미 대화 신청함.
   requested?: boolean;
-  // 받은 좋아요 잠긴 카드만: 지금 무료로 열 수 있다 (화면에 띄우는 순간 연다).
-  free_available?: boolean;
+  // 받은 인사 잠긴 카드만: 다음 무료 카드 (무료 시각이 되면 서버가 자동으로 연다).
+  free_next?: boolean;
+  // 받은 인사: 이번 조회에서 서버가 무료로 막 연 카드 — 탭이 이 카드에서 시작한다.
+  just_revealed?: boolean;
 }
 
 // 탐색 플레이리스트 (BE mig 063). 안 연 칸의 price = 지금 열면 낼 별사탕 (0 = 무료).

@@ -1,3 +1,4 @@
+import { Image } from 'react-native';
 import { api } from './api';
 import { photoAccessStore } from '@/stores/photoAccess';
 import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
@@ -57,6 +58,24 @@ export async function getDiscoverQuota(): Promise<DiscoverQuota> {
 export async function getPlaylists(): Promise<PlaylistsResponse> {
   const tz = new Date().getTimezoneOffset();
   return api.get<PlaylistsResponse>(`/api/discover/playlists?tz_offset_minutes=${tz}`);
+}
+
+// 선택 화면이 열기 연출 동안 받아 둔 카드 — 카드 화면이 첫 렌더에 한 번 꺼내 쓴다
+// (연출이 끝난 뒤 다시 받느라 스피너가 뜨지 않게).
+let preloaded: { idx: number; cards: DiscoverCandidate[] } | null = null;
+export function preloadPlaylistCards(idx: number, cards: DiscoverCandidate[]) {
+  preloaded = { idx, cards };
+  // 첫 카드와 좌우 이웃(순환) 사진도 미리 받는다. 남은 연출 시간 안에 끝나지 않아도
+  // 기다리지 않는다 — 느린 망에서 화면 이동을 붙잡지 않게.
+  for (const c of [cards[0], cards[1], cards[cards.length - 1]]) {
+    const url = c?.photos?.[0];
+    if (url) Image.prefetch(url).catch(() => {});
+  }
+}
+export function takePreloadedPlaylistCards(idx: number): DiscoverCandidate[] | null {
+  const hit = preloaded?.idx === idx ? preloaded.cards : null;
+  preloaded = null;
+  return hit;
 }
 
 // 오늘 연 플레이리스트의 카드. 오늘 열지 않았거나 자정이 지났으면 404.

@@ -1,6 +1,6 @@
 import { StarChip } from '@/components/stars/StarChip';
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { HaruIcon } from '@/components/ui/HaruIcon';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -9,8 +9,8 @@ import { colors } from '@/constants/colors';
 import { fonts, fs, PIXEL_NUMBER_OFFSET_Y, HEADER_FONT_WEIGHT } from '@/constants/fonts';
 import { NavCat } from '@/components/cat/NavCat';
 
-// 화살표가 폭을 차지해 하트가 작게 그려지므로 다른 아이콘보다 크게 표시한다.
-const LIKES_ICON_SCALE = 1.4;
+// 받은 인사 탭의 손 흔드는 손 — 좌우 반전 (빈 화면·인사 애니메이션도 같게 뒤집는다).
+const MIRROR = { transform: [{ scaleX: -1 }] };
 
 export default function TabLayout() {
   const { t } = useTranslation();
@@ -84,11 +84,13 @@ export default function TabLayout() {
             title: t('tabs.likes'),
             headerTitle: t('likes.headerTitle'),
             headerRight: () => <StarChip />,
+            // 받은 인사 — 손 흔드는 손 (좌우 반전).
             tabBarIcon: ({ color, size, focused }) => (
-              <HaruIcon
-                name={focused ? 'tab-likes-filled' : 'tab-likes-outline'}
-                size={size * LIKES_ICON_SCALE}
+              <MaterialCommunityIcons
+                name={focused ? 'hand-wave' : 'hand-wave-outline'}
+                size={size}
                 color={color}
+                style={MIRROR}
               />
             ),
           }}

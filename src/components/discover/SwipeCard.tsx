@@ -3,20 +3,15 @@ import {
     View,
     Text,
     StyleSheet,
-    useWindowDimensions,
     Pressable,
     Animated,
 } from "react-native";
 import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import Svg, { Circle, Path, Text as SvgText } from "react-native-svg";
 import CountryFlag from "react-native-country-flag";
 import { useTranslation } from "react-i18next";
 import { useAudioPlayerStatus } from "expo-audio";
-import {
-    PanGestureHandler,
-    State,
-    type PanGestureHandlerStateChangeEvent,
-} from "react-native-gesture-handler";
 import { ProfilePhoto } from "@/components/ui/ProfilePhoto";
 import { ReportModal } from "@/components/moderation/ReportModal";
 import { colors, gradients, radii, shadows } from "@/constants/colors";
@@ -25,8 +20,10 @@ import { calculateAge } from "@/utils/age";
 import { genderIconName, genderLabelKey } from "@/utils/gender";
 import type { DiscoverCandidate } from "@/types";
 import { useRecoverableAudioPlayer } from "@/components/chat/sharedAudioPlayer";
+import { useInterestResolver } from "@/hooks/useInterestLabel";
+import { isNight } from "@/constants/theme";
+import { useAuthStore } from "@/stores/authStore";
 
-const ROTATION_RANGE = 14;
 
 const WAVE_BAR_COUNT = 32;
 const WAVE_BAR_WIDTH = 4;
@@ -76,9 +73,13 @@ interface WaveBarProps {
 // per frame, safe on both iOS and Android.
 function WaveBar({ height, index, played, isPlaying }: WaveBarProps) {
     const scale = useRef(new Animated.Value(1)).current;
+    const pulsed = useRef(false);
 
     useEffect(() => {
         if (!isPlaying) {
+            // 한 번도 재생 안 했으면 이미 제자리 — 카드를 그릴 때마다 막대 32개가
+            // 각자 애니메이션을 시작하지 않게.
+            if (!pulsed.current) return;
             scale.stopAnimation(() => {
                 Animated.timing(scale, {
                     toValue: 1,
@@ -89,6 +90,7 @@ function WaveBar({ height, index, played, isPlaying }: WaveBarProps) {
             return;
         }
 
+        pulsed.current = true;
         const loop = Animated.loop(
             Animated.sequence([
                 Animated.timing(scale, {
@@ -130,203 +132,55 @@ function WaveBar({ height, index, played, isPlaying }: WaveBarProps) {
     );
 }
 
-interface SwipeCardProps {
+
+interface CardFaceProps {
     candidate: DiscoverCandidate;
-    // 받은 좋아요 탭: 오른쪽 = 좋아요, 왼쪽 = 패스로 카드를 날려 보낸다.
-    onLike?: () => void;
-    onPass?: () => void;
-    // 탐색 플레이리스트: 좌우 버튼·스와이프가 이전/다음 카드 이동이다 (onNext 가 있으면
-    // 이 모드). 좋아요는 카드 밖의 대화 신청 버튼이 맡는다.
-    onPrev?: () => void;
-    onNext?: () => void;
-    canPrev?: boolean;
-    canNext?: boolean;
-    // 게이트 상태(미등록)에서는 like 가 카드를 넘기지 않고 등록 유도 모달만 띄운다.
-    // 이 경우 카드를 화면 밖으로 날려보내면 모달을 닫아도 빈 화면이 남으므로,
-    // like-스와이프 시 fly-out 대신 제자리로 스프링백한다.
-    gated?: boolean;
-    // 신고 접수 성공 직후 발화. 호출 화면이 덱에서 이 후보를 제거한다(신고는
-    // 스와이프가 아니므로 일일 카운트는 증가하지 않는다). BE report 라우트가
-    // auto-block 하므로 이후 fetch 에서도 제외된다.
-    onReported?: () => void;
+    width: number;
+    isPlaying: boolean;
+    progress: number;
+    hasAudio: boolean;
+    onTogglePlay: () => void;
+    onReport: () => void;
+    onLeft?: () => void;
+    onRight?: () => void;
+    // 누를 수 없으면(줄의 끝, 카드 1장) 넘기기 버튼을 그리지 않는다.
+    leftDisabled: boolean;
+    rightDisabled: boolean;
+    // 대화 신청 완료 — 사진 위 도장.
+    requested?: boolean;
+    // 사진 크기 (카드 안쪽 폭 대비). 세로 공간이 좁은 화면은 줄여 카드를 낮춘다 (사진은 정사각 그대로).
+    coverRatio?: number;
 }
 
-export function SwipeCard({
+// 카드 안쪽 모양. 오디오·제스처 없이 그리기만 해서, 캐러셀 옆 카드(CardPreview)가
+// 앞 카드와 똑같이 보이면서도 player 를 만들지 않는다.
+function CardFace({
     candidate,
-    onLike,
-    onPass,
-    onPrev,
-    onNext,
-    canPrev = false,
-    canNext = false,
-    gated = false,
-    onReported,
-}: SwipeCardProps) {
-    const nav = !!onNext;
+    width,
+    isPlaying,
+    progress,
+    hasAudio,
+    onTogglePlay,
+    onReport,
+    onLeft,
+    onRight,
+    leftDisabled,
+    rightDisabled,
+    requested,
+    coverRatio = 0.9,
+}: CardFaceProps) {
     const { t } = useTranslation();
-    const [reportOpen, setReportOpen] = useState(false);
-    const { width: SCREEN_WIDTH } = useWindowDimensions();
-    const CARD_WIDTH = SCREEN_WIDTH - 64;
-    const COVER_SIZE = Math.round((CARD_WIDTH - 40) * 0.9);
-    const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.28;
-    const FLY_OUT_DISTANCE = SCREEN_WIDTH * 1.4;
+    const COVER_SIZE = Math.round((width - 40) * coverRatio);
     const age = calculateAge(candidate.birth_date);
     const photo = candidate.photos[0];
-    const audioUrl = candidate.voice_intro_audio_url;
-
-    const { player, play } = useRecoverableAudioPlayer(audioUrl ?? undefined);
-    const status = useAudioPlayerStatus(player);
-    const isPlaying = audioUrl ? status.playing : false;
-    const duration = status.duration || 0;
-    const currentTime = status.currentTime || 0;
-
-    // expo-audio's status only emits ~every 500ms, so deriving progress
-    // straight from status.currentTime makes the waveform fill light up in
-    // chunks (multiple bars at once). Poll the live player.currentTime at
-    // 50ms while playing so the fill advances roughly bar-by-bar.
-    const [smoothProgress, setSmoothProgress] = useState(0);
-    useEffect(() => {
-        if (duration <= 0) {
-            setSmoothProgress(0);
-            return;
-        }
-        const sample = () => {
-            const t = player.currentTime ?? 0;
-            setSmoothProgress(Math.min(Math.max(t / duration, 0), 1));
-        };
-        sample();
-        if (!isPlaying) return;
-        const id = setInterval(sample, 50);
-        return () => clearInterval(id);
-    }, [isPlaying, duration, player, currentTime]);
-    const progress = smoothProgress;
-
-    const togglePlay = useCallback(() => {
-        if (!audioUrl) return;
-        if (isPlaying) {
-            player.pause();
-            return;
-        }
-        if (duration > 0 && currentTime >= duration) {
-            player.seekTo(0);
-        }
-        play();
-    }, [audioUrl, player, play, isPlaying, duration, currentTime]);
-
-    const translateX = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(0)).current;
-
-    const onGestureEvent = Animated.event(
-        [
-            {
-                nativeEvent: {
-                    translationX: translateX,
-                    translationY: translateY,
-                },
-            },
-        ],
-        { useNativeDriver: true },
-    );
-
-    const springBack = () => {
-        Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            damping: 18,
-            stiffness: 180,
-        }).start();
-        Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            damping: 18,
-            stiffness: 180,
-        }).start();
-    };
-
-    const onHandlerStateChange = (event: PanGestureHandlerStateChangeEvent) => {
-        if (event.nativeEvent.state !== State.END) return;
-        const tx = event.nativeEvent.translationX;
-        if (nav) {
-            // 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전. 끝에서는 제자리로 돌아온다.
-            const go = tx < -SWIPE_THRESHOLD && canNext ? onNext : tx > SWIPE_THRESHOLD && canPrev ? onPrev : null;
-            if (!go) {
-                springBack();
-                return;
-            }
-            Animated.timing(translateX, {
-                toValue: go === onNext ? -FLY_OUT_DISTANCE : FLY_OUT_DISTANCE,
-                duration: 240,
-                useNativeDriver: true,
-            }).start(() => go());
-            return;
-        }
-        if (tx > SWIPE_THRESHOLD) {
-            if (gated) {
-                // 게이트 상태의 like: 카드를 넘기지 않으므로 fly-out 하지 않고
-                // 제자리로 되돌린 뒤 모달만 띄운다(닫으면 카드가 그대로 보임).
-                springBack();
-                onLike?.();
-                return;
-            }
-            Animated.timing(translateX, {
-                toValue: FLY_OUT_DISTANCE,
-                duration: 240,
-                useNativeDriver: true,
-            }).start(() => onLike?.());
-        } else if (tx < -SWIPE_THRESHOLD) {
-            Animated.timing(translateX, {
-                toValue: -FLY_OUT_DISTANCE,
-                duration: 240,
-                useNativeDriver: true,
-            }).start(() => onPass?.());
-        } else {
-            springBack();
-        }
-    };
-
-    const rotate = translateX.interpolate({
-        inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-        outputRange: [`-${ROTATION_RANGE}deg`, "0deg", `${ROTATION_RANGE}deg`],
-        extrapolate: "clamp",
-    });
-
-    const likeOpacity = translateX.interpolate({
-        inputRange: [40, SWIPE_THRESHOLD],
-        outputRange: [0, 1],
-        extrapolate: "clamp",
-    });
-
-    const skipOpacity = translateX.interpolate({
-        inputRange: [-SWIPE_THRESHOLD, -40],
-        outputRange: [1, 0],
-        extrapolate: "clamp",
-    });
-
     return (
         <>
-        <PanGestureHandler
-            onGestureEvent={onGestureEvent}
-            onHandlerStateChange={onHandlerStateChange}
-            activeOffsetX={[-12, 12]}
-            failOffsetY={[-20, 20]}
-        >
-            <Animated.View
-                style={[
-                    styles.card,
-                    {
-                        width: CARD_WIDTH,
-                        transform: [{ translateX }, { translateY }, { rotate }],
-                    },
-                ]}
-            >
                 {/* 신고 진입점 — 우상단 방패(shield-outline) 아이콘. 안전 신고
                     컨트롤임을 명확히 하면서도 카드 표면의 핵심 액션(보이스 재생/
-                    스와이프) 시각 우위를 침범하지 않도록 작게 둔다. PanGestureHandler
-                    는 activeOffsetX=[-12,12] 라 탭(수평 이동 없음)은 제스처를
-                    발화시키지 않고 이 Pressable 이 캡처한다. 액션이 신고 1개라
+                    스와이프) 시각 우위를 침범하지 않도록 작게 둔다. 액션이 신고 1개라
                     중간 시트 없이 신고 모달 직행. */}
                 <Pressable
-                    onPress={() => setReportOpen(true)}
+                    onPress={onReport}
                     hitSlop={10}
                     accessibilityRole="button"
                     accessibilityLabel={t("matches.actions.report")}
@@ -341,32 +195,6 @@ export function SwipeCard({
                         color={colors.white}
                     />
                 </Pressable>
-                {nav ? null : (
-                    <>
-                        <Animated.View
-                            style={[
-                                styles.stamp,
-                                styles.likeStamp,
-                                { opacity: likeOpacity },
-                            ]}
-                        >
-                            <Text style={[styles.stampText, { color: colors.like }]}>
-                                LIKE
-                            </Text>
-                        </Animated.View>
-                        <Animated.View
-                            style={[
-                                styles.stamp,
-                                styles.skipStamp,
-                                { opacity: skipOpacity },
-                            ]}
-                        >
-                            <Text style={[styles.stampText, { color: colors.white }]}>
-                                PASS
-                            </Text>
-                        </Animated.View>
-                    </>
-                )}
                 <View style={[styles.cover, { width: COVER_SIZE, height: COVER_SIZE }]}>
                     {/* photo-watercolor-pipeline sprint: 디스커버 응답은 BE 가 변환본
                         (gpt-image-2 수채화 톤 스타일라이즈) 1장을 노출하므로 블러를
@@ -381,6 +209,7 @@ export function SwipeCard({
                         variant="swipe-card"
                         forceBlur={false}
                     />
+                    {requested ? <SentStamp /> : null}
                 </View>
 
                 <View style={styles.meta}>
@@ -424,6 +253,7 @@ export function SwipeCard({
                             </Text>
                         )}
                     </View>
+                    <InterestChips interests={candidate.interests} width={width} />
                 </View>
 
                 <View style={styles.progressWrap}>
@@ -441,33 +271,28 @@ export function SwipeCard({
                 </View>
 
                 <View style={styles.controls}>
+                    <View style={styles.sideSlot}>
+                    {!leftDisabled ? (
                     <Pressable
-                        onPress={nav ? onPrev : onPass}
-                        disabled={nav && !canPrev}
-                        accessibilityLabel={nav ? t("discover.playlist.prev") : "pass"}
+                        onPress={onLeft}
+                        accessibilityLabel={t("discover.playlist.prev")}
                         style={({ pressed }) => [
                             styles.sideBtn,
-                            nav && !canPrev && styles.sideBtnDisabled,
                             pressed && styles.pressed,
                         ]}
                     >
-                        {nav ? null : (
-                            <Text
-                                style={[styles.sideLabel, { color: colors.white }]}
-                            >
-                                Pass
-                            </Text>
-                        )}
                         <Ionicons
                             name="play-back"
                             size={30}
                             color={colors.white}
                         />
                     </Pressable>
+                    ) : null}
+                    </View>
 
                     <Pressable
-                        onPress={togglePlay}
-                        disabled={!audioUrl}
+                        onPress={onTogglePlay}
+                        disabled={!hasAudio}
                         accessibilityLabel="play-bio"
                         style={({ pressed }) => [
                             styles.playShell,
@@ -480,7 +305,7 @@ export function SwipeCard({
                             end={{ x: 1, y: 1 }}
                             style={[
                                 styles.playBtn,
-                                !audioUrl && styles.playBtnDisabled,
+                                !hasAudio && styles.playBtnDisabled,
                             ]}
                         >
                             <Ionicons
@@ -496,43 +321,277 @@ export function SwipeCard({
                         </LinearGradient>
                     </Pressable>
 
+                    <View style={styles.sideSlot}>
+                    {!rightDisabled ? (
                     <Pressable
-                        onPress={nav ? onNext : onLike}
-                        disabled={nav && !canNext}
-                        accessibilityLabel={nav ? t("discover.playlist.next") : "like"}
+                        onPress={onRight}
+                        accessibilityLabel={t("discover.playlist.next")}
                         style={({ pressed }) => [
                             styles.sideBtn,
-                            nav && !canNext && styles.sideBtnDisabled,
                             pressed && styles.pressed,
                         ]}
                     >
                         <Ionicons
                             name="play-forward"
                             size={30}
-                            color={nav ? colors.white : colors.like}
+                            color={colors.white}
                         />
-                        {nav ? null : (
-                            <Text
-                                style={[styles.sideLabel, { color: colors.like }]}
-                            >
-                                Like
-                            </Text>
-                        )}
                     </Pressable>
+                    ) : null}
+                    </View>
                 </View>
-            </Animated.View>
-        </PanGestureHandler>
-        <ReportModal
-            visible={reportOpen}
-            targetId={candidate.id}
-            targetName={candidate.display_name}
-            notice={t("matches.report.sideEffectNoticeDiscover")}
-            onClose={() => setReportOpen(false)}
-            onResolved={onReported}
-        />
         </>
     );
 }
+
+// 플레이리스트 캐러셀의 카드. 앞(active)이든 옆이든 같은 트리로 그려, 앞뒤가 바뀔 때
+// 사진·관심사를 새로 그리지 않는다(새로 그리면 사진이 깜빡인다). 재생기는 앞 카드에만
+// 붙는다 — 옆 카드마다 player 를 만들면 서로 밀어내며 재생이 끊긴다.
+export function PlaylistCard({
+    candidate,
+    width,
+    active,
+    canPrev,
+    canNext,
+    onPrev,
+    onNext,
+    onReported,
+    requested,
+    coverRatio,
+}: {
+    candidate: DiscoverCandidate;
+    width: number;
+    active: boolean;
+    canPrev: boolean;
+    canNext: boolean;
+    onPrev: () => void;
+    onNext: () => void;
+    onReported: () => void;
+    requested: boolean;
+    coverRatio?: number;
+}) {
+    const { t } = useTranslation();
+    const [reportOpen, setReportOpen] = useState(false);
+    const [voice, setVoice] = useState<VoiceState>(IDLE_VOICE);
+    const audioUrl = active ? candidate.voice_intro_audio_url : null;
+    useEffect(() => {
+        if (!audioUrl) setVoice(IDLE_VOICE);
+    }, [audioUrl]);
+    return (
+        <>
+            <View
+                pointerEvents={active ? "auto" : "none"}
+                style={[styles.card, requested && styles.cardRequested, { width }]}
+            >
+                <CardFace
+                    candidate={candidate}
+                    width={width}
+                    isPlaying={voice.isPlaying}
+                    progress={voice.progress}
+                    hasAudio={!!candidate.voice_intro_audio_url}
+                    onTogglePlay={voice.togglePlay}
+                    onReport={() => setReportOpen(true)}
+                    onLeft={onPrev}
+                    onRight={onNext}
+                    leftDisabled={!canPrev}
+                    rightDisabled={!canNext}
+                    requested={requested}
+                    coverRatio={coverRatio}
+                />
+            </View>
+            {audioUrl ? <VoiceController url={audioUrl} onChange={setVoice} /> : null}
+            {active ? (
+                <ReportModal
+                    visible={reportOpen}
+                    targetId={candidate.id}
+                    targetName={candidate.display_name}
+                    notice={t("matches.report.sideEffectNoticeDiscover")}
+                    onClose={() => setReportOpen(false)}
+                    onResolved={onReported}
+                />
+            ) : null}
+        </>
+    );
+}
+
+type VoiceState = ReturnType<typeof useVoiceIntro>;
+const IDLE_VOICE: VoiceState = { isPlaying: false, progress: 0, togglePlay: () => {} };
+
+// 재생기만 따로 둔 빈 컴포넌트 — 붙였다 떼도 카드 모양은 그대로다.
+function VoiceController({
+    url,
+    onChange,
+}: {
+    url: string;
+    onChange: (v: VoiceState) => void;
+}) {
+    const v = useVoiceIntro(url);
+    useEffect(() => {
+        onChange(v);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [v.isPlaying, v.progress, v.togglePlay, onChange]);
+    return null;
+}
+
+const MAX_CHIPS = 4;
+
+// 관심사 칩 한 줄. 나와 겹치는 관심사를 앞에 두고 테마색 테두리로 강조한다. 앞의 4개만
+// 보이고 나머지는 "+N". 칩이 길어 두 줄로 넘어가면 한 줄에 들어갈 때까지 개수를 줄인다
+// (재 본 뒤 보이게 해서 두 줄이 비치지 않게).
+// 잰 결과(한 줄에 들어가는 개수). 같은 카드가 옆 카드 → 앞 카드로 새로 그려질 때 다시 재며
+// 두 줄로 밀렸다 돌아오는 깜빡임이 없게 기억해 둔다.
+const fittedCount = new Map<string, number>();
+
+function InterestChips({ interests, width }: { interests: string[]; width: number }) {
+    const { t } = useTranslation();
+    const { resolveId, labelFor } = useInterestResolver();
+    const mine = useAuthStore((s) => s.profile?.interests);
+    const myIds = new Set((mine ?? []).map(resolveId));
+    const items = (interests ?? [])
+        .map((v) => ({ label: labelFor(v), shared: myIds.has(resolveId(v)) }))
+        .sort((a, b) => Number(b.shared) - Number(a.shared));
+    // 실제 보이는 칩(현재 언어 · 겹치는 것 먼저)으로 기억한다.
+    const cacheKey = `${width}|${items.map((it) => it.label).join(",")}`;
+    const cached = fittedCount.get(cacheKey);
+    const [max, setMax] = useState(cached ?? MAX_CHIPS);
+    const [fitted, setFitted] = useState(cached !== undefined);
+    // 칩 하나 높이와 줄 전체 높이 — onLayout 순서가 정해져 있지 않아 둘 다 잰 뒤 판단한다.
+    const size = useRef({ chip: 0, row: 0 });
+    const check = () => {
+        const { chip, row } = size.current;
+        if (!chip || !row) return;
+        if (row > chip * 1.5 && max > 1) {
+            size.current = { chip: 0, row: 0 };
+            setMax(max - 1);
+        } else {
+            fittedCount.set(cacheKey, max);
+            setFitted(true);
+        }
+    };
+    // 관심사가 없으면 대화를 권하는 칩 하나 — 모든 카드 높이도 같아진다.
+    if (!interests?.length)
+        return (
+            <View style={styles.chips}>
+                <View style={styles.chip}>
+                    <Text style={styles.chipText} numberOfLines={1}>
+                        {t("discover.playlist.noInterests")}
+                    </Text>
+                </View>
+            </View>
+        );
+    const rest = items.length - max;
+    return (
+        <View
+            // 개수를 줄이면 새로 그려 크기 변화와 상관없이 다시 잰다.
+            key={max}
+            style={[styles.chips, !fitted && styles.chipsMeasuring]}
+            onLayout={(e) => {
+                size.current.row = e.nativeEvent.layout.height;
+                check();
+            }}
+        >
+            {items.slice(0, max).map((it, i) => (
+                <View
+                    key={`${it.label}-${i}`}
+                    onLayout={
+                        i === 0
+                            ? (e) => {
+                                  size.current.chip = e.nativeEvent.layout.height;
+                                  check();
+                              }
+                            : undefined
+                    }
+                    style={[styles.chip, it.shared && styles.chipShared]}
+                >
+                    <Text style={styles.chipText} numberOfLines={1}>
+                        {it.label}
+                    </Text>
+                </View>
+            ))}
+            {rest > 0 ? (
+                <View style={styles.chip}>
+                    <Text style={styles.chipText}>+{rest}</Text>
+                </View>
+            ) : null}
+        </View>
+    );
+}
+
+// 대화를 신청한 카드의 사진 위 우체국 소인 — 이중 원 안에 HARU / SENT / 날짜, 오른쪽으로
+// 물결 소인선. 비스듬히 찍혀 잉크처럼 살짝 비친다. 플레이리스트는 하루 단위라 날짜는 오늘.
+function SentStamp() {
+    const d = new Date();
+    const date = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+    const ink = REQUESTED_PINK; // 테두리와 같은 색
+    const wave = (y: number) =>
+        `M 104 ${y} q 9 -7 18 0 t 18 0 t 18 0 t 18 0`;
+    return (
+        <View pointerEvents="none" style={styles.sentStamp}>
+            <Svg width="100%" height="100%" viewBox="0 0 180 100">
+                <Circle cx="50" cy="50" r="45" fill="none" stroke={ink} strokeWidth="5" />
+                <Circle cx="50" cy="50" r="36" fill="none" stroke={ink} strokeWidth="2" />
+                <SvgText x="50" y="33" fontSize="10" fontFamily={fonts.bold} fontWeight="bold" letterSpacing="2" fill={ink} textAnchor="middle">
+                    HARU
+                </SvgText>
+                <SvgText x="50" y="59" fontSize="25" fontFamily={fonts.bold} fontWeight="bold" letterSpacing="2" fill={ink} stroke={ink} strokeWidth="0.5" textAnchor="middle">
+                    SENT
+                </SvgText>
+                <SvgText x="50" y="74" fontSize="9" fontFamily={fonts.bold} fontWeight="bold" fill={ink} textAnchor="middle">
+                    {date}
+                </SvgText>
+                {[30, 44, 58, 72].map((y) => (
+                    <Path key={y} d={wave(y)} fill="none" stroke={ink} strokeWidth="4.25" strokeLinecap="round" />
+                ))}
+            </Svg>
+        </View>
+    );
+}
+
+// 보이스 한마디 재생 상태. 카드 한 장에 player 하나 — 이 훅을 부르는 컴포넌트가 곧 player 다.
+function useVoiceIntro(audioUrl: string | null | undefined) {
+    const { player, play } = useRecoverableAudioPlayer(audioUrl ?? undefined);
+    const status = useAudioPlayerStatus(player);
+    const isPlaying = audioUrl ? status.playing : false;
+    const duration = status.duration || 0;
+    const currentTime = status.currentTime || 0;
+
+    // expo-audio's status only emits ~every 500ms, so deriving progress
+    // straight from status.currentTime makes the waveform fill light up in
+    // chunks (multiple bars at once). Poll the live player.currentTime at
+    // 50ms while playing so the fill advances roughly bar-by-bar.
+    const [smoothProgress, setSmoothProgress] = useState(0);
+    useEffect(() => {
+        if (duration <= 0) {
+            setSmoothProgress(0);
+            return;
+        }
+        const sample = () => {
+            const t = player.currentTime ?? 0;
+            setSmoothProgress(Math.min(Math.max(t / duration, 0), 1));
+        };
+        sample();
+        if (!isPlaying) return;
+        const id = setInterval(sample, 50);
+        return () => clearInterval(id);
+    }, [isPlaying, duration, player, currentTime]);
+    const progress = smoothProgress;
+
+    const togglePlay = useCallback(() => {
+        if (!audioUrl) return;
+        if (isPlaying) {
+            player.pause();
+            return;
+        }
+        if (duration > 0 && currentTime >= duration) {
+            player.seekTo(0);
+        }
+        play();
+    }, [audioUrl, player, play, isPlaying, duration, currentTime]);
+    return { isPlaying, progress, togglePlay };
+}
+
+// 대화를 신청한 카드 테두리·도장 색 — 낮엔 분홍 노을 위에서도 띄는 핫핑크, 밤엔 진한 테마색.
+const REQUESTED_PINK = isNight ? colors.primaryDark : "#E05C9E";
 
 const styles = StyleSheet.create({
     card: {
@@ -561,6 +620,32 @@ const styles = StyleSheet.create({
         fontFamily: fonts.bold,
         color: colors.white,
         letterSpacing: 0.3,
+    },
+    chips: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "center",
+        gap: 6,
+        marginTop: 8,
+    },
+    chipsMeasuring: {
+        opacity: 0,
+    },
+    chip: {
+        paddingHorizontal: 9,
+        paddingVertical: 3,
+        borderRadius: radii.pill,
+        borderWidth: 1,
+        borderColor: "transparent",
+        backgroundColor: "rgba(255,255,255,0.12)",
+    },
+    chipShared: {
+        borderColor: colors.primary,
+    },
+    chipText: {
+        fontSize: fs(11),
+        fontFamily: fonts.medium,
+        color: "rgba(255,255,255,0.9)",
     },
     detailRow: {
         flexDirection: "row",
@@ -600,12 +685,34 @@ const styles = StyleSheet.create({
         width: WAVE_BAR_WIDTH,
         borderRadius: WAVE_BAR_WIDTH / 2,
     },
+    // 넘기기 버튼은 재생 버튼과 카드 가장자리 사이 가운데에 온다.
     controls: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "center",
-        gap: 18,
+        alignSelf: "stretch",
         marginTop: 10,
+    },
+    sideSlot: {
+        flex: 1,
+        alignItems: "center",
+    },
+    sentStamp: {
+        position: "absolute",
+        left: "6%",
+        bottom: "8%",
+        width: "62%",
+        aspectRatio: 1.8,
+        transform: [{ rotate: "-14deg" }],
+    },
+    // 대화를 신청한 카드 — 핫핑크 굵은 테두리 + 은은한 빛 (iOS 그림자. 안드로이드 elevation 은
+    // 반투명 바탕 카드에서 그림자가 비쳐 보여 쓰지 않는다).
+    cardRequested: {
+        borderWidth: 3,
+        borderColor: REQUESTED_PINK,
+        shadowColor: isNight ? colors.primary : REQUESTED_PINK,
+        shadowOpacity: 0.7,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 0 },
     },
     sideBtn: {
         height: 44,
@@ -615,14 +722,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         gap: 8,
         paddingHorizontal: 8,
-    },
-    sideBtnDisabled: {
-        opacity: 0.3,
-    },
-    sideLabel: {
-        fontSize: fs(12),
-        fontFamily: fonts.medium,
-        letterSpacing: 0.4,
     },
     playShell: {
         borderRadius: 30,
@@ -655,29 +754,5 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         backgroundColor: "rgba(0,0,0,0.35)",
         zIndex: 20,
-    },
-    stamp: {
-        position: "absolute",
-        top: 28,
-        paddingHorizontal: 14,
-        paddingVertical: 6,
-        borderRadius: radii.sm,
-        borderWidth: 3,
-        zIndex: 10,
-    },
-    likeStamp: {
-        left: 24,
-        transform: [{ rotate: "-14deg" }],
-        borderColor: colors.like,
-    },
-    skipStamp: {
-        right: 24,
-        transform: [{ rotate: "14deg" }],
-        borderColor: colors.white,
-    },
-    stampText: {
-        fontSize: fs(22),
-        fontFamily: fonts.bold,
-        letterSpacing: 2,
     },
 });

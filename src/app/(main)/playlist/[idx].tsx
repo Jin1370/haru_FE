@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { useTranslation } from 'react-i18next';
 import { useSWRConfig } from 'swr';
-import { SwipeCard } from '@/components/discover/SwipeCard';
+import { PlaylistCard } from '@/components/discover/SwipeCard';
+import { PlaylistCarousel, useDeckArea } from '@/components/discover/PlaylistCarousel';
+import { coverUrl } from '@/utils/playlistCover';
 import { LaunchPromoCard } from '@/components/discover/LaunchPromoCard';
 import { CardDeck } from '@/components/discover/CardDeck';
 import { computeDiscoverGate, showLikeGate, showMatchAlert } from '@/components/discover/DiscoverGate';
 import { StarChip } from '@/components/stars/StarChip';
-import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useMidnight } from '@/hooks/useMidnight';
 import * as discoverService from '@/services/discover';
@@ -18,7 +20,7 @@ import type { DiscoverCandidate } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
 import { useCatStore } from '@/stores/catStore';
 import { showAlert } from '@/stores/alertStore';
-import { colors, radii } from '@/constants/colors';
+import { colors } from '@/constants/colors';
 import { fonts, fs, HEADER_FONT_WEIGHT } from '@/constants/fonts';
 
 // 탐색 탭 2단계 — 연 플레이리스트의 카드. 좌우 버튼·스와이프로 순환하며 앞뒤로 오가고,
@@ -30,11 +32,12 @@ export default function PlaylistScreen() {
   const profile = useAuthStore((s) => s.profile);
   const userId = useAuthStore((s) => s.userId);
   const { mutate: globalMutate } = useSWRConfig();
-  const [cards, setCards] = useState<DiscoverCandidate[] | null>(null);
+  const [cards, setCards] = useState<DiscoverCandidate[] | null>(() =>
+    discoverService.takePreloadedPlaylistCards(idx),
+  );
   const [error, setError] = useState(false);
   const [pos, setPos] = useState(0);
   const [sending, setSending] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -52,8 +55,11 @@ export default function PlaylistScreen() {
     }
   }, [idx, t]);
 
+  // 선택 화면이 받아 둔 카드가 있으면 다시 받지 않는다.
+  const preloadedRef = useRef(cards !== null);
   useEffect(() => {
-    load();
+    if (preloadedRef.current) preloadedRef.current = false;
+    else load();
   }, [load]);
 
   // 자정이 되면 보고 있던 카드도 닫고 선택 화면으로 돌아간다 (선택 화면은 focus 때 새로 받는다).
@@ -71,6 +77,30 @@ export default function PlaylistScreen() {
 
   const current = cards?.[pos];
 
+  // 위로 밀어 신청하는 법을 기기마다 한 번만 안내한다 (카드가 처음 뜰 때). 본 기록은 토큰 저장에
+  // 쓰는 SecureStore 재사용 — catStore 와 같은 패턴.
+  const hinted = useRef(false);
+  useEffect(() => {
+    if (hinted.current || !cards?.length) return;
+    hinted.current = true;
+    SecureStore.getItemAsync(SWIPE_HINT_KEY)
+      .then((seen) => {
+        if (seen) return;
+        showAlert({ variant: 'info', title: t('discover.playlist.swipeHintTitle'), message: t('discover.playlist.swipeHint') });
+        SecureStore.setItemAsync(SWIPE_HINT_KEY, '1').catch(() => {});
+      })
+      .catch(() => {});
+  }, [cards, t]);
+
+  // 좌우로 넘길 카드의 사진을 미리 받는다 (순환 이동). 받아 둔 사진은 캐시에서 바로 끝난다.
+  useEffect(() => {
+    if (!cards?.length) return;
+    for (const d of [1, -1]) {
+      const url = cards[(pos + d + cards.length) % cards.length]?.photos?.[0];
+      if (url) Image.prefetch(url).catch(() => {});
+    }
+  }, [cards, pos]);
+
   // 처음 화면에 나온 카드를 바로 기록한다 — 기록이 빠지면 본 사람이 다음 날 다시 후보가
   // 되어 별사탕으로 산 플레이리스트에 섞일 수 있다. 실패한 기록은 화면을 나갈 때 다시 보낸다.
   const reported = useRef(new Set<string>());
@@ -87,12 +117,6 @@ export default function PlaylistScreen() {
     },
     [idx],
   );
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  }, [load]);
 
   const patchCard = (id: string, patch: Partial<DiscoverCandidate> | null) =>
     setCards((prev) =>
@@ -138,6 +162,9 @@ export default function PlaylistScreen() {
   };
 
   const count = cards?.length ?? 0;
+  // 양옆 이웃 카드가 조금씩 보이도록 카드 폭을 줄인다 (사진은 정사각형 그대로).
+  const cardWidth = useWindowDimensions().width - 72;
+  const deck = useDeckArea();
 
   return (
     <>
@@ -149,38 +176,49 @@ export default function PlaylistScreen() {
           headerStyle: { backgroundColor: colors.background },
           headerShadowVisible: false,
           headerTintColor: colors.text,
-          headerTitleStyle: { fontFamily: fonts.bold, fontWeight: HEADER_FONT_WEIGHT, fontSize: fs(17) },
+          // 제목 앞에 이 플레이리스트의 커버.
+          headerTitle: ({ children }) => (
+            <View style={styles.titleRow}>
+              <Image source={{ uri: coverUrl(idx) }} style={styles.cover} />
+              <Text style={styles.title}>{children}</Text>
+            </View>
+          ),
         }}
       />
+      <View ref={deck.ref} collapsable={false} style={styles.deck} onLayout={deck.onLayout}>
       <CardDeck
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
         loading={cards === null && !error}
         overlay={current ? <LaunchPromoCard /> : null}
       >
-        {current ? (
-          <>
-            <Text style={styles.position}>
-              {pos + 1} / {count}
-            </Text>
-            <SwipeCard
-              key={current.id}
-              candidate={current}
-              // 순환 — 첫 카드에서 이전은 마지막 카드, 마지막에서 다음은 첫 카드.
-              onPrev={() => setPos((p) => (p - 1 + count) % count)}
-              onNext={() => setPos((p) => (p + 1) % count)}
-              canPrev={count > 1}
-              canNext={count > 1}
-              onReported={() => patchCard(current.id, null)}
-            />
-            <Button
-              title={t(current.requested ? 'discover.playlist.requested' : 'discover.playlist.request')}
-              onPress={onRequest}
-              disabled={current.requested}
-              loading={sending}
-              style={styles.requestBtn}
-            />
-          </>
+        {current && cards ? (
+          // 내비게이션 바 겹침을 재기 전엔 숨긴다 — 재고 나서 아래 여백이 생기며 카드가 올라가 보이지 않게.
+          <View style={{ paddingBottom: deck.navOverlap, opacity: deck.measured ? 1 : 0 }}>
+          <PlaylistCarousel
+            cards={cards}
+            pos={pos}
+            onSettle={setPos}
+            cardWidth={cardWidth}
+            onSwipeUp={onRequest}
+            swipeUpLabel={t('discover.playlist.request')}
+            canSwipeUp={(card) => !card.requested}
+            showPosition
+            areaHeight={deck.areaHeight}
+            // 순환 — 첫 카드에서 이전은 마지막 카드, 마지막에서 다음은 첫 카드.
+            renderCard={(card, active, step) => (
+              <PlaylistCard
+                candidate={card}
+                width={cardWidth}
+                active={active}
+                canPrev={count > 1}
+                canNext={count > 1}
+                onPrev={() => step(-1)}
+                onNext={() => step(1)}
+                onReported={() => patchCard(card.id, null)}
+                requested={!!card.requested}
+              />
+            )}
+          />
+          </View>
         ) : error ? (
           <EmptyState
             iconName="cloud-offline-outline"
@@ -197,20 +235,31 @@ export default function PlaylistScreen() {
           />
         )}
       </CardDeck>
+      </View>
     </>
   );
 }
 
+const SWIPE_HINT_KEY = 'haru_playlist_swipe_hint_v1';
+
 const styles = StyleSheet.create({
-  position: {
-    marginBottom: 8,
-    fontSize: fs(13),
-    fontFamily: fonts.medium,
-    color: colors.onPhotoTextSecondary,
+  deck: {
+    flex: 1,
   },
-  requestBtn: {
-    marginTop: 14,
-    minWidth: 200,
-    borderRadius: radii.pill,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  cover: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+  },
+  title: {
+    fontFamily: fonts.bold,
+    fontWeight: HEADER_FONT_WEIGHT,
+    fontSize: fs(17),
+    color: colors.text,
   },
 });
