@@ -11,6 +11,15 @@ import { NavCat } from '@/components/cat/NavCat';
 
 // 받은 인사 탭의 손 흔드는 손 — 좌우 반전 (빈 화면·인사 애니메이션도 같게 뒤집는다).
 const MIRROR = { transform: [{ scaleX: -1 }] };
+// 탭 아이콘은 같은 size 를 줘도 아이콘마다 실제 도형 크기가 다르다. 채팅·프로필(Ionicons)의
+// 도형 높이(size 의 87%)에 맞춘 배율 — 각 아이콘의 도형 높이 비율로 87 을 나눈 값.
+// (탐색 81% / 83%, 받은 인사 90% / 92% — 선택 안 됨 / 선택)
+const ICON_SCALE = {
+  discoverOutline: 87 / 81,
+  discoverFilled: 87 / 83,
+  waveOutline: 87 / 90,
+  waveFilled: 87 / 92,
+};
 
 export default function TabLayout() {
   const { t } = useTranslation();
@@ -74,7 +83,11 @@ export default function TabLayout() {
             headerTitle: t('tabs.discover'),
             headerRight: () => <StarChip />,
             tabBarIcon: ({ color, size, focused }) => (
-              <HaruIcon name={focused ? 'tab-discover-filled' : 'tab-discover-outline'} size={size} color={color} />
+              <HaruIcon
+                name={focused ? 'tab-discover-filled' : 'tab-discover-outline'}
+                size={size * (focused ? ICON_SCALE.discoverFilled : ICON_SCALE.discoverOutline)}
+                color={color}
+              />
             ),
           }}
         />
@@ -86,12 +99,14 @@ export default function TabLayout() {
             headerRight: () => <StarChip />,
             // 받은 인사 — 손 흔드는 손 (좌우 반전).
             tabBarIcon: ({ color, size, focused }) => (
-              <MaterialCommunityIcons
-                name={focused ? 'hand-wave' : 'hand-wave-outline'}
-                size={size}
-                color={color}
-                style={MIRROR}
-              />
+              <View style={MIRROR}>
+                {focused ? (
+                  <MaterialCommunityIcons name="hand-wave" size={size * ICON_SCALE.waveFilled} color={color} />
+                ) : (
+                  // 선 두께를 다른 탭에 맞춰 깎은 윤곽 (HaruIcon 'tab-wave-outline').
+                  <HaruIcon name="tab-wave-outline" size={size * ICON_SCALE.waveOutline} color={color} />
+                )}
+              </View>
             ),
           }}
         />

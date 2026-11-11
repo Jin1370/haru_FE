@@ -173,6 +173,7 @@ export default {
             resetNote: "초기화까지 {{time}}",
             expired: "자정이 되어 플레이리스트가 초기화됐어요",
             noInterests: "대화하면서 알아가요",
+            replaced: "그 자리에 새 카드를 넣어드렸어요.",
             swipeHintTitle: "안내",
             swipeHint: "인사를 보내려면 카드를 위로 미세요.",
             request: "인사하기",
@@ -195,6 +196,7 @@ export default {
             refunded: "사용한 별사탕 {{count}}개를 돌려드렸어요.",
         },
         headerTitle: "받은 인사",
+        newBadge: "New!",
         swipeHint: "나에게 먼저 인사한 사람이에요. 카드를 위로 밀어 인사하면 바로 대화가 시작돼요.",
         empty: {
             title: "아직 받은 인사가 없어요",

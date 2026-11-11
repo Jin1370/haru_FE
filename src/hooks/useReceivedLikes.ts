@@ -18,9 +18,12 @@ export function useReceivedLikes() {
   const userId = useAuthStore((s) => s.userId);
   const { mutate: globalMutate } = useSWRConfig();
   const quota = useDiscoverQuota();
-  const { data, mutate, isLoading, error } = useSWR<DiscoverCandidate[]>(
+  // 처음 그릴 때 자동으로 다시 받지 않는다 — 화면이 탭에 들어올 때마다(첫 진입 포함) 직접
+  // 받는다. 둘 다 받으면 요청이 거의 동시에 두 번 나가 무료 카드 자동 공개가 겹친다.
+  const { data, mutate, error } = useSWR<DiscoverCandidate[]>(
     userId ? likesKey(userId) : null,
     likesFetcher,
+    { revalidateOnMount: false },
   );
   const candidates = data ?? [];
 
@@ -79,7 +82,8 @@ export function useReceivedLikes() {
   return {
     candidates,
     // 캐시가 이미 있으면 로딩 스피너를 띄우지 않는다(첫 로드에만 true).
-    loading: isLoading,
+    // 받아 둔 목록이 없으면 첫 목록이 올 때까지 로딩.
+    loading: data === undefined && !error,
     error: error ? (error as Error).message : null,
     loadCandidates,
     syncQuota,

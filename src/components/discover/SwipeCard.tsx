@@ -150,6 +150,8 @@ interface CardFaceProps {
     requested?: boolean;
     // 사진 크기 (카드 안쪽 폭 대비). 세로 공간이 좁은 화면은 줄여 카드를 낮춘다 (사진은 정사각 그대로).
     coverRatio?: number;
+    // 받은 인사: 무료 카드로 막 열려 처음 보는 카드 — 카드 왼쪽 위 "New!" 배지.
+    isNew?: boolean;
 }
 
 // 카드 안쪽 모양. 오디오·제스처 없이 그리기만 해서, 캐러셀 옆 카드(CardPreview)가
@@ -168,6 +170,7 @@ function CardFace({
     rightDisabled,
     requested,
     coverRatio = 0.9,
+    isNew = false,
 }: CardFaceProps) {
     const { t } = useTranslation();
     const COVER_SIZE = Math.round((width - 40) * coverRatio);
@@ -195,6 +198,18 @@ function CardFace({
                         color={colors.white}
                     />
                 </Pressable>
+                {/* 무료 카드로 막 열려 처음 보는 카드 — 카드 왼쪽 위 윗변에 걸쳐 (사진을 가리지 않게). */}
+                {isNew ? (
+                    // 재생 버튼과 같은 분홍 그라데이션.
+                    <LinearGradient
+                        colors={[...gradients.primary]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.newBadge}
+                    >
+                        <Text style={styles.newBadgeText}>{t("likes.newBadge")}</Text>
+                    </LinearGradient>
+                ) : null}
                 <View style={[styles.cover, { width: COVER_SIZE, height: COVER_SIZE }]}>
                     {/* photo-watercolor-pipeline sprint: 디스커버 응답은 BE 가 변환본
                         (gpt-image-2 수채화 톤 스타일라이즈) 1장을 노출하므로 블러를
@@ -210,6 +225,7 @@ function CardFace({
                         forceBlur={false}
                     />
                     {requested ? <SentStamp /> : null}
+
                 </View>
 
                 <View style={styles.meta}>
@@ -358,6 +374,7 @@ export function PlaylistCard({
     onReported,
     requested,
     coverRatio,
+    isNew,
 }: {
     candidate: DiscoverCandidate;
     width: number;
@@ -369,6 +386,7 @@ export function PlaylistCard({
     onReported: () => void;
     requested: boolean;
     coverRatio?: number;
+    isNew?: boolean;
 }) {
     const { t } = useTranslation();
     const [reportOpen, setReportOpen] = useState(false);
@@ -397,6 +415,7 @@ export function PlaylistCard({
                     rightDisabled={!canNext}
                     requested={requested}
                     coverRatio={coverRatio}
+                    isNew={isNew}
                 />
             </View>
             {audioUrl ? <VoiceController url={audioUrl} onChange={setVoice} /> : null}
@@ -695,6 +714,23 @@ const styles = StyleSheet.create({
     sideSlot: {
         flex: 1,
         alignItems: "center",
+    },
+    // 카드 윗변에 반쯤 걸쳐 단다 — 카드 위 여백(20)이 좁아 안쪽에 두면 사진을 가린다.
+    newBadge: {
+        position: "absolute",
+        top: -17,
+        left: 16,
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        borderRadius: radii.pill,
+        borderWidth: 1.5,
+        borderColor: colors.white,
+        zIndex: 20,
+    },
+    newBadgeText: {
+        fontSize: fs(12),
+        fontFamily: fonts.bold,
+        color: colors.white,
     },
     sentStamp: {
         position: "absolute",

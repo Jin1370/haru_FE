@@ -230,6 +230,8 @@ export interface SwipeResponse {
   skipped?: boolean;
   // skipped 이고 별사탕으로 공개한 받은 좋아요 카드에 좋아요했으면, 공개에 쓴 별사탕을 돌려준 개수.
   refunded_stars?: number;
+  // skipped 인 플레이리스트 카드 — 그 자리를 바로 채운 새 카드 (앱이 빠진 카드 자리에 넣는다).
+  replacements?: DiscoverCandidate[];
 }
 
 export interface DiscoverQuota {

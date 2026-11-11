@@ -16,6 +16,7 @@ import { colors, radii } from '@/constants/colors';
 import { fonts, fs } from '@/constants/fonts';
 import { LockedCard, useCountdown } from '@/components/discover/LockedCard';
 import { ApiRequestError } from '@/services/api';
+import type { DiscoverCandidate } from '@/types';
 
 // 받은 인사 탭 — 나에게 인사한 사람. 탐색 플레이리스트와 같은 카드 고리로, 옆으로 밀어
 // 오가고(카드 아래 이전·다음 버튼도) 위로 밀어 인사 — 매치되면 목록에서 빠진다. 유료화 ON 이면
@@ -51,11 +52,6 @@ export default function LikesScreen() {
   // 탭에 머무는 동안에는 보이던 순서를 유지한다 — 별사탕으로 연 카드가 그 자리에서 모자이크만
   // 벗겨지고, 양옆 카드와 번호가 갑자기 바뀌지 않게. 새로 온 카드는 뒤에 붙고 사라진 카드는 빠진다.
   const [epoch, setEpoch] = useState(0);
-  useFocusEffect(
-    useCallback(() => {
-      loadCandidates().finally(() => setEpoch((e) => e + 1));
-    }, [loadCandidates]),
-  );
   const order = useRef<{ epoch: number; ids: string[] }>({ epoch: -1, ids: [] });
   const candidates = useMemo(() => {
     const byId = new Map(serverCards.map((c) => [c.id, c]));
@@ -67,11 +63,42 @@ export default function LikesScreen() {
     order.current = { epoch, ids };
     return ids.map((id) => byId.get(id)!);
   }, [serverCards, epoch]);
+  const candidatesRef = useRef<DiscoverCandidate[]>([]);
+  candidatesRef.current = candidates;
+
+  // 서버는 무료 카드를 연 그 한 번의 응답에만 just_revealed 를 붙인다. 그 응답은 탭에 들어올 때의
+  // 중복 요청(SWR 첫 로드 + focus) 중 하나일 수도, 다른 탭에 있는 동안 무료 타이머가 끝나 받은
+  // 배경 응답일 수도 있다 — 받은 순간 기억해 두고 다음 시작 위치를 정할 때 쓴다.
+  const freshId = useRef<string | null>(null);
+  const justRevealedInResponse = serverCards.find((c) => c.just_revealed)?.id;
+  if (justRevealedInResponse) freshId.current = justRevealedInResponse;
+
+  // 무료로 막 열려 처음 보는 카드 — "New!" 배지. 다른 카드로 넘기거나 탭을 나가면 사라진다.
+  const [newId, setNewId] = useState<string | null>(null);
+
+  // 시작 위치: 방금 무료로 열린 카드 → 첫 모자이크 카드 → 첫 카드.
+  const startIndex = (list: DiscoverCandidate[]) => {
+    const fresh = freshId.current ? list.findIndex((c) => c.id === freshId.current) : -1;
+    if (fresh >= 0) setNewId(list[fresh].id);
+    return fresh >= 0 ? fresh : Math.max(0, list.findIndex((c) => c.locked));
+  };
+
+  // 들어오는 순간 받아 둔 목록으로 시작 위치를 잡는다 — 새 목록을 받는 동안 떠날 때 보던 카드가
+  // 보이지 않게. 무료로 열리는 카드는 맨 앞 모자이크 카드이고, 열리면 연 카드 묶음 맨 끝(같은
+  // 자리)으로 가므로 새 목록이 와도 위치가 그대로다(그 자리에서 모자이크만 벗겨진다).
+  useFocusEffect(
+    useCallback(() => {
+      if (candidatesRef.current.length > 0) setPos(startIndex(candidatesRef.current));
+      loadCandidates().finally(() => setEpoch((e) => e + 1));
+      return () => setNewId(null);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loadCandidates]),
+  );
 
   useEffect(() => {
     if (candidates.length === 0) return;
-    const fresh = candidates.findIndex((c) => c.just_revealed);
-    setPos(fresh >= 0 ? fresh : Math.max(0, candidates.findIndex((c) => c.locked)));
+    setPos(startIndex(candidates));
+    freshId.current = null;
     // 시작 위치는 다시 정리할 때(epoch)만 정한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [epoch]);
@@ -80,6 +107,9 @@ export default function LikesScreen() {
   }, [candidates.length, pos]);
 
   const current = candidates[pos];
+  useEffect(() => {
+    if (newId && current && current.id !== newId) setNewId(null);
+  }, [current, newId]);
 
   // 위로 밀어 인사하는 법을 기기마다 한 번만 안내한다 — 열린 카드가 처음 앞에 왔을 때.
   // 본 기록은 토큰 저장에 쓰는 SecureStore 재사용 (탐색 플레이리스트 안내와 같은 패턴).
@@ -200,6 +230,10 @@ export default function LikesScreen() {
               swipeUpLabel={t('discover.playlist.request')}
               canSwipeUp={(card) => !card.locked}
               compactHint
+              // "New!" 배지는 화살표·번호처럼 다른 카드로 80% 넘어가는 순간 사라진다.
+              onLiveChange={(i) => {
+                if (newId && candidates[i]?.id !== newId) setNewId(null);
+              }}
               areaHeight={deck.areaHeight}
               renderCard={(card, active, step) =>
                 card.locked ? (
@@ -227,6 +261,7 @@ export default function LikesScreen() {
                     onReported={() => removeCandidate(card.id)}
                     requested={false}
                     coverRatio={LIKES_COVER_RATIO}
+                    isNew={card.id === newId}
                   />
                 )
               }

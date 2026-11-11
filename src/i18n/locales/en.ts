@@ -175,6 +175,7 @@ export default {
       resetNote: 'Resets in {{time}}',
       expired: "It's midnight, so your playlists have been reset",
       noInterests: "Let's get to know each other",
+      replaced: "We've put a new card in its place.",
       swipeHintTitle: 'Tip',
       swipeHint: 'Swipe the card up to say hello.',
       request: 'Say hello',
@@ -197,6 +198,7 @@ export default {
       refunded: "We've returned the {{count}} Stars you used.",
     },
     headerTitle: 'Hellos',
+    newBadge: 'New!',
     swipeHint: 'This person said hello to you first. Swipe the card up to say hello back and start chatting right away.',
     empty: {
       title: 'No hellos yet',

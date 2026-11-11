@@ -139,8 +139,20 @@ export default function PlaylistScreen() {
       const res = await discoverService.swipe({ swiped_id: candidate.id, direction: 'like', source: 'playlist' });
       // 상대가 그사이 탈퇴·정지·차단됐다 (기록 없음). 사유는 말하지 않는다.
       if (res.skipped) {
-        patchCard(candidate.id, null);
-        showAlert({ variant: 'info', title: t('likes.gone.title'), message: t('likes.gone.next') });
+        const fill = res.replacements ?? [];
+        // 빠진 카드 자리에 새 카드를 그대로 끼워 넣는다 — 화면을 나갔다 오지 않아도 산 만큼 본다.
+        setCards((prev) => {
+          if (!prev) return prev;
+          const at = prev.findIndex((c) => c.id === candidate.id);
+          const rest = prev.filter((c) => c.id !== candidate.id);
+          if (at < 0) return [...rest, ...fill];
+          return [...rest.slice(0, at), ...fill, ...rest.slice(at)];
+        });
+        showAlert({
+          variant: 'info',
+          title: t('likes.gone.title'),
+          message: t(fill.length > 0 ? 'discover.playlist.replaced' : 'likes.gone.next'),
+        });
         return;
       }
       if (res.match) {

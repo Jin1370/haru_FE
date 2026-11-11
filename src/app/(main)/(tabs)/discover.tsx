@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+    ActivityIndicator,
     Animated,
     Easing,
     Image,
@@ -11,6 +12,7 @@ import {
 } from "react-native";
 import Svg, { Polygon } from "react-native-svg";
 import { router, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { CardDeck } from "@/components/discover/CardDeck";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -25,7 +27,7 @@ import { useDiscoverStore } from "@/stores/discoverStore";
 import { showAlert } from "@/stores/alertStore";
 import { colors } from "@/constants/colors";
 import { isNight } from "@/constants/theme";
-import { fonts, fs } from "@/constants/fonts";
+import { fonts, fs, PIXEL_NUMBER_OFFSET_Y } from "@/constants/fonts";
 import { coverUrl } from "@/utils/playlistCover";
 import {
     TILE_SHADOW,
@@ -225,10 +227,28 @@ export default function DiscoverScreen() {
         else setSelected(idx);
     };
 
-    const onSelect = (idx: number) => {
+    const onSelect = async (idx: number) => {
         if (!data || opening !== null || playing !== null) return;
-        if (data.playlists.find((p) => p.idx === idx)?.opened) playAndGo(idx);
-        else confirmOpen(idx, data);
+        if (data.playlists.find((p) => p.idx === idx)?.opened) {
+            playAndGo(idx);
+            return;
+        }
+        // 구매 확인 직전에 곡 수·가격을 새로 받는다 — 화면을 오래 켜 둔 사이 후보가 바뀌었으면
+        // 확인 창이 옛 인원·가격을 보여 주고, 서버가 다르다며 다시 묻게 된다.
+        setOpening(idx);
+        let fresh: PlaylistsResponse;
+        try {
+            fresh = await discoverService.getPlaylists();
+            setData(fresh);
+        } catch {
+            showAlert({ variant: "info", title: t("common.tryAgainLater") });
+            return;
+        } finally {
+            setOpening(null);
+        }
+        // 그사이 다른 기기에서 이 칸을 열었으면 바로 들어간다.
+        if (fresh.playlists.find((p) => p.idx === idx)?.opened) playAndGo(idx);
+        else confirmOpen(idx, fresh);
     };
 
     // 세 장이 한 화면에 들어오게 — 헤더·탭바 몫(약 300)을 뺀 높이를 3등분.
@@ -316,6 +336,7 @@ export default function DiscoverScreen() {
                                             ? t("discover.playlist.open")
                                             : undefined
                                     }
+                                    openLoading={opening === p.idx}
                                     onPress={() => onPressTile(p.idx)}
                                 />
                                 <View style={styles.cursorSpacer} />
@@ -337,6 +358,7 @@ function PlaylistTile({
     dimmed,
     playing,
     openLabel,
+    openLoading = false,
     onPress,
 }: {
     idx: number;
@@ -349,6 +371,8 @@ function PlaylistTile({
     playing: boolean;
     /** 아직 안 연 칸의 커버 위 '오픈' 버튼 (오늘 다른 칸을 연 뒤에만) */
     openLabel?: string;
+    /** 오픈을 누른 뒤 확인 창이 뜨기 전(목록 새로 받는 중) — 글자 대신 스피너. */
+    openLoading?: boolean;
     onPress: () => void;
 }) {
     const { t } = useTranslation();
@@ -457,7 +481,11 @@ function PlaylistTile({
                                 hitSlop={8}
                                 style={({ pressed }) => [styles.openButton, pressed && styles.pressed]}
                             >
-                                <Text style={styles.openText}>{openLabel}</Text>
+                                {/* 글자는 투명하게 남겨 버튼 크기를 그대로 두고 그 위에 스피너. */}
+                                <Text style={[styles.openText, openLoading && styles.hidden]}>{openLabel}</Text>
+                                {openLoading ? (
+                                    <ActivityIndicator size="small" color={colors.white} style={styles.openSpinner} />
+                                ) : null}
                             </Pressable>
                         </View>
                     )}
@@ -480,10 +508,18 @@ function ResetCountdown() {
     const left = Math.max(0, Math.floor((midnight.getTime() - now) / 1000));
     const pad = (v: number) => String(v).padStart(2, "0");
     const time = `${pad(Math.floor(left / 3600))}:${pad(Math.floor((left % 3600) / 60))}:${pad(left % 60)}`;
-    return <Text style={styles.note}>{t("discover.playlist.resetNote", { time })}</Text>;
+    // 어두운 반투명 알약에 시계 아이콘 + 굵은 글씨. 1시간 안 남으면 바탕을 테마색으로
+    // 채워 눈에 띄게 — 곧 초기화된다는 걸 놓치고 플레이리스트를 사지 않게.
+    const soon = left < 3600;
+    return (
+        <View style={[styles.reset, soon && styles.resetSoon]}>
+            <Ionicons name="time-outline" size={15} color={colors.white} />
+            <Text style={styles.resetText}>{t("discover.playlist.resetNote", { time })}</Text>
+        </View>
+    );
 }
 
-// 게임 대화창 — 바탕 없이 흰 테두리, 오른쪽 아래 ▼.
+// 게임 대화창 — 어두운 반투명 바탕에 흰 테두리, 오른쪽 아래 ▼.
 function DialogBox({ text }: { text: string }) {
     return (
         <View style={styles.dialog}>
@@ -501,7 +537,7 @@ function DialogBox({ text }: { text: string }) {
 }
 
 const CURSOR_SLOT_W = 72;
-// 바탕이 없는 낮 테마에서 밝은 노을 위 흰 글자가 묻히지 않게 (대화창·하단 안내).
+// 바탕이 없는 낮 테마에서 밝은 노을 위 흰 글자가 묻히지 않게 (대화창).
 const DAY_TEXT_SHADOW = isNight
     ? null
     : {
@@ -536,6 +572,12 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: colors.white,
         borderRadius: 999,
+    },
+    hidden: {
+        opacity: 0,
+    },
+    openSpinner: {
+        ...StyleSheet.absoluteFillObject,
     },
     openText: {
         fontSize: fs(13),
@@ -592,8 +634,8 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderColor: colors.white,
         borderRadius: 6,
-        // 낮 테마는 바탕 없이 테두리만, 밤 테마는 어두운 막.
-        backgroundColor: isNight ? "rgba(0,0,0,0.35)" : "transparent",
+        // 아래 초기화 알약과 같은 어두운 반투명 막 (밤은 조금 더 어둡게).
+        backgroundColor: isNight ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.22)",
     },
     dialogText: {
         fontSize: fs(14),
@@ -607,11 +649,24 @@ const styles = StyleSheet.create({
         right: 10,
         bottom: 9,
     },
-    note: {
-        textAlign: "center",
+    reset: {
+        alignSelf: "center",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 7,
+        borderRadius: 999,
+        backgroundColor: isNight ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.22)",
+    },
+    resetSoon: {
+        backgroundColor: colors.primary,
+    },
+    // 위 대화창 글씨(fs 14)보다 크지 않게.
+    resetText: {
         fontSize: fs(13),
-        fontFamily: fonts.medium,
+        fontFamily: fonts.bold,
         color: colors.white,
-        ...DAY_TEXT_SHADOW,
+        transform: [{ translateY: PIXEL_NUMBER_OFFSET_Y }],
     },
 });

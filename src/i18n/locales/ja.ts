@@ -173,6 +173,7 @@ export default {
             resetNote: "リセットまで {{time}}",
             expired: "午前0時になり、プレイリストがリセットされました",
             noInterests: "話しながら知っていこう",
+            replaced: "代わりに新しいカードを入れました。",
             swipeHintTitle: "ご案内",
             swipeHint: "あいさつを送るには、カードを上にスワイプしてください。",
             request: "あいさつする",
@@ -195,6 +196,7 @@ export default {
             refunded: "使った金平糖{{count}}個をお返ししました。",
         },
         headerTitle: "届いたあいさつ",
+        newBadge: "New!",
         swipeHint: "あなたに先にあいさつした人です。カードを上にスワイプしてあいさつすると、すぐにトークが始まります。",
         empty: {
             title: "まだあいさつが届いていません",

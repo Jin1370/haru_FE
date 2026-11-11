@@ -35,6 +35,7 @@ export function PlaylistCarousel<T extends { id: string }>({
   loop = true,
   showPosition = false,
   compactHint = false,
+  onLiveChange,
 }: {
   cards: T[];
   pos: number;
@@ -56,6 +57,8 @@ export function PlaylistCarousel<T extends { id: string }>({
   showPosition?: boolean;
   // 위쪽 화살표를 납작하게 (카드 위 여백이 좁은 화면 — 받은 인사).
   compactHint?: boolean;
+  // 앞 카드 표시(화살표·번호)가 바뀌는 순간 — 넘기는 도중 80% 넘어갔을 때.
+  onLiveChange?: (index: number) => void;
 }) {
   const n = cards.length;
   // 고리 위 자리 수. 카드가 적으면 같은 카드를 되풀이해 채운다 — 2장이면 양옆이 모두 다른
@@ -169,7 +172,9 @@ export function PlaylistCarousel<T extends { id: string }>({
     if (!loop) cur = vmod(cur);
     if (cur === liveRaw.current) return;
     liveRaw.current = cur;
-    liveSetter.current?.(vmod(cur) % Math.max(1, n));
+    const i = vmod(cur) % Math.max(1, n);
+    liveSetter.current?.(i);
+    onLiveChange?.(i);
   };
   useEffect(() => {
     const id = p.addListener(({ value }) => reportLive(value));
@@ -317,7 +322,7 @@ const HINT_W = 36;
 const HINT_H = 36;
 const HINT_GAP = 12;
 // 받은 인사 — 아래 탭 바만큼 카드 위 여백이 좁아 납작하게.
-const HINT_H_COMPACT = 24;
+const HINT_H_COMPACT = 30;
 const HINT_GAP_COMPACT = 10;
 
 // 앞 카드 둘레의 표시 — 카드 위 화살표(인사 안 한 카드)와 카드 아래 "몇 번째 / 전체".
