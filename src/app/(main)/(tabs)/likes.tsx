@@ -201,6 +201,13 @@ export default function LikesScreen() {
       }
     } catch (e) {
       const code = e instanceof ApiRequestError ? e.code : undefined;
+      // card_changed = 보던 목록이 낡아 그 카드를 열 수 없다 (예: 그사이 탐색 플레이리스트에 들어감).
+      // 목록을 다시 받아 카드를 정리하고, 차감되지 않았다는 것만 알린다 (이유는 말하지 않는다).
+      if (code === 'card_changed') {
+        loadCandidates();
+        showAlert({ variant: 'info', title: t('common.notice'), message: t('likes.gone.noCharge') });
+        return;
+      }
       showAlert(
         code === 'insufficient_stars'
           ? { variant: 'info', title: t('stars.insufficient') }
