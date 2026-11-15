@@ -106,13 +106,13 @@ export default function VerifyEmailScreen() {
       // 새 코드 발급 → 만료 타이머 리셋.
       setExpiresIn(OTP_EXPIRY_SEC);
       setError(null);
-      showAlert({ variant: 'info', title: t('verifyEmail.resent') });
+      showAlert({ variant: 'info', title: t('common.notice'), message: t('verifyEmail.resent') });
     } catch (e) {
       const msg =
         e instanceof ApiRequestError && e.code === 'OTP_RATE_LIMIT'
           ? t('verifyEmail.rateLimit')
           : userFacingError(e, t);
-      showAlert({ variant: 'info', title: msg });
+      showAlert({ variant: 'info', title: t('common.error'), message: msg });
     }
   };
 

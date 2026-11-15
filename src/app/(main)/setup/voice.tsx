@@ -16,13 +16,13 @@ export default function SetupVoice() {
   const insets = useSafeAreaInsets();
 
   // Skip leaves voice_clone_status as-is (BE side); intro will detect
-  // !voiceReady and self-skip, dropping the user straight onto preferences.
+  // !voiceReady and self-skip, dropping the user straight onto discover.
   const goNext = () => router.push('/(main)/setup/intro');
 
   return (
     <View style={styles.container}>
       <WizardHeader
-        step={4}
+        step={3}
         title={t('signupWizard.voiceTitle')}
         subtitle={t('signupWizard.voiceSubtitle')}
         onBack={() => router.back()}

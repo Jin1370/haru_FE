@@ -130,14 +130,20 @@ export async function getStarProducts(userId: string): Promise<StarProduct[]> {
   });
 }
 
-// 결제 완료면 true, 사용자가 결제창을 닫으면 false.
-export async function buyStarProduct(userId: string, product: StarProduct): Promise<boolean> {
+// done = 결제 완료, cancelled = 사용자가 결제창을 닫음, pending = 결제 대기(일본 편의점 결제 같은
+// 나중에 내는 결제, iOS 가족 공유 구매 요청). 대기는 실패가 아니다 — 결제가 끝나면 RevenueCat
+// 웹훅으로 별사탕이 지급된다. 실패로 안내하면 사용자가 다시 사서 두 번 결제할 수 있다.
+export type BuyResult = 'done' | 'cancelled' | 'pending';
+
+export async function buyStarProduct(userId: string, product: StarProduct): Promise<BuyResult> {
   const Purchases = await ensurePurchases(userId);
   try {
     await Purchases.purchaseStoreProduct(product.raw);
-    return true;
+    return 'done';
   } catch (e: any) {
-    if (e?.userCancelled) return false;
+    if (e?.userCancelled) return 'cancelled';
+    const pendingCode = loadNative<any>('purchases').PURCHASES_ERROR_CODE?.PAYMENT_PENDING_ERROR ?? '20';
+    if (e?.code === pendingCode) return 'pending';
     throw e;
   }
 }

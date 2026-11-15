@@ -6,7 +6,7 @@ import { colors } from '@/constants/colors';
 import { fonts, fs, HEADER_FONT_WEIGHT } from '@/constants/fonts';
 
 interface WizardHeaderProps {
-  step?: 1 | 2 | 3 | 4 | 5;
+  step?: 1 | 2 | 3 | 4;
   total?: number;
   title: string;
   subtitle?: string;
@@ -19,7 +19,7 @@ interface WizardHeaderProps {
   compact?: boolean;
 }
 
-export function WizardHeader({ step, total = 5, title, subtitle, onBack, compact = false }: WizardHeaderProps) {
+export function WizardHeader({ step, total = 4, title, subtitle, onBack, compact = false }: WizardHeaderProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 

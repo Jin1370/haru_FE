@@ -47,7 +47,7 @@ export default function PlaylistScreen() {
     } catch (e) {
       // 자정이 지나 플레이리스트가 사라졌다 (앱이 백그라운드여서 타이머를 놓친 경우 등).
       if (e instanceof ApiRequestError && e.status === 404) {
-        showAlert({ variant: 'info', title: t('discover.playlist.expired') });
+        showAlert({ variant: 'info', title: t('discover.playlist.swipeHintTitle'), message: t('discover.playlist.expired') });
         router.back();
         return;
       }
@@ -66,13 +66,13 @@ export default function PlaylistScreen() {
   useMidnight(
     useCallback(() => {
       router.back();
-      showAlert({ variant: 'info', title: t('discover.playlist.expired') });
+      showAlert({ variant: 'info', title: t('discover.playlist.swipeHintTitle'), message: t('discover.playlist.expired') });
     }, [t]),
   );
 
-  // 신고·탈퇴로 카드가 빠지면 위치를 범위 안으로 되돌린다.
+  // 신고·탈퇴로 마지막 카드가 빠지면 첫 카드로 — 카드는 순환하므로 마지막의 다음은 첫 카드다.
   useEffect(() => {
-    if (cards && pos > Math.max(0, cards.length - 1)) setPos(Math.max(0, cards.length - 1));
+    if (cards && pos > Math.max(0, cards.length - 1)) setPos(0);
   }, [cards, pos]);
 
   const current = cards?.[pos];
@@ -167,7 +167,7 @@ export default function PlaylistScreen() {
       patchCard(candidate.id, { requested: false });
       // 403 = 자정이 지나 오늘 플레이리스트가 아니다 — 다시 받으면 404 로 선택 화면에 간다.
       if (status === 403) load();
-      else showAlert({ variant: 'info', title: t('common.tryAgainLater') });
+      else showAlert({ variant: 'info', title: t('common.error'), message: t('common.tryAgainLater') });
     } finally {
       setSending(false);
     }

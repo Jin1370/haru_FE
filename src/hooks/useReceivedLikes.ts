@@ -20,10 +20,12 @@ export function useReceivedLikes() {
   const quota = useDiscoverQuota();
   // 처음 그릴 때 자동으로 다시 받지 않는다 — 화면이 탭에 들어올 때마다(첫 진입 포함) 직접
   // 받는다. 둘 다 받으면 요청이 거의 동시에 두 번 나가 무료 카드 자동 공개가 겹친다.
+  // 앱 복귀(AppState) 때도 다시 받지 않는다 — 타이머 카드를 보던 중 그 사람이 사라졌으면
+  // 정책상 타이머가 끝날 때까지 그대로 보여야 하는데, 복귀 재조회가 카드를 안내 없이 바꾼다.
   const { data, mutate, error } = useSWR<DiscoverCandidate[]>(
     userId ? likesKey(userId) : null,
     likesFetcher,
-    { revalidateOnMount: false },
+    { revalidateOnMount: false, revalidateOnFocus: false },
   );
   const candidates = data ?? [];
 
@@ -48,13 +50,19 @@ export function useReceivedLikes() {
 
   // 대화 신청. 받은 좋아요는 상대가 이미 나를 like 했으므로 거의 항상 즉시 매치 →
   // 카드가 목록에서 빠진다. 실패는 호출처로 던진다.
+  // 상대가 사라져 넘어갔으면(skipped) 목록을 다 받은 뒤 돌려준다 — 돌려받은 무료 카드로
+  // 다음 카드가 실제로 열렸는지(free_opened) 알아야 안내 문구를 고를 수 있다.
   const request = useCallback(
-    async (likerId: string): Promise<SwipeResponse> => {
+    async (likerId: string): Promise<SwipeResponse & { free_opened?: boolean }> => {
       const res = await discoverService.swipe({ swiped_id: likerId, direction: 'like', source: 'likes' });
-      if (res.refunded_stars) syncQuota();
+      if (res.refunded_stars || res.free_restored) syncQuota();
       if (res.match && userId) {
         globalMutate(matchesKey(userId));
         useCatStore.getState().celebrate();
+      }
+      if (res.skipped) {
+        const list = await mutate();
+        return { ...res, free_opened: !!list?.some((c) => c.just_revealed) };
       }
       mutate();
       return res;

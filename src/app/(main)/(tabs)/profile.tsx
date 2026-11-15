@@ -206,7 +206,7 @@ export default function ProfileScreen() {
       // (e.g. HEIC/JPEG stored in iCloud but not downloaded locally), throwing
       // "Failed to read picked image". Surface a retry hint instead of letting
       // the promise reject unhandled.
-      showAlert({ variant: 'info', title: t('profile.photoReadFailed') });
+      showAlert({ variant: 'info', title: t('common.error'), message: t('profile.photoReadFailed') });
       return null;
     }
 
@@ -218,7 +218,7 @@ export default function ProfileScreen() {
     if (!edited) return null;
     const info = await FileSystem.getInfoAsync(edited);
     if (info.exists && info.size && info.size > 5 * 1024 * 1024) {
-      showAlert({ variant: 'info', title: t('profile.photoSizeLimit') });
+      showAlert({ variant: 'info', title: t('common.notice'), message: t('profile.photoSizeLimit') });
       return null;
     }
     return edited;
@@ -226,7 +226,7 @@ export default function ProfileScreen() {
 
   const handleAddPhoto = async () => {
     if ((profile?.photos.length ?? 0) >= MAX_PHOTOS) {
-      showAlert({ variant: 'info', title: t('profile.maxPhotosReached') });
+      showAlert({ variant: 'info', title: t('common.notice'), message: t('profile.maxPhotosReached') });
       return;
     }
     const uri = await pickAndValidate();
@@ -420,7 +420,7 @@ export default function ProfileScreen() {
       // BE 가 우하단 "haru" 워터마크를 합성한 JPEG 사본을 로컬 캐시에 내려준다.
       const localUri = await downloadWatermarkedPhoto(position);
       await MediaLibrary.saveToLibraryAsync(localUri);
-      showAlert({ variant: 'info', title: t('profile.downloadSuccess') });
+      showAlert({ variant: 'info', title: t('common.notice'), message: t('profile.downloadSuccess') });
     } catch (e: any) {
       showAlert({
         variant: 'error',

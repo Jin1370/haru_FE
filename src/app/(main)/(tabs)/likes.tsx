@@ -52,6 +52,8 @@ export default function LikesScreen() {
   // 탭에 머무는 동안에는 보이던 순서를 유지한다 — 별사탕으로 연 카드가 그 자리에서 모자이크만
   // 벗겨지고, 양옆 카드와 번호가 갑자기 바뀌지 않게. 새로 온 카드는 뒤에 붙고 사라진 카드는 빠진다.
   const [epoch, setEpoch] = useState(0);
+  const focusedRef = useRef(false);
+  const focusLoadingRef = useRef(false);
   const order = useRef<{ epoch: number; ids: string[] }>({ epoch: -1, ids: [] });
   const candidates = useMemo(() => {
     const byId = new Map(serverCards.map((c) => [c.id, c]));
@@ -89,8 +91,16 @@ export default function LikesScreen() {
   useFocusEffect(
     useCallback(() => {
       if (candidatesRef.current.length > 0) setPos(startIndex(candidatesRef.current));
-      loadCandidates().finally(() => setEpoch((e) => e + 1));
-      return () => setNewId(null);
+      focusedRef.current = true;
+      focusLoadingRef.current = true;
+      loadCandidates().finally(() => {
+        focusLoadingRef.current = false;
+        setEpoch((e) => e + 1);
+      });
+      return () => {
+        focusedRef.current = false;
+        setNewId(null);
+      };
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loadCandidates]),
   );
@@ -103,12 +113,38 @@ export default function LikesScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [epoch]);
   useEffect(() => {
-    if (pos > candidates.length - 1) setPos(Math.max(0, candidates.length - 1));
+    // 마지막 카드가 빠지면 첫 카드로 — 카드는 순환하므로 마지막의 다음은 첫 카드다.
+    if (pos > candidates.length - 1) setPos(0);
   }, [candidates.length, pos]);
 
-  const current = candidates[pos];
+  // 탭에 머무는 동안 목록이 바뀌어도(앞쪽 카드가 빠짐 등) 보던 카드에 그대로 머문다 — 위치를
+  // 번호로만 들고 있으면 앞 카드가 빠질 때 다음 사람이 화면 가운데로 온다. 다시 정리할 때
+  // (epoch)는 위 시작 위치 규칙이 정한다.
+  const viewingId = useRef<string | undefined>(undefined);
+  const lastEpoch = useRef(epoch);
   useEffect(() => {
-    if (newId && current && current.id !== newId) setNewId(null);
+    if (lastEpoch.current !== epoch) {
+      lastEpoch.current = epoch;
+      return;
+    }
+    const id = viewingId.current;
+    const at = id ? candidates.findIndex((c) => c.id === id) : -1;
+    if (at >= 0 && at !== pos) setPos(at);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidates]);
+  useEffect(() => {
+    viewingId.current = candidates[pos]?.id;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pos]);
+
+  const current = candidates[pos];
+  // New! 는 그 카드를 한 번 본 뒤 다른 카드로 넘어갈 때 사라진다 — 다른 카드를 보는 중에
+  // 타이머가 끝나 열린 카드는 아직 안 봤으니, 사용자가 넘어가 볼 때까지 배지를 남긴다.
+  const newSeen = useRef<string | null>(null);
+  useEffect(() => {
+    if (!newId || !current) return;
+    if (current.id === newId) newSeen.current = newId;
+    else if (newSeen.current === newId) setNewId(null);
   }, [current, newId]);
 
   // 위로 밀어 인사하는 법을 기기마다 한 번만 안내한다 — 열린 카드가 처음 앞에 왔을 때.
@@ -127,10 +163,32 @@ export default function LikesScreen() {
   }, [current, t]);
 
   // 서버가 무료 카드를 막 열었으면 다음 무료 시각이 바뀌었다 — 타이머용으로 다시 받는다.
+  // 탭을 보고 있는 중에 타이머가 끝나 열린 경우엔 그 카드에 New! 를 붙이고, 타이머 카드를
+  // 보고 있었으면(그 카드가 열렸거나, 그사이 사라져 다른 카드가 열림) 열린 카드로 옮긴다.
+  // 탭에 들어올 때 열린 경우는 위 시작 위치(epoch)가 처리한다.
   const justRevealedId = candidates.find((c) => c.just_revealed)?.id;
   useEffect(() => {
-    if (justRevealedId) syncQuota();
-  }, [justRevealedId, syncQuota]);
+    if (!justRevealedId) return;
+    syncQuota();
+    if (!focusedRef.current || focusLoadingRef.current) return;
+    const at = candidates.findIndex((c) => c.id === justRevealedId);
+    if (at < 0) return;
+    freshId.current = null;
+    setNewId(justRevealedId);
+    const prev = prevCurrentRef.current;
+    if (!prev || prev.free_next || !candidates.some((c) => c.id === prev.id)) setPos(at);
+    // 타이머를 지켜보던 카드가 그사이 사라져 다른 사람이 열렸다 — 모자이크 너머 사진 형태가 달라
+    // 눈치챌 수 있으니 이유를 짧게 알린다 (탈퇴·정지·차단 같은 사유는 말하지 않는다).
+    if (prev?.free_next && prev.id !== justRevealedId) {
+      showAlert({ variant: 'info', title: t('common.notice'), message: t('likes.freeSwitched') });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [justRevealedId]);
+  // 위 효과가 "타이머가 끝나기 직전에 보던 카드" 를 알 수 있게 — 효과 순서상 이전 화면 값이 남아 있다.
+  const prevCurrentRef = useRef<DiscoverCandidate | undefined>(undefined);
+  useEffect(() => {
+    prevCurrentRef.current = current;
+  });
 
   // 모자이크 카드 공개 — 확인 후 별사탕 2개. 별사탕이 모자라면 사용하기가 충전 화면으로 보낸다.
   // 공개 중인 카드 — 버튼 대신 카드 위에 스피너를 띄운다.
@@ -143,10 +201,11 @@ export default function LikesScreen() {
       }
     } catch (e) {
       const code = e instanceof ApiRequestError ? e.code : undefined;
-      showAlert({
-        variant: 'info',
-        title: code === 'insufficient_stars' ? t('stars.insufficient') : t('common.tryAgainLater'),
-      });
+      showAlert(
+        code === 'insufficient_stars'
+          ? { variant: 'info', title: t('stars.insufficient') }
+          : { variant: 'info', title: t('common.error'), message: t('common.tryAgainLater') },
+      );
     } finally {
       setRevealingId(null);
     }
@@ -175,21 +234,24 @@ export default function LikesScreen() {
     try {
       const res = await request(current.id);
       // 상대가 그사이 탈퇴·정지·차단됐다. 사유를 말하지 않는다 — 차단·정지가 드러나면 안
-      // 된다. 별사탕으로 공개한 카드였으면 서버가 공개에 쓴 별사탕을 돌려준다.
+      // 된다. 별사탕으로 공개한 카드였으면 서버가 공개에 쓴 별사탕을, 무료 카드였으면 무료 카드를
+      // 돌려준다 (다음 카드가 무료로 열리고 New! 가 붙는다).
       if (res.skipped) {
         showAlert({
           variant: 'info',
           title: t('likes.gone.title'),
           message: res.refunded_stars
             ? t('likes.gone.refunded', { count: res.refunded_stars })
-            : t('likes.gone.next'),
+            : res.free_opened
+              ? t('likes.gone.freeRestored')
+              : t('likes.gone.next'),
         });
         return;
       }
       if (res.match) showMatchAlert(t, res.match.id);
     } catch {
       loadCandidates();
-      showAlert({ variant: 'info', title: t('common.tryAgainLater') });
+      showAlert({ variant: 'info', title: t('common.error'), message: t('common.tryAgainLater') });
     } finally {
       setSending(false);
     }
@@ -232,7 +294,7 @@ export default function LikesScreen() {
               compactHint
               // "New!" 배지는 화살표·번호처럼 다른 카드로 80% 넘어가는 순간 사라진다.
               onLiveChange={(i) => {
-                if (newId && candidates[i]?.id !== newId) setNewId(null);
+                if (newId && newSeen.current === newId && candidates[i]?.id !== newId) setNewId(null);
               }}
               areaHeight={deck.areaHeight}
               renderCard={(card, active, step) =>

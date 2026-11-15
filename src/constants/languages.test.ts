@@ -43,8 +43,7 @@ describe('isLanguageCode', () => {
 
 describe('preferred_languages sanitization', () => {
   it('.filter(isLanguageCode) drops legacy labels while keeping supported codes', () => {
-    // Contract relied upon by src/app/(main)/settings/preferences.tsx and
-    // src/app/(main)/setup/profile.tsx: the server may still return legacy
+    // Contract relied upon by src/app/(main)/setup/profile.tsx: the server may still return legacy
     // localized labels ("한국어") for accounts that were created before the
     // ISO-code migration. The UI must render only the supported codes and
     // self-heal on next save.

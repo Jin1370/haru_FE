@@ -18,6 +18,7 @@ export default {
         next: "다음",
         done: "완료",
         error: "오류",
+        notice: "안내",
         networkError: "네트워크가 불안정합니다. 다시 시도해주세요.",
         networkTimeout: "응답이 지연되고 있어요. 다시 시도해주세요.",
         serverError: "일시적인 문제가 발생했어요. 잠시 후 다시 시도해주세요.",
@@ -52,8 +53,6 @@ export default {
         voiceSkipWarning: "내 목소리를 등록하지 않으면 매칭 상대 탐색이 제한돼요.",
         introTitle: "보이스 한마디",
         introSubtitle: "고른 한마디가 등록된 목소리로 자동 생성돼요.",
-        preferencesTitle: "매칭 선호 설정",
-        preferencesSubtitle: "어떤 사람을 만나고 싶은지 알려주세요. 나중에 바꿀 수 있어요.",
         photosTitle: "프로필 사진",
         photosSubtitle: "매칭에 사용할 사진을 등록해주세요. 다음 단계를 진행하시는 동안 사진이 그림으로 자동 변환돼요.",
         photosAtLeastOne: "사진을 한 장 이상 등록해야 진행할 수 있어요.",
@@ -171,9 +170,9 @@ export default {
             buy: "{{count}}명의 목소리가 담겨있어요.",
             buyOne: "{{count}}명의 목소리가 담겨있어요.",
             resetNote: "초기화까지 {{time}}",
-            expired: "자정이 되어 플레이리스트가 초기화됐어요",
+            expired: "자정이 되어 플레이리스트가 초기화됐어요.",
             noInterests: "대화하면서 알아가요",
-            replaced: "그 자리에 새 카드를 넣어드렸어요.",
+            replaced: "새 카드를 넣어드렸어요.",
             swipeHintTitle: "안내",
             swipeHint: "인사를 보내려면 카드를 위로 미세요.",
             request: "인사하기",
@@ -194,9 +193,11 @@ export default {
             next: "다음 카드를 보여드릴게요.",
             noCharge: "별사탕은 차감되지 않았어요.",
             refunded: "사용한 별사탕 {{count}}개를 돌려드렸어요.",
+            freeRestored: "다음 카드를 무료로 열어드렸어요.",
         },
         headerTitle: "받은 인사",
         newBadge: "New!",
+        freeSwitched: "기다리던 분은 지금 만날 수 없게 되어, 다음 분을 열어드렸어요.",
         swipeHint: "나에게 먼저 인사한 사람이에요. 카드를 위로 밀어 인사하면 바로 대화가 시작돼요.",
         empty: {
             title: "아직 받은 인사가 없어요",
@@ -224,6 +225,8 @@ export default {
         shopUnavailable: "지금은 상품을 불러올 수 없어요. 잠시 후 다시 시도해 주세요.",
         purchaseDone: "충전이 완료됐어요. 반영까지 몇 초 걸릴 수 있어요.",
         purchaseFailed: "결제를 완료하지 못했어요. 다시 시도해 주세요.",
+        purchasePendingTitle: "결제 대기 중이에요",
+        purchasePending: "결제가 완료되면 별사탕이 자동으로 들어와요.",
     },
 
     matches: {
@@ -292,7 +295,6 @@ export default {
         },
         editProfile: "프로필 수정",
         voiceSettings: "내 목소리 등록",
-        matchingPreferences: "매칭 선호 설정",
         editBio: "보이스 한마디 등록",
         bioEmpty: "보이스 한마디를 골라보세요.",
         editBioSubtitle: "고른 한마디가 등록된 목소리로 자동 생성돼요.",
@@ -420,10 +422,6 @@ export default {
             intro: {
                 title: "요즘 무한 반복 중인 노래 있어요?",
                 body: "귀가 번쩍 뜨일 플레이리스트 교환하기",
-            },
-            preferences: {
-                title: "과몰입 방지! 혹시 MBTI가 뭐예요?",
-                body: "닮아서 편할지, 달라서 짜릿할지 궁금해요.",
             },
             photos: {
                 title: "올해 꼭 해내고 싶은 '단 하나'는?",

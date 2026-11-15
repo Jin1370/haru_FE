@@ -18,6 +18,7 @@ export default {
         next: "次へ",
         done: "完了",
         error: "エラー",
+        notice: "ご案内",
         networkError: "ネットワークが不安定です。もう一度お試しください。",
         networkTimeout: "応答に時間がかかっています。もう一度お試しください。",
         serverError: "一時的な問題が発生しました。しばらくしてからもう一度お試しください。",
@@ -52,8 +53,6 @@ export default {
         voiceSkipWarning: "声を登録しないと、相手を探せる範囲が制限されます。",
         introTitle: "ボイスひとこと",
         introSubtitle: "選んだひとことが登録された声で自動生成されます。",
-        preferencesTitle: "マッチング設定",
-        preferencesSubtitle: "どんな相手に出会いたいか教えてください。後で変更できます。",
         photosTitle: "プロフィール写真",
         photosSubtitle: "マッチングに使う写真を登録してください。次のステップに進む間に写真がイラストへ自動変換されます。",
         photosAtLeastOne: "写真を1枚以上登録すると次へ進めます。",
@@ -171,9 +170,9 @@ export default {
             buy: "{{count}}人の声が入っています。",
             buyOne: "{{count}}人の声が入っています。",
             resetNote: "リセットまで {{time}}",
-            expired: "午前0時になり、プレイリストがリセットされました",
+            expired: "午前0時になり、プレイリストがリセットされました。",
             noInterests: "話しながら知っていこう",
-            replaced: "代わりに新しいカードを入れました。",
+            replaced: "新しいカードを入れました。",
             swipeHintTitle: "ご案内",
             swipeHint: "あいさつを送るには、カードを上にスワイプしてください。",
             request: "あいさつする",
@@ -194,9 +193,11 @@ export default {
             next: "次のカードをお見せします。",
             noCharge: "金平糖は消費されていません。",
             refunded: "使った金平糖{{count}}個をお返ししました。",
+            freeRestored: "次のカードを無料で開きました。",
         },
         headerTitle: "届いたあいさつ",
         newBadge: "New!",
+        freeSwitched: "お待ちの方は現在お会いできなくなったため、次の方を公開しました。",
         swipeHint: "あなたに先にあいさつした人です。カードを上にスワイプしてあいさつすると、すぐにトークが始まります。",
         empty: {
             title: "まだあいさつが届いていません",
@@ -223,6 +224,8 @@ export default {
         shopUnavailable: "現在商品を読み込めません。しばらくしてからもう一度お試しください。",
         purchaseDone: "チャージが完了しました。反映まで数秒かかる場合があります。",
         purchaseFailed: "購入を完了できませんでした。もう一度お試しください。",
+        purchasePendingTitle: "お支払い待ちです",
+        purchasePending: "お支払いが完了すると、金平糖が自動で届きます。",
     },
 
     matches: {
@@ -290,7 +293,6 @@ export default {
         },
         editProfile: "プロフィール編集",
         voiceSettings: "自分の声を登録",
-        matchingPreferences: "マッチング設定",
         editBio: "ボイスひとことを登録",
         bioEmpty: "ボイスひとことを選んでみましょう。",
         editBioSubtitle: "選んだひとことが登録された声で自動生成されます。",
@@ -416,10 +418,6 @@ export default {
             intro: {
                 title: "最近、無限リピートしてる曲ありますか？",
                 body: "耳が冴えわたるプレイリストを交換しよう",
-            },
-            preferences: {
-                title: "重く考えないで、MBTIって何ですか？",
-                body: "似ていて落ち着くか、違っていて刺激的か、気になります。",
             },
             photos: {
                 title: "今年叶えたい『たった一つ』は？",

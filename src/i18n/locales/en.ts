@@ -18,6 +18,7 @@ export default {
     next: 'Next',
     done: 'Done',
     error: 'Error',
+    notice: 'Notice',
     networkError: 'Network connection is unstable. Please try again.',
     networkTimeout: 'The request is taking too long. Please try again.',
     serverError: 'Something went wrong on our end. Please try again later.',
@@ -52,8 +53,6 @@ export default {
     voiceSkipWarning: "Without registering your voice, you can't discover potential matches.",
     introTitle: 'Voice intro',
     introSubtitle: 'Your chosen line is auto-generated with your registered voice.',
-    preferencesTitle: 'Matching Preferences',
-    preferencesSubtitle: 'Tell us who you want to meet. You can change this later.',
     photosTitle: 'Profile Photos',
     photosSubtitle: 'Add photos to use for matching. Your photos are converted to illustrations while you go through the next steps.',
     photosAtLeastOne: 'Please add at least one photo to continue.',
@@ -173,9 +172,9 @@ export default {
       buy: 'It has {{count}} voices.',
       buyOne: 'It has {{count}} voice.',
       resetNote: 'Resets in {{time}}',
-      expired: "It's midnight, so your playlists have been reset",
+      expired: "It's midnight, so your playlists have been reset.",
       noInterests: "Let's get to know each other",
-      replaced: "We've put a new card in its place.",
+      replaced: "We've added a new card.",
       swipeHintTitle: 'Tip',
       swipeHint: 'Swipe the card up to say hello.',
       request: 'Say hello',
@@ -196,9 +195,11 @@ export default {
       next: "Here's the next one.",
       noCharge: "You weren't charged any Stars.",
       refunded: "We've returned the {{count}} Stars you used.",
+      freeRestored: "We've opened the next card for free.",
     },
     headerTitle: 'Hellos',
     newBadge: 'New!',
+    freeSwitched: "The person you were waiting for isn't available right now, so we opened the next one.",
     swipeHint: 'This person said hello to you first. Swipe the card up to say hello back and start chatting right away.',
     empty: {
       title: 'No hellos yet',
@@ -225,6 +226,8 @@ export default {
     shopUnavailable: "Products can't be loaded right now. Please try again later.",
     purchaseDone: 'Purchase complete. It may take a few seconds to appear.',
     purchaseFailed: "The purchase couldn't be completed. Please try again.",
+    purchasePendingTitle: 'Payment pending',
+    purchasePending: 'Your Stars will be added automatically once the payment is complete.',
   },
 
   matches: {
@@ -293,7 +296,6 @@ export default {
     },
     editProfile: 'Edit Profile',
     voiceSettings: 'Register My Voice',
-    matchingPreferences: 'Matching Preferences',
     editBio: 'Set Voice intro',
     bioEmpty: 'Pick a voice intro.',
     editBioSubtitle: 'Your chosen line is auto-generated with your registered voice.',
@@ -421,10 +423,6 @@ export default {
       intro: {
         title: 'Got a song on infinite repeat lately?',
         body: "Swap playlists that'll wake your ears up",
-      },
-      preferences: {
-        title: "Just for fun — what's your MBTI?",
-        body: "Curious if we'll click by being alike, or spark by being different.",
       },
       photos: {
         title: 'The one thing you want to do this year?',

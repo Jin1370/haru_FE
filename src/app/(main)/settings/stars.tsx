@@ -56,13 +56,15 @@ export default function StarsScreen() {
     if (!userId || busy) return;
     setBusy(product.id);
     try {
-      const done = await buyStarProduct(userId, product);
-      if (done) {
-        showAlert({ variant: 'info', title: t('stars.purchaseDone') });
+      const result = await buyStarProduct(userId, product);
+      if (result === 'done') {
+        showAlert({ variant: 'info', title: t('common.notice'), message: t('stars.purchaseDone') });
         void syncAfterGrant();
+      } else if (result === 'pending') {
+        showAlert({ variant: 'info', title: t('stars.purchasePendingTitle'), message: t('stars.purchasePending') });
       }
     } catch {
-      showAlert({ variant: 'info', title: t('stars.purchaseFailed') });
+      showAlert({ variant: 'info', title: t('common.error'), message: t('stars.purchaseFailed') });
     } finally {
       setBusy(null);
     }
@@ -74,7 +76,7 @@ export default function StarsScreen() {
     try {
       if (await watchRewardedAd(userId)) void syncAfterGrant();
     } catch {
-      showAlert({ variant: 'info', title: t('stars.adsUnavailable') });
+      showAlert({ variant: 'info', title: t('common.notice'), message: t('stars.adsUnavailable') });
     } finally {
       setBusy(null);
     }

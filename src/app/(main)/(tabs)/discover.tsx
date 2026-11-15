@@ -164,7 +164,8 @@ export default function DiscoverScreen() {
             } else {
                 showAlert({
                     variant: "info",
-                    title: t("common.tryAgainLater"),
+                    title: t("common.error"),
+                    message: t("common.tryAgainLater"),
                 });
             }
         } finally {
@@ -241,7 +242,7 @@ export default function DiscoverScreen() {
             fresh = await discoverService.getPlaylists();
             setData(fresh);
         } catch {
-            showAlert({ variant: "info", title: t("common.tryAgainLater") });
+            showAlert({ variant: "info", title: t("common.error"), message: t("common.tryAgainLater") });
             return;
         } finally {
             setOpening(null);
@@ -508,11 +509,9 @@ function ResetCountdown() {
     const left = Math.max(0, Math.floor((midnight.getTime() - now) / 1000));
     const pad = (v: number) => String(v).padStart(2, "0");
     const time = `${pad(Math.floor(left / 3600))}:${pad(Math.floor((left % 3600) / 60))}:${pad(left % 60)}`;
-    // 어두운 반투명 알약에 시계 아이콘 + 굵은 글씨. 1시간 안 남으면 바탕을 테마색으로
-    // 채워 눈에 띄게 — 곧 초기화된다는 걸 놓치고 플레이리스트를 사지 않게.
-    const soon = left < 3600;
+    // 어두운 반투명 알약에 시계 아이콘 + 굵은 글씨.
     return (
-        <View style={[styles.reset, soon && styles.resetSoon]}>
+        <View style={styles.reset}>
             <Ionicons name="time-outline" size={15} color={colors.white} />
             <Text style={styles.resetText}>{t("discover.playlist.resetNote", { time })}</Text>
         </View>
@@ -658,9 +657,6 @@ const styles = StyleSheet.create({
         paddingVertical: 7,
         borderRadius: 999,
         backgroundColor: isNight ? "rgba(0,0,0,0.35)" : "rgba(0,0,0,0.22)",
-    },
-    resetSoon: {
-        backgroundColor: colors.primary,
     },
     // 위 대화창 글씨(fs 14)보다 크지 않게.
     resetText: {

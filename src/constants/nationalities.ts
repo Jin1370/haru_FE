@@ -1,7 +1,7 @@
 // Whitelisted nationalities for launch (ISO-3166-1 alpha-2). Locked at
 // launch policy review — keep in sync with `haru_BE/src/schemas/profile.ts`
 // `NATIONALITY_CODES`. Any change requires product + i18n + safety sign-off.
-// Order here drives the picker order in setup/edit-profile/preferences.
+// Order here drives the picker order in setup/edit-profile.
 import type { LanguageCode } from './languages';
 
 export const SUPPORTED_NATIONALITIES = [

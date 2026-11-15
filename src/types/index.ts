@@ -230,6 +230,8 @@ export interface SwipeResponse {
   skipped?: boolean;
   // skipped 이고 별사탕으로 공개한 받은 좋아요 카드에 좋아요했으면, 공개에 쓴 별사탕을 돌려준 개수.
   refunded_stars?: number;
+  // skipped 이고 무료 카드로 공개한 카드였으면 true — 무료 카드를 돌려받아 다음 조회 때 다음 카드가 무료로 열린다.
+  free_restored?: boolean;
   // skipped 인 플레이리스트 카드 — 그 자리를 바로 채운 새 카드 (앱이 빠진 카드 자리에 넣는다).
   replacements?: DiscoverCandidate[];
 }
@@ -455,21 +457,3 @@ export interface ReportRequest {
   description?: string;
 }
 
-// === Preference ===
-export interface UserPreference {
-  user_id: string;
-  min_age: number;
-  max_age: number;
-  preferred_genders: ('male' | 'female' | 'other')[];
-  // ISO-3166-1 alpha-2 country codes. Empty = no nationality preference.
-  // (Language preference removed — mig 042 — language derives from nationality.)
-  preferred_nationalities: string[];
-  updated_at?: string;
-}
-
-export interface PreferenceUpdateRequest {
-  min_age?: number;
-  max_age?: number;
-  preferred_genders?: ('male' | 'female' | 'other')[];
-  preferred_nationalities?: string[];
-}

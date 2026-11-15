@@ -121,7 +121,7 @@ export default function SetupIntro() {
   const hasBioInput = bio.trim().length > 0;
 
   // Pre-redirect render: keep blank to avoid a one-frame flash of the locked
-  // copy when we already know we're about to bounce to preferences.
+  // copy when we already know we're about to bounce to discover.
   if (profile && !voiceReady) {
     return <View style={styles.container} />;
   }
@@ -129,7 +129,7 @@ export default function SetupIntro() {
   return (
     <View style={styles.container}>
       <WizardHeader
-        step={5}
+        step={4}
         title={t('signupWizard.introTitle')}
         subtitle={t('signupWizard.introSubtitle')}
         onBack={() => router.back()}

@@ -68,7 +68,6 @@ export default function MainLayout() {
       <Stack.Screen name="setup/consent" />
       <Stack.Screen name="setup/profile" />
       <Stack.Screen name="setup/photos" />
-      <Stack.Screen name="setup/preferences" />
       <Stack.Screen name="setup/voice" />
       <Stack.Screen name="setup/intro" />
       {/* 탐색 탭 2단계 — 연 플레이리스트의 카드. 헤더는 화면 안에서 켠다. */}
