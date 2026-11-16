@@ -68,6 +68,7 @@ export default function PlaylistScreen() {
       router.back();
       showAlert({ variant: 'info', title: t('discover.playlist.swipeHintTitle'), message: t('discover.playlist.expired') });
     }, [t]),
+    discoverService.playlistResetsAt(),
   );
 
   // 신고·탈퇴로 마지막 카드가 빠지면 첫 카드로 — 카드는 순환하므로 마지막의 다음은 첫 카드다.

@@ -57,7 +57,16 @@ export async function getDiscoverQuota(): Promise<DiscoverQuota> {
 // 오늘의 탐색 플레이리스트 3칸 (BE mig 063). tz = 사용자 로컬 자정 경계.
 export async function getPlaylists(): Promise<PlaylistsResponse> {
   const tz = new Date().getTimezoneOffset();
-  return api.get<PlaylistsResponse>(`/api/discover/playlists?tz_offset_minutes=${tz}`);
+  const res = await api.get<PlaylistsResponse>(`/api/discover/playlists?tz_offset_minutes=${tz}`);
+  lastResetsAt = res.resets_at ?? null;
+  return res;
+}
+
+// 마지막으로 받은 초기화 시각 — 카드 화면은 늘 선택 화면을 거쳐 들어가고 그날 세 칸은 같은
+// 시각에 끝나므로, 카드 화면의 자정 처리가 이 값을 쓴다.
+let lastResetsAt: string | null = null;
+export function playlistResetsAt(): string | null {
+  return lastResetsAt;
 }
 
 // 선택 화면이 열기 연출 동안 받아 둔 카드 — 카드 화면이 첫 렌더에 한 번 꺼내 쓴다

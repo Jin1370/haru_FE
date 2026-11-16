@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 import { CardDeck } from "@/components/discover/CardDeck";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useDiscoverQuota } from "@/hooks/useDiscoverQuota";
-import { useMidnight } from "@/hooks/useMidnight";
+import { resetTargetMs, useMidnight } from "@/hooks/useMidnight";
 import * as discoverService from "@/services/discover";
 import { ApiRequestError } from "@/services/api";
 import { preloadTabData } from "@/lib/swr";
@@ -112,7 +112,7 @@ export default function DiscoverScreen() {
     }, [reloadVersion, load]);
 
     // 자정이 지나면 새 플레이리스트를 받는다.
-    useMidnight(load);
+    useMidnight(load, data?.resets_at);
 
     const goTo = (idx: number) =>
         router.push({
@@ -344,7 +344,7 @@ export default function DiscoverScreen() {
                             </View>
                         ))}
                     </View>
-                    <ResetCountdown />
+                    <ResetCountdown resetsAt={data?.resets_at} />
                 </Pressable>
             )}
         </CardDeck>
@@ -496,17 +496,15 @@ function PlaylistTile({
     );
 }
 
-// 하단 "플레이리스트 초기화까지 hh:mm:ss" — 로컬 자정까지 1초마다 줄어든다.
-function ResetCountdown() {
+// 하단 "플레이리스트 초기화까지 hh:mm:ss" — 서버 초기화 시각(없으면 로컬 자정)까지 1초마다 줄어든다.
+function ResetCountdown({ resetsAt }: { resetsAt?: string }) {
     const { t } = useTranslation();
     const [now, setNow] = useState(() => Date.now());
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(id);
     }, []);
-    const midnight = new Date(now);
-    midnight.setHours(24, 0, 0, 0);
-    const left = Math.max(0, Math.floor((midnight.getTime() - now) / 1000));
+    const left = Math.max(0, Math.floor((resetTargetMs(resetsAt) - now) / 1000));
     const pad = (v: number) => String(v).padStart(2, "0");
     const time = `${pad(Math.floor(left / 3600))}:${pad(Math.floor((left % 3600) / 60))}:${pad(left % 60)}`;
     // 어두운 반투명 알약에 시계 아이콘 + 굵은 글씨.

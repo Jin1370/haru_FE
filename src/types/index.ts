@@ -207,6 +207,8 @@ export interface PlaylistsResponse {
   available_count: number;
   // 자르지 않은 남은 후보 수. 옛 BE 는 안 보낸다.
   candidate_count?: number;
+  // 초기화 시각 (ISO). 연 칸이 끝나는 시각, 없으면 지금 열면 끝날 시각. 옛 BE 는 안 보낸다.
+  resets_at?: string;
   playlists: PlaylistSlot[];
 }
 

@@ -7,23 +7,30 @@ function nextLocalMidnightMs(): number {
   return d.getTime();
 }
 
-// 사용자 로컬 자정마다 onMidnight 를 부른다 (탐색 플레이리스트 초기화 시각 — 서버도 같은
-// 로컬 날짜로 나눈다). 백그라운드에서는 타이머가 멈출 수 있어, 앱으로 돌아왔을 때 자정을
-// 지났으면 그때 부른다.
-export function useMidnight(onMidnight: () => void) {
+// 플레이리스트 초기화 시각(ms). 서버가 준 resets_at — 그날 처음 연 시각의 시간대 자정이라 그 뒤
+// 휴대폰 시간대가 바뀌어도 서버와 같다. 없으면(옛 BE) 휴대폰 로컬 자정.
+export function resetTargetMs(resetsAt?: string | null): number {
+  const ms = resetsAt ? Date.parse(resetsAt) : NaN;
+  return Number.isNaN(ms) ? nextLocalMidnightMs() : ms;
+}
+
+// 플레이리스트가 초기화되는 순간 onMidnight 를 부른다. 백그라운드에서는 타이머가 멈출 수 있어,
+// 앱으로 돌아왔을 때 그 시각을 지났으면 그때 부른다. 서버 시각으로 한 번 부른 뒤에는 새
+// resetsAt 이 올 때까지 기다린다 (onMidnight 가 다시 받아 온다).
+export function useMidnight(onMidnight: () => void, resetsAt?: string | null) {
   const cb = useRef(onMidnight);
   cb.current = onMidnight;
 
   useEffect(() => {
-    let target = nextLocalMidnightMs();
+    let target = resetTargetMs(resetsAt);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const arm = () => {
       clearTimeout(timer);
-      timer = setTimeout(check, Math.max(target - Date.now(), 0) + 500);
+      if (Number.isFinite(target)) timer = setTimeout(check, Math.max(target - Date.now(), 0) + 500);
     };
     const check = () => {
       if (Date.now() >= target) {
-        target = nextLocalMidnightMs();
+        target = resetsAt ? Infinity : nextLocalMidnightMs();
         cb.current();
       }
       arm();
@@ -36,5 +43,5 @@ export function useMidnight(onMidnight: () => void) {
       clearTimeout(timer);
       sub.remove();
     };
-  }, []);
+  }, [resetsAt]);
 }
