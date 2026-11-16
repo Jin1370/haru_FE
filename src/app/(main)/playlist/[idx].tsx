@@ -7,7 +7,6 @@ import { useSWRConfig } from 'swr';
 import { PlaylistCard } from '@/components/discover/SwipeCard';
 import { PlaylistCarousel, useDeckArea } from '@/components/discover/PlaylistCarousel';
 import { coverUrl } from '@/utils/playlistCover';
-import { LaunchPromoCard } from '@/components/discover/LaunchPromoCard';
 import { CardDeck } from '@/components/discover/CardDeck';
 import { computeDiscoverGate, showLikeGate, showMatchAlert } from '@/components/discover/DiscoverGate';
 import { StarChip } from '@/components/stars/StarChip';
@@ -199,10 +198,7 @@ export default function PlaylistScreen() {
         }}
       />
       <View ref={deck.ref} collapsable={false} style={styles.deck} onLayout={deck.onLayout}>
-      <CardDeck
-        loading={cards === null && !error}
-        overlay={current ? <LaunchPromoCard /> : null}
-      >
+      <CardDeck loading={cards === null && !error}>
         {current && cards ? (
           // 내비게이션 바 겹침을 재기 전엔 숨긴다 — 재고 나서 아래 여백이 생기며 카드가 올라가 보이지 않게.
           <View style={{ paddingBottom: deck.navOverlap, opacity: deck.measured ? 1 : 0 }}>

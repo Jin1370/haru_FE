@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   title: {
-    fontSize: fs(20),
+    fontSize: fs(16),
     fontFamily: fonts.semibold,
     color: colors.onPhotoText,
     textAlign: 'center',

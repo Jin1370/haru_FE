@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 
 // 기기 로컬 온/오프 설정. 토큰 저장에 이미 쓰는 SecureStore 를 재사용해
-// AsyncStorage 신규 도입을 피한다 (LaunchPromoCard 와 동일 패턴).
+// AsyncStorage 신규 도입을 피한다.
 const CAT_ENABLED_KEY = 'haru_nav_cat_enabled_v1';
 
 interface CatState {

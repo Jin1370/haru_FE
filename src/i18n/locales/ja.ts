@@ -146,7 +146,7 @@ export default {
         matchSubtitle: "今すぐ会話を始めてみましょう。",
         sendMessage: "メッセージを送る",
         keepDiscovering: "もっと探す",
-        noMoreProfiles: "これ以上のプロフィールはありません",
+        noMoreProfiles: "もう見られるプロフィールがありません",
         checkBackLater: "また後で新しい人をのぞいてみてください。",
         lockedVoiceTitle: "先に声を登録してください",
         lockedBioTitle: "ボイスひとことを登録してください",
@@ -182,11 +182,6 @@ export default {
             prev: "前のカード",
             next: "次のカード",
         },
-        launchPromo: {
-            title: "リリース記念イベント",
-            body: "プレミアム機能を今だけ無料でお楽しみください。\n• ボイスチャット無制限\n• 届いたあいさつを無制限に確認",
-            dismiss: "閉じる",
-        },
     },
 
     likes: {
@@ -203,7 +198,8 @@ export default {
         swipeHint: "あなたに先にあいさつした人です。カードを上にスワイプしてあいさつすると、すぐにトークが始まります。",
         empty: {
             title: "まだあいさつが届いていません",
-            text: "「探す」タブでもっと多くの人に出会ってみましょう。",
+            needVoice: "あいさつを受け取るには声を登録してください。",
+            needBio: "あいさつを受け取るにはボイスひとことを登録してください。",
             cta: "今すぐ探す",
         },
         locked: {
@@ -231,7 +227,9 @@ export default {
     },
 
     matches: {
-        noMatches: "マッチした相手がいません",
+        noMatches: "まだ会話の相手がいません",
+        needVoice: "会話を始めるには声を登録してください。",
+        needBio: "会話を始めるにはボイスひとことを登録してください。",
         goToDiscover: "今すぐ探す",
         unknown: "不明",
         startConversation: "会話を始めてみましょう！",
@@ -444,7 +442,7 @@ export default {
         referralCode: "紹介コード（任意）",
         referralCodeHint: "集まりやイベントでコードを受け取った方は入力してください。",
         referralCodePlaceholder: "AAAAA00",
-        bioLockedHint: "ボイスクローンを登録するとボイスひとことが自動生成されます。先に「自分の声を登録」で声を登録してください。",
+        bioLockedHint: "先に声を登録してください。",
         bioPicker: {
             customPlaceholder: "言いたい言葉を直接入力してみてください",
             customTag: "自由入力",

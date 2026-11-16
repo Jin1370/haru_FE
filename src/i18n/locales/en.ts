@@ -148,7 +148,7 @@ export default {
     matchSubtitle: 'Start the conversation right now.',
     sendMessage: 'Send Message',
     keepDiscovering: 'Keep Discovering',
-    noMoreProfiles: 'No more profiles',
+    noMoreProfiles: 'No more profiles to see',
     checkBackLater: 'Check back later for new people.',
     lockedVoiceTitle: 'Register your voice first',
     lockedBioTitle: 'Set your voice intro first',
@@ -184,11 +184,6 @@ export default {
       prev: 'Previous card',
       next: 'Next card',
     },
-    launchPromo: {
-      title: 'Launch celebration event',
-      body: 'Enjoy premium features free for now.\n• Unlimited voice chat\n• See everyone who said hello',
-      dismiss: 'Dismiss',
-    },
   },
 
   likes: {
@@ -205,7 +200,8 @@ export default {
     swipeHint: 'This person said hello to you first. Swipe the card up to say hello back and start chatting right away.',
     empty: {
       title: 'No hellos yet',
-      text: 'Meet more people in the Discover tab.',
+      needVoice: 'Register your voice to receive hellos.',
+      needBio: 'Set your voice intro to receive hellos.',
       cta: 'Discover now',
     },
     locked: {
@@ -233,7 +229,9 @@ export default {
   },
 
   matches: {
-    noMatches: 'No matches yet',
+    noMatches: 'No one to chat with yet',
+    needVoice: 'Register your voice to start chatting.',
+    needBio: 'Set your voice intro to start chatting.',
     goToDiscover: 'Start discovering',
     unknown: 'Unknown',
     startConversation: 'Start a conversation!',
@@ -449,7 +447,7 @@ export default {
     referralCode: "Referral code (optional)",
     referralCodeHint: "Got a code from a meetup or event? Enter it here.",
     referralCodePlaceholder: "AAAAA00",
-    bioLockedHint: "Your voice intro is generated automatically once your voice clone is registered. Please register your voice in 'Register My Voice' first.",
+    bioLockedHint: "Please register your voice first.",
     bioPicker: {
       customPlaceholder: 'Type your own message',
       customTag: 'Custom',

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { PlaylistCard } from '@/components/discover/SwipeCard';
 import { PlaylistCarousel, useDeckArea } from '@/components/discover/PlaylistCarousel';
 import { CardDeck } from '@/components/discover/CardDeck';
-import { computeDiscoverGate, showLikeGate, showMatchAlert } from '@/components/discover/DiscoverGate';
+import { computeDiscoverGate, emptyStateNeed, NEED_ROUTE, showLikeGate, showMatchAlert } from '@/components/discover/DiscoverGate';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useReceivedLikes } from '@/hooks/useReceivedLikes';
@@ -27,6 +27,7 @@ export default function LikesScreen() {
   const { t } = useTranslation();
   const profile = useAuthStore((s) => s.profile);
   const gate = computeDiscoverGate(profile);
+  const need = emptyStateNeed(gate);
   const {
     candidates: serverCards,
     loading,
@@ -346,13 +347,13 @@ export default function LikesScreen() {
             onCtaPress={onRetry}
           />
         ) : (
-          // 받은 좋아요 0개 — 탐색으로 유도하는 CTA.
+          // 받은 좋아요 0개 — 목소리·한마디가 없으면 인사를 받을 수 없어(탐색 미노출) 등록으로, 아니면 탐색으로 유도.
           <EmptyState
             mdiIcon="hand-wave-outline"
             title={t('likes.empty.title')}
-            subtitle={t('likes.empty.text')}
-            ctaLabel={t('likes.empty.cta')}
-            onCtaPress={() => router.push('/(main)/(tabs)/discover')}
+            subtitle={need ? t(need === 'voice' ? 'likes.empty.needVoice' : 'likes.empty.needBio') : undefined}
+            ctaLabel={need ? t(need === 'voice' ? 'discover.lockedGoVoice' : 'discover.lockedGoBio') : t('likes.empty.cta')}
+            onCtaPress={() => router.push(need ? NEED_ROUTE[need] : '/(main)/(tabs)/discover')}
           />
         )}
       </CardDeck>

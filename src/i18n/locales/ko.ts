@@ -146,8 +146,8 @@ export default {
         matchSubtitle: "지금 바로 대화를 시작해보세요.",
         sendMessage: "대화 시작하기",
         keepDiscovering: "계속 둘러보기",
-        noMoreProfiles: "더 이상 프로필이 없습니다",
-        checkBackLater: "나중에 새로운 사람을 확인해보세요.",
+        noMoreProfiles: "더 이상 볼 수 있는 프로필이 없어요",
+        checkBackLater: "나중에 새로운 사람을 확인해 보세요.",
         lockedVoiceTitle: "목소리를 먼저 등록해주세요",
         lockedBioTitle: "보이스 한마디를 등록해주세요",
         lockedPhotoTitle: "프로필 사진을 등록해주세요",
@@ -182,11 +182,6 @@ export default {
             prev: "이전 카드",
             next: "다음 카드",
         },
-        launchPromo: {
-            title: "출시 기념 이벤트",
-            body: "프리미엄 기능을 지금 무료로 즐기세요.\n• 음성 채팅 무제한\n• 받은 인사 무제한 확인",
-            dismiss: "닫기",
-        },
     },
 
     likes: {
@@ -203,7 +198,8 @@ export default {
         swipeHint: "나에게 먼저 인사한 사람이에요. 카드를 위로 밀어 인사하면 바로 대화가 시작돼요.",
         empty: {
             title: "아직 받은 인사가 없어요",
-            text: "탐색 탭에서 더 많은 사람을 만나보세요.",
+            needVoice: "인사를 받으려면 목소리를 등록해주세요.",
+            needBio: "인사를 받으려면 보이스 한마디를 등록해주세요.",
             cta: "지금 탐색하기",
         },
         locked: {
@@ -232,7 +228,9 @@ export default {
     },
 
     matches: {
-        noMatches: "매칭된 상대가 없습니다",
+        noMatches: "아직 대화 상대가 없어요",
+        needVoice: "대화를 시작하려면 목소리를 등록해주세요.",
+        needBio: "대화를 시작하려면 보이스 한마디를 등록해주세요.",
         goToDiscover: "지금 탐색하기",
         unknown: "알 수 없음",
         startConversation: "대화를 시작해보세요!",
@@ -448,7 +446,7 @@ export default {
         referralCode: "추천 코드 (선택)",
         referralCodeHint: "모임·행사에서 코드를 받으셨다면 입력해주세요.",
         referralCodePlaceholder: "AAAAA00",
-        bioLockedHint: "보이스 클론이 등록되어야 보이스 한마디가 자동으로 생성돼요. 먼저 '내 목소리 등록'에서 목소리를 등록해주세요.",
+        bioLockedHint: "먼저 목소리를 등록해주세요.",
         bioPicker: {
             customPlaceholder: "하고 싶은 말을 직접 입력해보세요",
             customTag: "직접 입력",

@@ -85,6 +85,20 @@ export function getDiscoverGateStep(
   };
 }
 
+// 받은 인사·매칭 탭 빈 화면에서 안내할 단계 — 목소리 → 한마디 순. 클론 생성 중이면
+// 사용자가 할 일이 없어 안내하지 않는다(기본 빈 화면).
+export function emptyStateNeed(state: DiscoverGateState): 'voice' | 'bio' | null {
+  if (state.voiceProcessing) return null;
+  if (!state.voiceReady) return 'voice';
+  if (!state.bioReady) return 'bio';
+  return null;
+}
+
+export const NEED_ROUTE = {
+  voice: '/(main)/settings/voice',
+  bio: '/(main)/settings/edit-bio',
+} as const;
+
 // like-wall — 미등록 사용자가 좋아요를 눌렀을 때 전체 화면 게이트 대신 모달로
 // 부족한 단계를 안내한다. 디스커버 탭과 받은 좋아요 탭이 공유(동일 UX).
 // gated 가 아니면 아무것도 안 띄운다(호출처에서 가드하지만 방어적으로 확인).

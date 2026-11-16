@@ -15,6 +15,8 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { PhotoBackground } from '@/components/ui/PhotoBackground';
 import { useMatches } from '@/hooks/useMatches';
 import { showAlert } from '@/stores/alertStore';
+import { useAuthStore } from '@/stores/authStore';
+import { computeDiscoverGate, emptyStateNeed, NEED_ROUTE } from '@/components/discover/DiscoverGate';
 import { userFacingError } from '@/utils/errors';
 import { setMatchesTabActive } from '@/lib/activeChat';
 import { colors } from '@/constants/colors';
@@ -22,6 +24,8 @@ import type { MatchListItem } from '@/types';
 
 export default function MatchesScreen() {
   const { t } = useTranslation();
+  // 목소리·한마디가 없으면 매칭이 생길 수 없어 빈 화면에서 등록으로 유도한다.
+  const need = emptyStateNeed(computeDiscoverGate(useAuthStore((s) => s.profile)));
   const { matches, loading, loadingMore, hasMore, loadMatches, loadMore, toggleMute } = useMatches();
   const [actionTarget, setActionTarget] = useState<MatchListItem | null>(null);
   // RefreshControl 의 refreshing 은 "사용자가 직접 당긴" 경우에만 true 로 둔다.
@@ -100,6 +104,17 @@ export default function MatchesScreen() {
     // 이 첫 로드 인디케이터를 겸했으나 위 분리로 더는 발화하지 않으므로).
     if (loading) {
       return <LoadingState />;
+    }
+    if (need) {
+      return (
+        <EmptyState
+          iconName="sparkles-outline"
+          title={t('matches.noMatches')}
+          subtitle={t(need === 'voice' ? 'matches.needVoice' : 'matches.needBio')}
+          ctaLabel={t(need === 'voice' ? 'discover.lockedGoVoice' : 'discover.lockedGoBio')}
+          onCtaPress={() => router.push(NEED_ROUTE[need])}
+        />
+      );
     }
     return (
       <EmptyState
