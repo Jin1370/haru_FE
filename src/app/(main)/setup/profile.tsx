@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   Pressable,
   BackHandler,
   Keyboard,
+  type ScrollView,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { router, useNavigation, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,7 +33,6 @@ import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { validateDisplayName, validateBirthDate, DISPLAY_NAME_MAX } from '@/utils/validators';
 import { isDisplayNameAvailable } from '@/services/profile';
-import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
 
@@ -42,10 +43,12 @@ const formatBirthDate = (input: string): string => {
   return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
 };
 
+// 화면 위에서부터의 순서.
+const ERROR_FIELDS = ['display_name', 'birth_date', 'nationality'] as const;
+type ErrorField = (typeof ERROR_FIELDS)[number];
+
 export default function SetupProfile() {
   const { t } = useTranslation();
-  // 유료화 ON 이면 생년월일·성별·국적은 가입 후 변경 불가 — 입력 전에 미리 알린다.
-  const identityLocked = useDiscoverQuota().monetizationEnabled;
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const draft = useSignupDraftStore();
@@ -90,7 +93,17 @@ export default function SetupProfile() {
     nationality?: string;
   }>({});
 
-  const clearError = (field: 'display_name' | 'birth_date' | 'nationality') =>
+  const scrollRef = useRef<ScrollView>(null);
+  // 각 필드 컨테이너의 y (스크롤 콘텐츠 기준). 오류 시 첫 오류 필드를 화면 위로 올린다.
+  const fieldY = useRef<Partial<Record<ErrorField, number>>>({});
+  const trackY = (field: ErrorField) => (e: LayoutChangeEvent) => {
+    fieldY.current[field] = e.nativeEvent.layout.y;
+  };
+  const scrollToField = (field: ErrorField) => {
+    scrollRef.current?.scrollTo({ y: Math.max(0, (fieldY.current[field] ?? 0) - 12), animated: true });
+  };
+
+  const clearError = (field: ErrorField) =>
     setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e));
 
   // Storage moved from "current-locale label" to canonical id so the
@@ -141,7 +154,11 @@ export default function SetupProfile() {
     if (!form.nationality) next.nationality = t('setupProfile.selectNationalityRequired');
 
     setErrors(next);
-    if (Object.keys(next).length > 0) return;
+    if (Object.keys(next).length > 0) {
+      const first = ERROR_FIELDS.find((k) => next[k]);
+      if (first) scrollToField(first);
+      return;
+    }
 
     // 닉네임 중복은 여기서 미리 잡는다 — BE INSERT 는 사진 단계에서야 일어나므로
     // 이 확인이 없으면 사진을 다 고른 뒤에 409 로 튕긴다. 조회 자체가 실패하면
@@ -151,6 +168,7 @@ export default function SetupProfile() {
       const available = await isDisplayNameAvailable(form.display_name.trim());
       if (!available) {
         setErrors({ display_name: t('validation.displayNameTaken') });
+        scrollToField('display_name');
         return;
       }
     } catch {
@@ -195,6 +213,7 @@ export default function SetupProfile() {
           keyboard (mirrors edit-bio.tsx) — so the last field (referral code)
           isn't hidden behind the keyboard. bottomOffset = breathing room. */}
       <KeyboardAwareScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: 24 + insets.bottom + 88 },
@@ -202,7 +221,7 @@ export default function SetupProfile() {
         keyboardShouldPersistTaps="handled"
         bottomOffset={20}
       >
-      <View>
+      <View onLayout={trackY('display_name')}>
         <RequiredLabel text={t('setupProfile.displayName')} />
         <FormField
           value={form.display_name}
@@ -217,7 +236,7 @@ export default function SetupProfile() {
         />
       </View>
 
-      <View>
+      <View onLayout={trackY('birth_date')}>
         <RequiredLabel text={t('setupProfile.birthDate')} gap />
         <FormField
           value={form.birth_date}
@@ -251,7 +270,7 @@ export default function SetupProfile() {
         ))}
       </View>
 
-      <View>
+      <View onLayout={trackY('nationality')}>
         <RequiredLabel text={t('setupProfile.nationality')} gap />
         <Pressable
           style={[
@@ -308,7 +327,6 @@ export default function SetupProfile() {
           </View>
         )}
         <ErrorText>{errors.nationality ?? null}</ErrorText>
-        {identityLocked ? <Text style={styles.lockedNotice}>{t('setupProfile.identityLockNotice')}</Text> : null}
       </View>
 
       {/* Interests — optional. Markup mirrors settings/edit-profile.tsx so
@@ -400,12 +418,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   selectBtnOpen: { borderColor: colors.primary, backgroundColor: colors.white },
-  lockedNotice: {
-    marginTop: 6,
-    fontSize: fs(12),
-    fontFamily: fonts.regular,
-    color: colors.textSecondary,
-  },
   inputCompact: { fontSize: fs(14) },
   selectText: { fontSize: fs(14), color: colors.text, fontFamily: fonts.medium },
   selectPlaceholder: { color: colors.textLight },

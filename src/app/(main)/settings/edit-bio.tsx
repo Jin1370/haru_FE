@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, type ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -29,29 +29,33 @@ export default function EditBioScreen() {
   // (voice-intro-preset-bypass sprint) to skip Gemini for known entries.
   const [phraseId, setPhraseId] = useState<string | null>(null);
   const [bioError, setBioError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const bioErrorY = useRef(0);
 
   useEffect(() => {
     if (profile) setBio(profile.voice_intro ?? '');
   }, [profile]);
 
-  // Live-validate the voice intro text as the user picks/types it. Empty is
-  // allowed (treated as "clear the intro"); only length and forbidden-char
-  // violations surface inline. BioPhrasePicker also reports the picked preset
-  // id (null in custom mode); we mirror both into local state.
+  // BioPhrasePicker also reports the picked preset id (null in custom mode);
+  // we mirror both into local state.
   const handleBioChange = (next: string, nextPhraseId: string | null) => {
     setBio(next);
     setPhraseId(nextPhraseId);
-    const err = validateVoiceIntro(next);
-    setBioError(err ? t(err.key, err.vars) : null);
+    // 검사는 저장 버튼을 누를 때만 한다 (프로필 화면과 같은 방식). 고치기 시작하면 오류만 지운다.
+    setBioError(null);
   };
 
   const handleSave = async () => {
     if (!profile) return;
-    // Block save while the inline error is showing — otherwise users could
-    // tap save before the validation message lands and ship the bad value.
-    const err = validateVoiceIntro(bio);
+    // 빈 한마디는 저장하지 않는다 — 한마디가 없으면 탐색이 막히는데, 직접 입력을
+    // 눌렀다가 그냥 저장하는 실수로 지워지기 쉽다. (가입 단계에서는 빈칸 = 건너뛰기 유지)
+    const err = bio.trim()
+      ? validateVoiceIntro(bio)
+      : { key: 'validation.voiceIntroRequired' };
     if (err) {
       setBioError(t(err.key, err.vars));
+      // 오류가 난 직접 입력 카드를 화면 위로 올린다 (setup/profile.tsx 와 같은 방식).
+      scrollRef.current?.scrollTo({ y: Math.max(0, bioErrorY.current - 12), animated: true });
       return;
     }
     setBioError(null);
@@ -94,6 +98,7 @@ export default function EditBioScreen() {
           keyboard — no manual scrollToEnd / onFocus wiring needed. bottomOffset
           adds breathing room between the input bottom and the keyboard top. */}
       <KeyboardAwareScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: 24 + insets.bottom + 88 },
@@ -109,6 +114,7 @@ export default function EditBioScreen() {
           disabled={!voiceReady}
           lockedHint={!voiceReady ? t('setupProfile.bioLockedHint') : undefined}
           error={bioError}
+          onErrorFieldLayout={(y) => { bioErrorY.current = y; }}
         />
         {!voiceReady ? (
           <View style={styles.lockedCta}>

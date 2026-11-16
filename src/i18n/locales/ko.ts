@@ -135,6 +135,7 @@ export default {
         birthDateInvalid: "생년월일을 YYYY-MM-DD 형식으로 입력해주세요.",
         birthDateAdult: "만 18세 이상만 가입할 수 있어요.",
         voiceIntroTooLong: "보이스 한마디는 500자 이내로 입력해주세요.",
+        voiceIntroRequired: "보이스 한마디를 입력해주세요.",
         messageEmpty: "메시지를 입력해주세요.",
         messageTooLong: "메시지는 500자 이내로 입력해주세요.",
         textInvalidChars: "사용할 수 없는 문자가 포함되어 있어요.",
@@ -432,7 +433,6 @@ export default {
     },
 
     setupProfile: {
-        identityLockNotice: "생년월일, 성별, 국적은 가입 후 변경할 수 없어요.",
         displayName: "닉네임",
         displayNamePlaceholder: "닉네임을 입력하세요",
         birthDate: "생년월일",
@@ -639,7 +639,6 @@ export default {
     },
 
     settings: {
-        identityLocked: "가입 시 입력한 생년월일, 성별, 국적은 변경할 수 없어요.",
         title: "설정",
         languageSettings: "언어 설정",
         changePassword: "비밀번호 변경",

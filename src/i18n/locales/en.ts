@@ -137,6 +137,7 @@ export default {
     birthDateInvalid: 'Birth date must be YYYY-MM-DD.',
     birthDateAdult: 'You must be at least 18 years old to sign up.',
     voiceIntroTooLong: 'Voice intro must be 500 characters or fewer.',
+    voiceIntroRequired: 'Please enter your voice intro.',
     messageEmpty: 'Please enter a message.',
     messageTooLong: 'Message must be 500 characters or fewer.',
     textInvalidChars: 'Contains characters that are not allowed.',
@@ -433,7 +434,6 @@ export default {
   },
 
   setupProfile: {
-    identityLockNotice: "Birth date, gender, and nationality can't be changed after sign-up.",
     displayName: 'Nickname',
     displayNamePlaceholder: 'Your nickname',
     birthDate: 'Birth Date',
@@ -639,7 +639,6 @@ export default {
   },
 
   settings: {
-    identityLocked: "The birth date, gender, and nationality you entered at sign-up can't be changed.",
     title: 'Settings',
     languageSettings: 'Language',
     changePassword: 'Change Password',

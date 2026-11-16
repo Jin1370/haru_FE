@@ -33,6 +33,9 @@ interface BioPhrasePickerProps {
   // text). Renders directly under the custom input and tints its border red
   // so the message stays visually attached to the field that caused it.
   error?: string | null;
+  // 직접 입력 카드(오류가 표시되는 곳)의 y. 피커 부모 기준 — 피커를 스크롤 콘텐츠의
+  // 직속 자식으로 두면 그대로 scrollTo 에 쓸 수 있다.
+  onErrorFieldLayout?: (y: number) => void;
 }
 
 const CUSTOM_MAX = 500;
@@ -61,8 +64,12 @@ export function BioPhrasePicker({
   lockedHint,
   onCustomFocus,
   error,
+  onErrorFieldLayout,
 }: BioPhrasePickerProps) {
   const { t } = useTranslation();
+  const containerY = useRef(0);
+  const customCardY = useRef(0);
+  const reportErrorFieldY = () => onErrorFieldLayout?.(containerY.current + customCardY.current);
 
   // Derive initial selection state from the incoming `value`. Empty value =
   // nothing selected yet. Matching preset = that preset selected. Otherwise =
@@ -152,7 +159,13 @@ export function BioPhrasePicker({
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      onLayout={(e) => {
+        containerY.current = e.nativeEvent.layout.y;
+        reportErrorFieldY();
+      }}
+    >
       {BIO_PHRASES.map((phrase) => {
         const selected = selectedId === phrase.id;
         const localizedText = getBioPhraseText(phrase, language);
@@ -192,6 +205,10 @@ export function BioPhrasePicker({
       <Pressable
         disabled={disabled}
         onPress={handleSelectCustom}
+        onLayout={(e) => {
+          customCardY.current = e.nativeEvent.layout.y;
+          reportErrorFieldY();
+        }}
         style={[
           styles.card,
           selectedId === 'custom' && styles.cardSelected,

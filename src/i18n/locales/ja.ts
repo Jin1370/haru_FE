@@ -135,6 +135,7 @@ export default {
         birthDateInvalid: "生年月日を YYYY-MM-DD の形式で入力してください。",
         birthDateAdult: "18歳以上のみご登録いただけます。",
         voiceIntroTooLong: "ボイスひとことは500文字以内で入力してください。",
+        voiceIntroRequired: "ボイスひとことを入力してください。",
         messageEmpty: "メッセージを入力してください。",
         messageTooLong: "メッセージは500文字以内で入力してください。",
         textInvalidChars: "使用できない文字が含まれています。",
@@ -428,7 +429,6 @@ export default {
     },
 
     setupProfile: {
-        identityLockNotice: "生年月日・性別・国籍は登録後に変更できません。",
         displayName: "ニックネーム",
         displayNamePlaceholder: "ニックネームを入力してください",
         birthDate: "生年月日",
@@ -635,7 +635,6 @@ export default {
     },
 
     settings: {
-        identityLocked: "登録時に入力した生年月日・性別・国籍は変更できません。",
         title: "設定",
         languageSettings: "言語設定",
         changePassword: "パスワード変更",

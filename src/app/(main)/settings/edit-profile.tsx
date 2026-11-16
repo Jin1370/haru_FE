@@ -1,14 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
-  Pressable,
   Keyboard,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useKeyboardState } from 'react-native-keyboard-controller';
@@ -22,33 +20,15 @@ import { DISPLAY_NAME_TAKEN_CODE } from '@/services/profile';
 import { showAlert } from '@/stores/alertStore';
 import { colors, radii } from '@/constants/colors';
 import { fonts, fs } from '@/constants/fonts';
-import {
-  SUPPORTED_NATIONALITIES,
-  languageForNationality,
-  type NationalityCode,
-} from '@/constants/nationalities';
+import { languageForNationality } from '@/constants/nationalities';
 import { MAX_INTERESTS } from '@/constants/interests';
 import { InterestSelector } from '@/components/profile/InterestSelector';
 import { useInterestResolver } from '@/hooks/useInterestLabel';
-import { ErrorText } from '@/components/ui/ErrorText';
-import { validateDisplayName, validateBirthDate, DISPLAY_NAME_MAX } from '@/utils/validators';
+import { validateDisplayName, DISPLAY_NAME_MAX } from '@/utils/validators';
 import { userFacingError } from '@/utils/errors';
-import { genderLabelKey } from '@/utils/gender';
-import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
-
-const GENDER_OPTIONS = ['male', 'female', 'other'] as const;
-
-const formatBirthDate = (input: string): string => {
-  const digits = input.replace(/\D/g, '').slice(0, 8);
-  if (digits.length <= 4) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
-  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
-};
 
 export default function EditProfileScreen() {
   const { t } = useTranslation();
-  // 별사탕 유료화 ON 이면 생년월일·성별·국적은 가입 후 변경 불가 (BE 가 403 으로도 막는다).
-  const identityLocked = useDiscoverQuota().monetizationEnabled;
   const insets = useSafeAreaInsets();
   const { profile, loading, upsertProfile } = useProfile();
   // Lift the absolute footer above the keyboard and extend ScrollView
@@ -56,38 +36,19 @@ export default function EditProfileScreen() {
   // for both platforms — keeps the layout math identical everywhere).
   const kbHeight = useKeyboardState((s) => s.height);
 
-  const [form, setForm] = useState<{
-    display_name: string;
-    birth_date: string;
-    gender: 'male' | 'female' | 'other';
-    nationality: string;
-  }>({
-    display_name: profile?.display_name ?? '',
-    birth_date: profile?.birth_date ?? '',
-    gender: profile?.gender ?? 'male',
-    nationality: profile?.nationality ?? '',
-  });
-  const [nationalityOpen, setNationalityOpen] = useState(false);
+  // 생년월일·성별·국적은 가입 후 수정하지 않는다 — 저장 시 기존 값을 그대로 보낸다.
+  const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [interests, setInterests] = useState<string[]>(profile?.interests ?? []);
-  // Inline validation errors, keyed by field. Populated on Save, surfaced as
-  // small red text under each field, and cleared per-field as the user edits.
-  const [errors, setErrors] = useState<{
-    display_name?: string;
-    birth_date?: string;
-    nationality?: string;
-  }>({});
-
-  const clearError = (field: 'display_name' | 'birth_date' | 'nationality') =>
-    setErrors((e) => (e[field] ? { ...e, [field]: undefined } : e));
+  const [nameError, setNameError] = useState<string | undefined>();
+  // 오류가 나면 닉네임 필드를 화면 위로 올린다 (setup/profile.tsx 와 같은 방식).
+  const scrollRef = useRef<ScrollView>(null);
+  const nameY = useRef(0);
+  const scrollToName = () =>
+    scrollRef.current?.scrollTo({ y: Math.max(0, nameY.current - 12), animated: true });
 
   useEffect(() => {
     if (profile) {
-      setForm({
-        display_name: profile.display_name,
-        birth_date: profile.birth_date,
-        gender: profile.gender,
-        nationality: profile.nationality,
-      });
+      setDisplayName(profile.display_name);
       setInterests(profile.interests);
     }
   }, [profile]);
@@ -118,35 +79,27 @@ export default function EditProfileScreen() {
     setInterests((prev) => [...prev, id]);
   };
 
-  // The Save button is always enabled so a tap always produces feedback. On tap
-  // we validate every required field at once and render an inline red message
-  // under each invalid one, instead of leaving a silently-disabled button (App
-  // Review flagged the disabled-button pattern under Guideline 2.1(a)). Only
-  // saves once all fields are valid.
+  // The Save button is always enabled so a tap always produces feedback (App
+  // Review flagged the disabled-button pattern under Guideline 2.1(a)).
   const handleSave = async () => {
     Keyboard.dismiss();
-    const next: typeof errors = {};
-
-    const nameErr = validateDisplayName(form.display_name.trim());
-    if (nameErr) next.display_name = t(nameErr.key, nameErr.vars);
-
-    const birthErr = validateBirthDate(form.birth_date);
-    if (birthErr) next.birth_date = t(birthErr.key, birthErr.vars);
-
-    if (!form.nationality) next.nationality = t('setupProfile.selectNationalityRequired');
-
-    setErrors(next);
-    if (Object.keys(next).length > 0) return;
+    if (!profile) return;
+    const nameErr = validateDisplayName(displayName.trim());
+    setNameError(nameErr ? t(nameErr.key, nameErr.vars) : undefined);
+    if (nameErr) {
+      scrollToName();
+      return;
+    }
 
     try {
       await upsertProfile({
-        display_name: form.display_name.trim(),
-        birth_date: form.birth_date,
-        gender: form.gender,
-        nationality: form.nationality,
+        display_name: displayName.trim(),
+        birth_date: profile.birth_date,
+        gender: profile.gender,
+        nationality: profile.nationality,
         // Language is derived from nationality — no user-facing picker.
-        language: languageForNationality(form.nationality),
-        voice_intro: profile?.voice_intro ?? null,
+        language: languageForNationality(profile.nationality),
+        voice_intro: profile.voice_intro ?? null,
         interests,
       });
       router.back();
@@ -154,14 +107,13 @@ export default function EditProfileScreen() {
       // mig 053: 닉네임 중복은 해당 필드 인라인 에러로 (일반 알림은 어느 값이
       // 문제인지 안 알려준다).
       if (e instanceof ApiRequestError && e.code === DISPLAY_NAME_TAKEN_CODE) {
-        setErrors({ display_name: t('validation.displayNameTaken') });
+        setNameError(t('validation.displayNameTaken'));
+        scrollToName();
         return;
       }
       showAlert({ variant: 'error', title: t('common.error'), message: userFacingError(e, t) });
     }
   };
-
-  const genderLabel = (g: typeof GENDER_OPTIONS[number]) => t(genderLabelKey(g));
 
   return (
     <View style={styles.container}>
@@ -171,112 +123,26 @@ export default function EditProfileScreen() {
         onBack={() => router.back()}
       />
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: 24 + insets.bottom + 88 + kbHeight },
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        <View>
+        <View onLayout={(e) => { nameY.current = e.nativeEvent.layout.y; }}>
           <RequiredLabel text={t('setupProfile.displayName')} />
           <FormField
-            value={form.display_name}
+            value={displayName}
             onChangeText={(v) => {
-              setForm((f) => ({ ...f, display_name: v }));
-              clearError('display_name');
+              setDisplayName(v);
+              setNameError(undefined);
             }}
             placeholder={t('setupProfile.displayNamePlaceholder')}
             maxLength={DISPLAY_NAME_MAX}
             inputStyle={styles.inputCompact}
-            error={errors.display_name}
+            error={nameError}
           />
-        </View>
-        <View>
-          <RequiredLabel text={t('setupProfile.birthDate')} gap />
-          <FormField
-            value={form.birth_date}
-            onChangeText={(v) => {
-              setForm((f) => ({ ...f, birth_date: formatBirthDate(v) }));
-              clearError('birth_date');
-            }}
-            placeholder={t('setupProfile.birthDatePlaceholder')}
-            editable={!identityLocked}
-            keyboardType="number-pad"
-            maxLength={10}
-            inputStyle={[styles.inputCompact, identityLocked && styles.lockedField]}
-            error={errors.birth_date}
-          />
-        </View>
-
-        <RequiredLabel text={t('setupProfile.gender')} gap />
-        <View style={styles.genderRow}>
-          {GENDER_OPTIONS.map((g) => (
-            <Pressable
-              key={g}
-              style={[styles.genderBtn, form.gender === g && styles.genderActive, identityLocked && styles.lockedField]}
-              disabled={identityLocked}
-              onPress={() => {
-                Keyboard.dismiss();
-                setForm((f) => ({ ...f, gender: g }));
-              }}
-            >
-              <Text style={[styles.genderText, form.gender === g && styles.genderActiveText]}>
-                {genderLabel(g)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        <View>
-          <RequiredLabel text={t('setupProfile.nationality')} gap />
-          <Pressable
-            style={[
-              styles.selectBtn,
-              nationalityOpen && styles.selectBtnOpen,
-              identityLocked && styles.lockedField,
-            ]}
-            disabled={identityLocked}
-            onPress={() => {
-              Keyboard.dismiss();
-              setNationalityOpen((v) => !v);
-            }}
-          >
-            <Text style={[styles.selectText, !form.nationality && styles.selectPlaceholder]}>
-              {form.nationality
-                ? t(`nationalities.${form.nationality}`)
-                : t('setupProfile.nationalityPlaceholder')}
-            </Text>
-            <Ionicons
-              name={nationalityOpen ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color={colors.textSecondary}
-            />
-          </Pressable>
-          {nationalityOpen && (
-            <View style={[styles.chipRow, styles.dropdownPanel]}>
-              {SUPPORTED_NATIONALITIES.map(({ code, labelKey }) => {
-                const selected = form.nationality === code;
-                return (
-                  <Pressable
-                    key={code}
-                    style={[styles.chip, selected && styles.chipActive]}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setForm((f) => ({ ...f, nationality: code as NationalityCode }));
-                      setNationalityOpen(false);
-                      clearError('nationality');
-                    }}
-                  >
-                    <Text style={[styles.chipText, selected && styles.chipActiveText]}>
-                      {t(labelKey)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-          <ErrorText>{errors.nationality ?? null}</ErrorText>
-          {identityLocked ? <Text style={styles.lockedNotice}>{t('settings.identityLocked')}</Text> : null}
         </View>
 
         <Text style={[styles.label, styles.sectionGap]}>
@@ -307,67 +173,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40 },
   label: { fontSize: fs(14), fontFamily: fonts.medium, color: colors.text, marginBottom: 8 },
   sectionGap: { marginTop: 16 },
-  genderRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  genderBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    alignItems: 'center',
-  },
-  genderActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  genderText: {
-    fontSize: fs(11),
-    color: colors.textSecondary,
-    fontFamily: fonts.medium,
-    textTransform: 'capitalize',
-  },
-  genderActiveText: { color: colors.white },
-  selectBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    backgroundColor: colors.card,
-  },
-  selectBtnOpen: { borderColor: colors.primary, backgroundColor: colors.white },
-  lockedField: { opacity: 0.5 },
-  lockedNotice: {
-    marginTop: 6,
-    fontSize: fs(12),
-    fontFamily: fonts.regular,
-    color: colors.textSecondary,
-  },
   inputCompact: { fontSize: fs(14) },
-  selectText: { fontSize: fs(14), color: colors.text, fontFamily: fonts.medium },
-  selectPlaceholder: { color: colors.textLight },
-  dropdownPanel: {
-    padding: 12,
-    marginTop: 4,
-    marginBottom: 16,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    backgroundColor: colors.surface,
-  },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  chipText: { fontSize: fs(11), color: colors.textSecondary, fontFamily: fonts.medium },
-  chipActiveText: { color: colors.white },
   hintBlock: {
     fontSize: fs(12),
     color: colors.textSecondary,

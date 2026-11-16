@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, type ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -42,6 +42,8 @@ export default function SetupIntro() {
   // `voice_intro_phrase_id` (voice-intro-preset-bypass sprint).
   const [phraseId, setPhraseId] = useState<string | null>(draft.bioPhraseId);
   const [bioError, setBioError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const bioErrorY = useRef(0);
 
   // Live-validate the bio while the user picks/types so length and forbidden
   // chars surface inline (red border + ErrorText) inside the picker card.
@@ -51,8 +53,8 @@ export default function SetupIntro() {
   const handleBioChange = (next: string, nextPhraseId: string | null) => {
     setBio(next);
     setPhraseId(nextPhraseId);
-    const err = validateVoiceIntro(next);
-    setBioError(err ? t(err.key, err.vars) : null);
+    // 검사는 저장 버튼을 누를 때만 한다 (프로필 화면과 같은 방식). 고치기 시작하면 오류만 지운다.
+    setBioError(null);
   };
 
   const persistBio = async (nextBio: string, nextPhraseId: string | null) => {
@@ -91,6 +93,8 @@ export default function SetupIntro() {
     const err = validateVoiceIntro(bio);
     if (err) {
       setBioError(t(err.key, err.vars));
+      // 오류가 난 직접 입력 카드를 화면 위로 올린다 (setup/profile.tsx 와 같은 방식).
+      scrollRef.current?.scrollTo({ y: Math.max(0, bioErrorY.current - 12), animated: true });
       return;
     }
     setBioError(null);
@@ -138,6 +142,7 @@ export default function SetupIntro() {
           keyboard (no manual scrollToEnd / onFocus wiring needed). bottomOffset
           adds breathing room between the input bottom and the keyboard top. */}
       <KeyboardAwareScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: 24 + insets.bottom + 88 },
@@ -152,6 +157,7 @@ export default function SetupIntro() {
           disabled={!voiceReady}
           lockedHint={!voiceReady ? t('setupProfile.bioLockedHint') : undefined}
           error={bioError}
+          onErrorFieldLayout={(y) => { bioErrorY.current = y; }}
         />
       </KeyboardAwareScrollView>
 
