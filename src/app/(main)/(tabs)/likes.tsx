@@ -231,13 +231,17 @@ export default function LikesScreen() {
   };
 
   const [sending, setSending] = useState(false);
-  const onRequest = async () => {
-    if (!current || current.locked || sending) return;
+  // 위로 밀면 카드가 날아가 사라진다 — 보내지 않았거나 실패하면 false 로 카드를 되돌린다.
+  // 화면 상태(sending)는 다음 그리기에야 바뀌어, 거의 동시에 두 번 불리면 둘 다 통과한다 — 바로 바뀌는 ref 로 막는다.
+  const sendingRef = useRef(false);
+  const onRequest = async (): Promise<boolean> => {
+    if (!current || current.locked || sendingRef.current) return false;
     // 미등록 사용자의 신청은 상대 피드에 안 보여 매치가 안 된다 — 등록을 유도한다.
     if (gate.gated) {
       showLikeGate(gate, t);
-      return;
+      return false;
     }
+    sendingRef.current = true;
     setSending(true);
     try {
       const res = await request(current.id);
@@ -254,13 +258,18 @@ export default function LikesScreen() {
               ? t('likes.gone.freeRestored')
               : t('likes.gone.next'),
         });
-        return;
+        return true;
       }
       if (res.match) showMatchAlert(t, res.match.id);
-    } catch {
+      return true;
+    } catch (e) {
       loadCandidates();
+      // 409 = 이미 인사함 (다른 기기 등). 다시 받은 목록에서 빠진다 — 오류가 아니다.
+      if (e instanceof ApiRequestError && e.status === 409) return true;
       showAlert({ variant: 'info', title: t('common.error'), message: t('common.tryAgainLater') });
+      return false;
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -300,6 +309,7 @@ export default function LikesScreen() {
               swipeUpLabel={t('discover.playlist.request')}
               canSwipeUp={(card) => !card.locked}
               compactHint
+              flyAway
               // "New!" 배지는 화살표·번호처럼 다른 카드로 80% 넘어가는 순간 사라진다.
               onLiveChange={(i) => {
                 if (newId && newSeen.current === newId && candidates[i]?.id !== newId) setNewId(null);

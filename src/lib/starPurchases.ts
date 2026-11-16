@@ -63,7 +63,8 @@ export async function watchRewardedAd(userId: string): Promise<boolean> {
   await initAds();
   const ads = loadNative<any>('ads');
   const ad = ads.RewardedAd.createForAdRequest(rewardedUnitId(ads), {
-    serverSideVerificationOptions: { userId },
+    // customData = 휴대폰 시간대 — 서버가 광고 하루 한도를 사용자 자정에 초기화한다.
+    serverSideVerificationOptions: { userId, customData: String(new Date().getTimezoneOffset()) },
   });
 
   return new Promise<boolean>((resolve, reject) => {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useTranslation } from 'react-i18next';
 import { useSWRConfig } from 'swr';
@@ -38,6 +38,16 @@ export default function PlaylistScreen() {
   const [pos, setPos] = useState(0);
   const [sending, setSending] = useState(false);
 
+  // 플레이리스트가 초기화되면 이 화면을 닫고 알린다. 자정 처리와 404(대화 신청 거절 뒤 다시 받기)가
+  // 거의 동시에 올 수 있어 한 번만 — 두 번 닫으면 탐색 화면까지 닫힌다.
+  const closed = useRef(false);
+  const closeExpired = useCallback(() => {
+    if (closed.current) return;
+    closed.current = true;
+    router.back();
+    showAlert({ variant: 'info', title: t('discover.playlist.swipeHintTitle'), message: t('discover.playlist.expired') });
+  }, [t]);
+
   const load = useCallback(async () => {
     try {
       const res = await discoverService.getPlaylistCards(idx);
@@ -46,13 +56,12 @@ export default function PlaylistScreen() {
     } catch (e) {
       // 자정이 지나 플레이리스트가 사라졌다 (앱이 백그라운드여서 타이머를 놓친 경우 등).
       if (e instanceof ApiRequestError && e.status === 404) {
-        showAlert({ variant: 'info', title: t('discover.playlist.swipeHintTitle'), message: t('discover.playlist.expired') });
-        router.back();
+        closeExpired();
         return;
       }
       setError(true);
     }
-  }, [idx, t]);
+  }, [idx, closeExpired]);
 
   // 선택 화면이 받아 둔 카드가 있으면 다시 받지 않는다.
   const preloadedRef = useRef(cards !== null);
@@ -62,12 +71,20 @@ export default function PlaylistScreen() {
   }, [load]);
 
   // 자정이 되면 보고 있던 카드도 닫고 선택 화면으로 돌아간다 (선택 화면은 focus 때 새로 받는다).
+  // 이 화면 위에 다른 화면(채팅·별사탕 충전·목소리 등록)이 떠 있으면 그 화면이 닫히므로, 돌아왔을 때 닫는다.
+  const navigation = useNavigation();
+  const expiredWhileAway = useRef(false);
   useMidnight(
     useCallback(() => {
-      router.back();
-      showAlert({ variant: 'info', title: t('discover.playlist.swipeHintTitle'), message: t('discover.playlist.expired') });
-    }, [t]),
+      if (navigation.isFocused()) closeExpired();
+      else expiredWhileAway.current = true;
+    }, [navigation, closeExpired]),
     discoverService.playlistResetsAt(),
+  );
+  useFocusEffect(
+    useCallback(() => {
+      if (expiredWhileAway.current) closeExpired();
+    }, [closeExpired]),
   );
 
   // 신고·탈퇴로 마지막 카드가 빠지면 첫 카드로 — 카드는 순환하므로 마지막의 다음은 첫 카드다.
@@ -125,14 +142,17 @@ export default function PlaylistScreen() {
 
   const gate = computeDiscoverGate(profile);
 
+  // 화면 상태(sending)는 다음 그리기에야 바뀌어, 거의 동시에 두 번 불리면 둘 다 통과한다 — 바로 바뀌는 ref 로 막는다.
+  const sendingRef = useRef(false);
   const onRequest = async () => {
-    if (!current || current.requested || sending) return;
+    if (!current || current.requested || sendingRef.current) return;
     // 미등록 사용자의 신청은 상대 피드에 안 보여 매치가 안 된다 — 부족한 단계로 안내.
     if (gate.gated) {
       showLikeGate(gate, t);
       return;
     }
     const candidate = current;
+    sendingRef.current = true;
     setSending(true);
     patchCard(candidate.id, { requested: true });
     try {
@@ -169,6 +189,7 @@ export default function PlaylistScreen() {
       if (status === 403) load();
       else showAlert({ variant: 'info', title: t('common.error'), message: t('common.tryAgainLater') });
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -191,7 +212,7 @@ export default function PlaylistScreen() {
           // 제목 앞에 이 플레이리스트의 커버.
           headerTitle: ({ children }) => (
             <View style={styles.titleRow}>
-              <Image source={{ uri: coverUrl(idx) }} style={styles.cover} />
+              <Image source={{ uri: coverUrl(idx, discoverService.playlistResetsAt()) }} style={styles.cover} />
               <Text style={styles.title}>{children}</Text>
             </View>
           ),

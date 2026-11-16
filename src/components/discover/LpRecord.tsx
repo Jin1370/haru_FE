@@ -55,6 +55,17 @@ export function Vinyl({ size, spinning }: { size: number; spinning: boolean }) {
             if (!spinning) return;
             AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
                 if (reduce || cancelled) return;
+                // 네이티브 반복은 매 바퀴를 '시작할 때의 값' 에서 다시 출발한다 — 멈췄던 각도(예 0.6)에서
+                // 다시 돌리면 7초에 0.4바퀴만 돌고 7초마다 0.6으로 튄다. 멈춘 각도를 offset 으로 옮겨
+                // 반복은 늘 0→1 로 돌게 한다 (멈춘 자리에서 이어 돈다).
+                spin.stopAnimation((v) => {
+                    if (cancelled) return;
+                    spin.setOffset(v % 1);
+                    spin.setValue(0);
+                    startLoops();
+                });
+            });
+            const startLoops = () => {
                 loops = [
                     Animated.loop(
                         Animated.timing(spin, {
@@ -78,7 +89,7 @@ export function Vinyl({ size, spinning }: { size: number; spinning: boolean }) {
                     ),
                 ];
                 loops.forEach((l) => l.start());
-            });
+            };
             return () => {
                 cancelled = true;
                 loops.forEach((l) => l.stop());

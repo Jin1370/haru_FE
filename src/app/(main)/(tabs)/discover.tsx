@@ -20,7 +20,8 @@ import { useDiscoverQuota } from "@/hooks/useDiscoverQuota";
 import { resetTargetMs, useMidnight } from "@/hooks/useMidnight";
 import * as discoverService from "@/services/discover";
 import { ApiRequestError } from "@/services/api";
-import { preloadTabData } from "@/lib/swr";
+import { likesKey, preloadTabData } from "@/lib/swr";
+import { useSWRConfig } from "swr";
 import type { PlaylistsResponse } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 import { useDiscoverStore } from "@/stores/discoverStore";
@@ -40,6 +41,9 @@ import {
 // PLAY_SLIDE = LP 가 커버 밖으로 더 나오는 거리(커버 한 변 비율), PLAY_TURN = 그동안 추가 회전.
 // 플레이리스트 한 칸에 담기는 최대 인원 (BE CARD_RESET_AMOUNT 와 같아야 한다).
 const PLAYLIST_SIZE = 10;
+// 자정 조회 재시도 — 2초 간격 최대 30번(1분). 서버·휴대폰 시계 차이는 보통 1~2초라 짧게.
+const MIDNIGHT_RETRY_MS = 2000;
+const MIDNIGHT_RETRIES = 30;
 const SELECTED_SCALE = 1.06;
 const PLAY_MS = 600;
 // 재생 직전 눌림 — PRESS_SCALE 만큼 작아졌다 PRESS_MS 동안 돌아온다.
@@ -56,7 +60,8 @@ const RESET_AFTER_LEAVE_MS = 600;
 export default function DiscoverScreen() {
     const { t } = useTranslation();
     const reloadVersion = useDiscoverStore((s) => s.reloadVersion);
-    const { starsTotal, syncQuota } = useDiscoverQuota();
+    const { starsTotal, syncQuota, monetizationEnabled } = useDiscoverQuota();
+    const { mutate: globalMutate } = useSWRConfig();
     const [data, setData] = useState<PlaylistsResponse | null>(null);
     const [error, setError] = useState(false);
     const [opening, setOpening] = useState<number | null>(null);
@@ -69,6 +74,12 @@ export default function DiscoverScreen() {
             const d = await discoverService.getPlaylists();
             setData(d);
             setError(false);
+            // 다음 초기화 때 바뀔 커버를 미리 받는다 — 초기화 순간 새 커버가 받아지는 동안 검게 보이지 않게.
+            // 다음 초기화는 하루 뒤라 그 시각으로 고른 커버가 곧 다음 날 커버다 (장당 약 50~120KB).
+            if (d.resets_at) {
+                const next = new Date(Date.parse(d.resets_at) + 86_400_000).toISOString();
+                for (const p of d.playlists) Image.prefetch(coverUrl(p.idx, next)).catch(() => {});
+            }
             return d;
         } catch {
             setError(true);
@@ -84,6 +95,7 @@ export default function DiscoverScreen() {
     // 고른 칸·재생 연출은 떠날 때, 카드 화면이 다 덮은 뒤 되돌린다 — 돌아올 때 되돌리면
     // 빠져나온 LP 가 잠깐 보였다가 커버 안으로 튄다. 그 전에 돌아오면 바로 되돌린다.
     const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const refreshOnLeave = useRef(false);
     useFocusEffect(
         useCallback(() => {
             load();
@@ -96,6 +108,12 @@ export default function DiscoverScreen() {
             return () => {
                 resetTimer.current = setTimeout(() => {
                     resetTimer.current = null;
+                    // 방금 칸을 열었다 — 카드 화면에 가려진 동안 새 목록을 받아 둔다. 돌아올 때 받으면
+                    // 다른 칸의 막·오픈 버튼이 응답(1초 안팎)을 기다린 뒤에야 생긴다.
+                    if (refreshOnLeave.current) {
+                        refreshOnLeave.current = false;
+                        load();
+                    }
                     setSelected(null);
                     setPlaying(null);
                 }, RESET_AFTER_LEAVE_MS);
@@ -111,8 +129,43 @@ export default function DiscoverScreen() {
         load();
     }, [reloadVersion, load]);
 
-    // 자정이 지나면 새 플레이리스트를 받는다.
-    useMidnight(load, data?.resets_at);
+    // 자정이 지나면 새 플레이리스트를 받는다. 이 조회에서 서버가 어제 본 카드를 넘김으로 기록한다.
+    // 받기에 실패했거나, 휴대폰 시계가 서버보다 빨라 아직 초기화 전 값이 오면 잠시 뒤 다시 받는다
+    // (그대로 두면 카운트다운이 00:00:00 에 멈춘다). 탭을 옮겨도 focus 때 다시 받으니 횟수는 제한한다.
+    const midnightRetry = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    useEffect(() => () => clearTimeout(midnightRetry.current), []);
+    const onMidnight = useCallback(() => {
+        let tries = 0;
+        const run = async () => {
+            const d = await load();
+            if (!d || resetTargetMs(d.resets_at) <= Date.now()) {
+                if (++tries < MIDNIGHT_RETRIES) midnightRetry.current = setTimeout(run, MIDNIGHT_RETRY_MS);
+                return;
+            }
+            // 광고 남은 횟수가 새 날로 바뀐다 (별사탕 충전 화면이 같은 캐시를 본다).
+            syncQuota();
+            // 유료화 OFF 는 받은 인사 탭이 플레이리스트 멤버를 숨기지 않아, 어제 본 사람이 남아 있다가
+            // 대화 신청 때 거절된다 — 넘김 기록 뒤 새로 받는다. ON 은 이미 걸러 두고, 새로 받으면 무료 카드
+            // 타이머를 기다리던 카드가 안내 없이 바뀔 수 있어 받지 않는다.
+            const uid = useAuthStore.getState().userId;
+            if (!monetizationEnabled && uid) globalMutate(likesKey(uid));
+        };
+        clearTimeout(midnightRetry.current);
+        run();
+    }, [load, syncQuota, monetizationEnabled, globalMutate]);
+    useMidnight(onMidnight, data?.resets_at);
+
+    // 초기화 시각이 지났는데 아직 새 목록이 안 왔다 — 옛 LP 를 어둡게 덮고 누를 수 없게 한다
+    // (하단 카운트다운 자리엔 스피너). 옛 화면을 누르면 새 날의 칸을 뜻하지 않게 열 수 있다.
+    const [resetDue, setResetDue] = useState(false);
+    useEffect(() => {
+        if (!data) return;
+        const left = resetTargetMs(data.resets_at) - Date.now();
+        setResetDue(left <= 0);
+        if (left <= 0) return;
+        const timer = setTimeout(() => setResetDue(true), left);
+        return () => clearTimeout(timer);
+    }, [data]);
 
     const goTo = (idx: number) =>
         router.push({
@@ -147,6 +200,7 @@ export default function DiscoverScreen() {
             ]);
             discoverService.preloadPlaylistCards(idx, res.cards);
             if (expectedCount) syncQuota();
+            refreshOnLeave.current = true;
             goTo(idx);
         } catch (e) {
             setPlaying(null);
@@ -220,10 +274,20 @@ export default function DiscoverScreen() {
             starCost: price,
             cancelText: t("common.cancel"),
             confirmText: t("stars.useConfirm"),
-            onConfirm: () =>
-                starsTotal < price
-                    ? router.push("/(main)/settings/stars")
-                    : open(idx, count),
+            onConfirm: () => {
+                // 창을 띄운 채 초기화가 지났다 — 서버는 이 요청을 새 날의 무료 칸으로 열어 버린다.
+                // ponytail: 휴대폰 시계가 서버보다 늦으면 그 차이(보통 1초 미만)만큼은 못 막는다.
+                if (resetTargetMs(d.resets_at) <= Date.now()) {
+                    showAlert({
+                        variant: "info",
+                        title: t("discover.playlist.swipeHintTitle"),
+                        message: t("discover.playlist.expired"),
+                    });
+                    return;
+                }
+                if (starsTotal < price) router.push("/(main)/settings/stars");
+                else open(idx, count);
+            },
         });
     };
 
@@ -231,8 +295,10 @@ export default function DiscoverScreen() {
     // 오늘 아직 연 칸이 없으면 고르기 모드 — 처음 누르면 고르기만, 고른 칸을 한 번 더 누르면 연다.
     // 한 칸이라도 열었으면 고르기 없이 바로 — 연 칸은 카드 화면으로, 안 연 칸은 오픈(구매 확인).
     const anyOpened = data?.playlists.some((p) => p.opened) ?? false;
+    // 타이머보다 먼저 누른 경우(백그라운드 복귀 직후 등)도 막는다.
+    const resetPending = () => resetDue || (!!data && resetTargetMs(data.resets_at) <= Date.now());
     const onPressTile = (idx: number) => {
-        if (opening !== null || playing !== null) return;
+        if (opening !== null || playing !== null || resetPending()) return;
         if (anyOpened || selected === idx) onSelect(idx);
         else setSelected(idx);
     };
@@ -243,8 +309,15 @@ export default function DiscoverScreen() {
             playAndGo(idx);
             return;
         }
-        // 구매 확인 직전에 곡 수·가격을 새로 받는다 — 화면을 오래 켜 둔 사이 후보가 바뀌었으면
-        // 확인 창이 옛 인원·가격을 보여 주고, 서버가 다르다며 다시 묻게 된다.
+        // 별사탕 칸은 지금 목록으로 바로 묻는다 — 목록은 화면에 올 때·칸을 연 뒤 이미 새로 받았고,
+        // 그사이 장수가 바뀌었으면 서버가 expected_count 로 차감 없이 거절해 새 값으로 다시 묻는다
+        // (가격은 장수로 정해진다).
+        if (anyOpened) {
+            confirmOpen(idx, data);
+            return;
+        }
+        // 무료 칸은 새로 받는다 — 무료 열기 요청엔 확인할 값이 없어, 옛 화면이면(그사이 다른 칸을 염)
+        // 서버가 확인 없이 별사탕을 차감한다.
         setOpening(idx);
         let fresh: PlaylistsResponse;
         try {
@@ -256,6 +329,8 @@ export default function DiscoverScreen() {
         } finally {
             setOpening(null);
         }
+        // 새 목록에 이 칸이 없다 (유료화 OFF 는 한 칸을 열면 나머지가 빠진다) — 새 화면만 보여 준다.
+        if (!fresh.playlists.some((p) => p.idx === idx)) return;
         // 그사이 다른 기기에서 이 칸을 열었으면 바로 들어간다.
         if (fresh.playlists.find((p) => p.idx === idx)?.opened) playAndGo(idx);
         else confirmOpen(idx, fresh);
@@ -328,6 +403,7 @@ export default function DiscoverScreen() {
                                 </View>
                                 <PlaylistTile
                                     idx={p.idx}
+                                    resetsAt={data.resets_at}
                                     size={tileSize}
                                     disabled={
                                         !p.opened && data.available_count === 0
@@ -339,6 +415,7 @@ export default function DiscoverScreen() {
                                         (anyOpened && !p.opened)
                                     }
                                     playing={playing === p.idx}
+                                    resetting={resetDue}
                                     openLabel={
                                         anyOpened &&
                                         !p.opened &&
@@ -353,7 +430,7 @@ export default function DiscoverScreen() {
                             </View>
                         ))}
                     </View>
-                    <ResetCountdown resetsAt={data?.resets_at} />
+                    <ResetCountdown resetsAt={data?.resets_at} due={resetDue} />
                 </Pressable>
             )}
         </CardDeck>
@@ -362,6 +439,7 @@ export default function DiscoverScreen() {
 
 function PlaylistTile({
     idx,
+    resetsAt,
     size,
     disabled,
     selected,
@@ -369,9 +447,12 @@ function PlaylistTile({
     playing,
     openLabel,
     openLoading = false,
+    resetting,
     onPress,
 }: {
     idx: number;
+    /** 커버는 초기화 시각으로 고른다 — 초기화와 함께 바뀌게. */
+    resetsAt?: string;
     size: number;
     disabled: boolean;
     selected: boolean;
@@ -383,6 +464,8 @@ function PlaylistTile({
     openLabel?: string;
     /** 오픈을 누른 뒤 확인 창이 뜨기 전(목록 새로 받는 중) — 글자 대신 스피너. */
     openLoading?: boolean;
+    /** 초기화 시각이 지나 새 목록을 기다리는 중 — 어둡게 덮고 누를 수 없다. */
+    resetting: boolean;
     onPress: () => void;
 }) {
     const { t } = useTranslation();
@@ -428,11 +511,11 @@ function PlaylistTile({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [playing, out, scale]);
 
-    const dark = disabled || dimmed;
+    const dark = disabled || dimmed || resetting;
     return (
         <Pressable
             onPress={onPress}
-            disabled={disabled}
+            disabled={disabled || resetting}
             accessibilityRole="button"
             accessibilityState={{ selected }}
             accessibilityLabel={t("discover.playlist.title", { n: idx + 1 })}
@@ -479,7 +562,7 @@ function PlaylistTile({
                 </Animated.View>
                 <View style={[styles.cover, { width: size, height: size }]}>
                     <Image
-                        source={{ uri: coverUrl(idx) }}
+                        source={{ uri: coverUrl(idx, resetsAt) }}
                         style={[StyleSheet.absoluteFill, styles.coverImage]}
                     />
                     {dark && <View style={[styles.dim, styles.coverImage]} />}
@@ -487,6 +570,7 @@ function PlaylistTile({
                         <View style={styles.openWrap} pointerEvents="box-none">
                             <Pressable
                                 onPress={onPress}
+                                disabled={resetting}
                                 accessibilityRole="button"
                                 hitSlop={8}
                                 style={({ pressed }) => [styles.openButton, pressed && styles.pressed]}
@@ -499,6 +583,10 @@ function PlaylistTile({
                             </Pressable>
                         </View>
                     )}
+                    {/* 초기화 대기 중엔 오픈 버튼까지 덮어 눌리지 않는 것처럼 보이게. */}
+                    {resetting && openLabel ? (
+                        <View style={[styles.dim, styles.coverImage]} pointerEvents="none" />
+                    ) : null}
                 </View>
             </Animated.View>
         </Pressable>
@@ -506,21 +594,26 @@ function PlaylistTile({
 }
 
 // 하단 "플레이리스트 초기화까지 hh:mm:ss" — 서버 초기화 시각(없으면 로컬 자정)까지 1초마다 줄어든다.
-function ResetCountdown({ resetsAt }: { resetsAt?: string }) {
+function ResetCountdown({ resetsAt, due }: { resetsAt?: string; due: boolean }) {
     const { t } = useTranslation();
     const [now, setNow] = useState(() => Date.now());
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(id);
     }, []);
-    const left = Math.max(0, Math.floor((resetTargetMs(resetsAt) - now) / 1000));
+    // 0 은 LP 를 덮는 막(due)과 같은 순간에만 — 남은 1초 미만은 1초로 보여 준다.
+    const left = due ? 0 : Math.max(1, Math.ceil((resetTargetMs(resetsAt) - now) / 1000));
     const pad = (v: number) => String(v).padStart(2, "0");
     const time = `${pad(Math.floor(left / 3600))}:${pad(Math.floor((left % 3600) / 60))}:${pad(left % 60)}`;
-    // 어두운 반투명 알약에 시계 아이콘 + 굵은 글씨.
+    // 어두운 반투명 알약에 시계 아이콘 + 굵은 글씨. 0 이 된 뒤 새 목록이 올 때까지는 스피너 —
+    // 글자는 투명하게 남겨 알약 크기를 유지한다.
     return (
         <View style={styles.reset}>
-            <Ionicons name="time-outline" size={15} color={colors.white} />
-            <Text style={styles.resetText}>{t("discover.playlist.resetNote", { time })}</Text>
+            <Ionicons name="time-outline" size={15} color={colors.white} style={left === 0 && styles.hidden} />
+            <Text style={[styles.resetText, left === 0 && styles.hidden]}>
+                {t("discover.playlist.resetNote", { time })}
+            </Text>
+            {left === 0 ? <ActivityIndicator size="small" color={colors.white} style={styles.openSpinner} /> : null}
         </View>
     );
 }

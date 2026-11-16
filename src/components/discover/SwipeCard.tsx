@@ -6,9 +6,9 @@ import {
     Pressable,
     Animated,
 } from "react-native";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { FontAwesome, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Circle, Path, Text as SvgText } from "react-native-svg";
+import Svg, { Circle, Path } from "react-native-svg";
 import CountryFlag from "react-native-country-flag";
 import { useTranslation } from "react-i18next";
 import { useAudioPlayerStatus } from "expo-audio";
@@ -417,6 +417,9 @@ export function PlaylistCard({
                     coverRatio={coverRatio}
                     isNew={isNew}
                 />
+                {/* 굵은 테두리는 겹쳐 그린다 — 카드 크기에 넣으면 보낸 카드만 4px 커져, 앞 카드 높이로
+                    가운데를 잡는 고리가 넘길 때마다 위아래로 움직인다. */}
+                {requested ? <View pointerEvents="none" style={styles.requestedBorder} /> : null}
             </View>
             {audioUrl ? <VoiceController url={audioUrl} onChange={setVoice} /> : null}
             {active ? (
@@ -536,32 +539,28 @@ function InterestChips({ interests, width }: { interests: string[]; width: numbe
     );
 }
 
-// 대화를 신청한 카드의 사진 위 우체국 소인 — 이중 원 안에 HARU / SENT / 날짜, 오른쪽으로
-// 물결 소인선. 비스듬히 찍혀 잉크처럼 살짝 비친다. 플레이리스트는 하루 단위라 날짜는 오늘.
+// 대화를 신청한 카드의 사진 위 우체국 소인 — 이중 원 안에 인사 아이콘(받은 인사 탭과 같은 손),
+// 오른쪽으로 물결 소인선. 비스듬히 찍혀 잉크처럼 살짝 비친다.
 function SentStamp() {
-    const d = new Date();
-    const date = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
     const ink = REQUESTED_PINK; // 테두리와 같은 색
+    const [w, setW] = useState(0);
     const wave = (y: number) =>
         `M 104 ${y} q 9 -7 18 0 t 18 0 t 18 0 t 18 0`;
     return (
-        <View pointerEvents="none" style={styles.sentStamp}>
+        <View pointerEvents="none" style={styles.sentStamp} onLayout={(e) => setW(e.nativeEvent.layout.width)}>
             <Svg width="100%" height="100%" viewBox="0 0 180 100">
                 <Circle cx="50" cy="50" r="45" fill="none" stroke={ink} strokeWidth="5" />
                 <Circle cx="50" cy="50" r="36" fill="none" stroke={ink} strokeWidth="2" />
-                <SvgText x="50" y="33" fontSize="10" fontFamily={fonts.bold} fontWeight="bold" letterSpacing="2" fill={ink} textAnchor="middle">
-                    HARU
-                </SvgText>
-                <SvgText x="50" y="59" fontSize="25" fontFamily={fonts.bold} fontWeight="bold" letterSpacing="2" fill={ink} stroke={ink} strokeWidth="0.5" textAnchor="middle">
-                    SENT
-                </SvgText>
-                <SvgText x="50" y="74" fontSize="9" fontFamily={fonts.bold} fontWeight="bold" fill={ink} textAnchor="middle">
-                    {date}
-                </SvgText>
                 {[30, 44, 58, 72].map((y) => (
                     <Path key={y} d={wave(y)} fill="none" stroke={ink} strokeWidth="4.25" strokeLinecap="round" />
                 ))}
             </Svg>
+            {/* 원 중심(viewBox x 50 / 180) 위에 — 안쪽 원(지름 72)에 여백을 두고. */}
+            {w > 0 ? (
+                <View style={styles.sentStampIcon}>
+                    <MaterialCommunityIcons name="hand-wave" size={(w * 46) / 180} color={ink} />
+                </View>
+            ) : null}
         </View>
     );
 }
@@ -610,7 +609,7 @@ function useVoiceIntro(audioUrl: string | null | undefined) {
 }
 
 // 대화를 신청한 카드 테두리·도장 색 — 낮엔 분홍 노을 위에서도 띄는 핫핑크, 밤엔 진한 테마색.
-const REQUESTED_PINK = isNight ? colors.primaryDark : "#E05C9E";
+export const REQUESTED_PINK = isNight ? colors.primaryDark : "#E05C9E";
 
 const styles = StyleSheet.create({
     card: {
@@ -740,15 +739,36 @@ const styles = StyleSheet.create({
         aspectRatio: 1.8,
         transform: [{ rotate: "-14deg" }],
     },
+    // 원 중심(viewBox 180 중 x 50)에 놓는다. 받은 인사 탭 아이콘처럼 좌우 반전.
+    sentStampIcon: {
+        position: "absolute",
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: `${10000 / 180}%`,
+        alignItems: "center",
+        justifyContent: "center",
+        // 반전한 뒤라 -20deg 가 화면에선 시계 방향 20도.
+        transform: [{ scaleX: -1 }, { rotate: "-20deg" }],
+    },
     // 대화를 신청한 카드 — 핫핑크 굵은 테두리 + 은은한 빛 (iOS 그림자. 안드로이드 elevation 은
     // 반투명 바탕 카드에서 그림자가 비쳐 보여 쓰지 않는다).
     cardRequested: {
-        borderWidth: 3,
-        borderColor: REQUESTED_PINK,
         shadowColor: isNight ? colors.primary : REQUESTED_PINK,
         shadowOpacity: 0.7,
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 0 },
+    },
+    // 카드의 1px 테두리 자리부터 덮는다 (절대 위치는 테두리 안쪽 기준이라 -1).
+    requestedBorder: {
+        position: "absolute",
+        top: -1,
+        left: -1,
+        right: -1,
+        bottom: -1,
+        borderRadius: radii.xl,
+        borderWidth: 3,
+        borderColor: REQUESTED_PINK,
     },
     sideBtn: {
         height: 44,

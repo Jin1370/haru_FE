@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Animated, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { PanGestureHandler, State, type PanGestureHandlerStateChangeEvent } from 'react-native-gesture-handler';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { colors, radii } from '@/constants/colors';
-import { fonts, fs } from '@/constants/fonts';
+import { REQUESTED_PINK } from '@/components/discover/SwipeCard';
+import { isNight } from '@/constants/theme';
 
 // 플레이리스트 카드 고리. 아주 큰 원 둘레에 카드들이 나란히 세워져 있고, 보는 사람은 그중
 // 한 장을 정면으로 본다. 카드는 원 둘레에 놓였지만 모두 정면(보는 사람 쪽)을 향해 서
@@ -35,6 +36,7 @@ export function PlaylistCarousel<T extends { id: string }>({
   loop = true,
   showPosition = false,
   compactHint = false,
+  flyAway = false,
   onLiveChange,
 }: {
   cards: T[];
@@ -45,7 +47,8 @@ export function PlaylistCarousel<T extends { id: string }>({
   // active = 앞 카드(재생·신청). 앞뒤가 바뀌어도 같은 컴포넌트로 그려야 새로 그리지 않는다.
   renderCard: (card: T, active: boolean, step: (dir: 1 | -1) => void) => ReactNode;
   // 앞 카드를 위로 밀면 (대화 신청). 스크린 리더는 같은 이름의 동작으로 실행한다.
-  onSwipeUp: () => void;
+  // flyAway 면 false 를 돌려줄 때(보내지 않음·실패) 날아간 카드를 제자리로 되돌린다.
+  onSwipeUp: () => void | boolean | Promise<boolean | void>;
   swipeUpLabel: string;
   // 이 카드를 위로 밀 수 있나 (아직 인사 안 한 카드). 아니면 밀리지 않고 위쪽 화살표도 없다.
   canSwipeUp: (card: T) => boolean;
@@ -57,6 +60,9 @@ export function PlaylistCarousel<T extends { id: string }>({
   showPosition?: boolean;
   // 위쪽 화살표를 납작하게 (카드 위 여백이 좁은 화면 — 받은 인사).
   compactHint?: boolean;
+  // 위로 밀어 신청하면 카드가 제자리로 돌아오지 않고 위로 날아가 사라진다 (받은 인사 — 신청한
+  // 카드는 목록에서 빠진다). 목록에서 빠지기 전까지 화면 밖에 둔다.
+  flyAway?: boolean;
   // 앞 카드 표시(화살표·번호)가 바뀌는 순간 — 넘기는 도중 80% 넘어갔을 때.
   onLiveChange?: (index: number) => void;
 }) {
@@ -136,27 +142,81 @@ export function PlaylistCarousel<T extends { id: string }>({
   };
 
   // 앞 카드 위로 밀기. room = 카드 윗변 ~ 헤더 밑변 (카드가 가운데 정렬이라 위아래 여백이 같다).
-  // 손가락을 그대로 따라가다 room 의 70% 부터 급격히 무거워져 헤더 바로 아래에서 멈춘다.
+  // 손가락을 그대로 따라가다 room 의 90% 부터 무거워져 헤더 바로 아래에서 멈춘다.
   // 헤더 가까이(room 의 75%) 올려야 신청 — 짧게 건드려 실수로 신청되지 않게. 빠르게 튕겨도
-  // room 의 40% 는 올라가야 한다. 놓으면 제자리로.
+  // room 의 40% 는 올라가야 한다. 놓으면 살짝 튕기며 제자리로.
   const room = areaHeight > 0 && height > 0 ? Math.max(40, (areaHeight - height) / 2) : 150;
+  const free = room * 0.9;
+  const heavy = 200; // 무거운 구간을 끝까지 끌어야 하는 손가락 거리
   const liftY = useRef(new Animated.Value(0)).current;
-  const lift = useMemo(() => {
-    const free = room * 0.7;
-    return liftY.interpolate({
-      inputRange: [-(free + 300), -free, 0],
-      outputRange: [-(room - 4), -free, 0],
-      extrapolate: 'clamp',
-    });
-  }, [liftY, room]);
+  // 놓은 뒤 되돌아오는 몫. 끄는 값(liftY)은 아래로 못 가게 0 에서 잘리므로, 되돌아오며
+  // 0 을 살짝 지나치는 튕김이 잘려 뚝 끊겼다 — 되돌아오기는 자르지 않는 이 값으로 한다.
+  const back = useRef(new Animated.Value(0)).current;
+  const lift = useMemo(
+    () =>
+      Animated.add(
+        liftY.interpolate({
+          inputRange: [-(free + heavy), -free, 0],
+          outputRange: [-(room - 4), -free, 0],
+          extrapolate: 'clamp',
+        }),
+        back,
+      ),
+    [liftY, back, room, free],
+  );
+  // 위 interpolate 와 같은 계산 — 놓은 순간 카드가 있던 자리.
+  const liftAt = (t: number) => {
+    if (t >= 0) return 0;
+    if (t >= -free) return t;
+    return -free - (room - 4 - free) * Math.min(1, (-free - t) / heavy);
+  };
+  // 날아간 카드의 투명도. 앞 카드가 바뀌면(신청한 카드가 목록에서 빠짐) 새 앞 카드는 제자리로.
+  const fade = useRef(new Animated.Value(1)).current;
+  const frontId = n > 0 ? cards[settled % n]?.id : undefined;
+  useEffect(() => {
+    back.stopAnimation();
+    back.setValue(0);
+    liftY.setValue(0);
+    fade.setValue(1);
+  }, [frontId, back, liftY, fade]);
   const onLiftEvent = Animated.event([{ nativeEvent: { translationY: liftY } }], { useNativeDriver: true });
   const onLiftState = (e: PanGestureHandlerStateChangeEvent) => {
     const { state, translationY, velocityY } = e.nativeEvent;
+    // 튕기는 도중 다시 잡으면 그 자리에서 이어 끈다.
+    if (state === State.BEGAN) back.stopAnimation();
     if (state !== State.END && state !== State.CANCELLED && state !== State.FAILED) return;
     const far = translationY < -room * 0.75;
     const flick = velocityY < -1200 && translationY < -room * 0.4;
-    if (state === State.END && (far || flick)) onSwipeUp();
-    Animated.spring(liftY, { toValue: 0, damping: 18, stiffness: 260, useNativeDriver: true }).start();
+    const sent = state === State.END && (far || flick);
+    if (sent && flyAway) {
+      back.stopAnimation((b) => {
+        back.setValue(b + liftAt(translationY));
+        liftY.setValue(0);
+        Animated.parallel([
+          Animated.timing(back, {
+            toValue: -(room + height + 120),
+            duration: 260,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(fade, { toValue: 0, duration: 260, useNativeDriver: true }),
+        ]).start();
+      });
+      Promise.resolve(onSwipeUp()).then((ok) => {
+        if (ok !== false) return;
+        Animated.parallel([
+          Animated.spring(back, { toValue: 0, damping: 14, stiffness: 220, useNativeDriver: true }),
+          Animated.timing(fade, { toValue: 1, duration: 200, useNativeDriver: true }),
+        ]).start();
+      });
+      return;
+    }
+    if (sent) onSwipeUp();
+    back.stopAnimation((b) => {
+      back.setValue(b + liftAt(translationY));
+      liftY.setValue(0);
+      Animated.spring(back, { toValue: 0, damping: 14, stiffness: 220, mass: 1, useNativeDriver: true }).start();
+    });
   };
 
   // 넘기는 동안엔 다시 그리지 않는다 — 위치·크기는 아래 노드가 네이티브에서 계산한다.
@@ -282,7 +342,7 @@ export function PlaylistCarousel<T extends { id: string }>({
                     isFront && canSwipeUp(card) ? [{ name: 'swipeUp', label: swipeUpLabel }] : undefined
                   }
                   onAccessibilityAction={isFront ? onSwipeUp : undefined}
-                  style={isFront ? { transform: [{ translateY: lift }] } : undefined}
+                  style={isFront ? { opacity: fade, transform: [{ translateY: lift }] } : undefined}
                 >
                   {renderCard(card, isFront, step)}
                 </Animated.View>
@@ -358,9 +418,12 @@ function LiveOverlay<T>({
       {card && canSwipeUp(card) ? <UpHint height={h} top={-h - gap} /> : null}
       {showPosition ? (
         <View pointerEvents="none" style={[styles.positionBox, { top: cardHeight, height: room }]}>
-          <Text style={styles.position}>
-            {live + 1} / {cards.length}
-          </Text>
+          {/* 카드 수만큼 점 — 보고 있는 카드는 인사 도장·테두리와 같은 색. */}
+          <View style={styles.dots}>
+            {cards.map((c, i) => (
+              <View key={i} style={[styles.dot, i === live && styles.dotActive]} />
+            ))}
+          </View>
         </View>
       ) : null}
     </>
@@ -400,13 +463,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  position: {
-    fontSize: fs(14),
-    fontFamily: fonts.bold,
-    color: colors.white,
-    textShadowColor: 'rgba(0,0,0,0.45)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+  dots: {
+    flexDirection: 'row',
+    gap: 7,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: isNight ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.22)',
+  },
+  dotActive: {
+    backgroundColor: REQUESTED_PINK,
   },
   ring: {
     alignSelf: 'center',
