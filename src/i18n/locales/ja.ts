@@ -169,6 +169,7 @@ export default {
             changedTitle: "入っている声の数が変わりました",
             buy: "{{count}}人の声が入っています。",
             buyOne: "{{count}}人の声が入っています。",
+            resetSoon: "{{minutes}}分後にリセットされます。",
             resetNote: "リセットまで {{time}}",
             expired: "午前0時になり、プレイリストがリセットされました。",
             noInterests: "話しながら知っていこう",

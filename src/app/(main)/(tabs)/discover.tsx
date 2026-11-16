@@ -193,6 +193,8 @@ export default function DiscoverScreen() {
             open(idx);
             return;
         }
+        // 초기화까지 1시간 미만이면 남은 분(올림)을 덧붙인다 — 산 칸도 초기화 때 함께 사라진다.
+        const minutesLeft = Math.ceil((resetTargetMs(d.resets_at) - Date.now()) / 60_000);
         showAlert({
             variant: "confirm",
             title: t(
@@ -201,12 +203,19 @@ export default function DiscoverScreen() {
                     : "discover.playlist.buyTitle",
             ),
             // 영어만 단수·복수가 갈린다. ko·ja 의 buyOne 은 buy 와 같다.
-            message: t(
-                count === 1
-                    ? "discover.playlist.buyOne"
-                    : "discover.playlist.buy",
-                { count },
-            ),
+            message:
+                t(
+                    count === 1
+                        ? "discover.playlist.buyOne"
+                        : "discover.playlist.buy",
+                    { count },
+                ) +
+                (minutesLeft < 60
+                    ? "\n" +
+                      t("discover.playlist.resetSoon", {
+                          minutes: Math.max(1, minutesLeft),
+                      })
+                    : ""),
             messageHighlight: String(count),
             starCost: price,
             cancelText: t("common.cancel"),

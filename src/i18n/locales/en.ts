@@ -171,6 +171,7 @@ export default {
       changedTitle: 'The number of voices changed',
       buy: 'It has {{count}} voices.',
       buyOne: 'It has {{count}} voice.',
+      resetSoon: 'Resets in {{minutes}} min.',
       resetNote: 'Resets in {{time}}',
       expired: "It's midnight, so your playlists have been reset.",
       noInterests: "Let's get to know each other",
