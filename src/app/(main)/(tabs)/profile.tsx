@@ -777,12 +777,15 @@ export default function ProfileScreen() {
       ) : null}
 
       {/* Profile Info Card */}
-      <LinearGradient
-        colors={[...gradients.blush]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.section}
-      >
+      <View style={styles.section}>
+        <View style={styles.cardFill} pointerEvents="none">
+          <LinearGradient
+            colors={[...gradients.blush]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
         <Pressable
           style={styles.profileEditBtn}
           onPress={() => router.push('/(main)/settings/edit-profile')}
@@ -834,15 +837,18 @@ export default function ProfileScreen() {
             </View>
           </View>
         ) : null}
-      </LinearGradient>
+      </View>
 
       {/* Voice Intro Card */}
-      <LinearGradient
-        colors={[...gradients.blush]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.voiceCard}
-      >
+      <View style={styles.voiceCard}>
+        <View style={styles.cardFill} pointerEvents="none">
+          <LinearGradient
+            colors={[...gradients.blush]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
         <View style={styles.voiceCardHeader}>
           <View style={styles.voiceCardTitleGroup}>
             <Text style={styles.voiceCardTitle}>{t('profile.voiceCardTitle')}</Text>
@@ -881,7 +887,7 @@ export default function ProfileScreen() {
             <ActivityIndicator size="small" color={colors.primary} />
           </View>
         ) : null}
-      </LinearGradient>
+      </View>
 
       </ScrollView>
 
@@ -1016,7 +1022,7 @@ const styles = StyleSheet.create({
     gap: GRID_GAP,
   },
   mainPhotoSlot: {
-    borderRadius: radii.xl,
+    borderRadius: radii.lg,
     overflow: 'hidden',
     backgroundColor: colors.cardAlt,
     ...shadows.card,
@@ -1162,6 +1168,14 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSoft,
     position: 'relative',
     ...shadows.soft,
+  },
+  // 카드 테두리 안쪽을 채우는 그라데이션의 틀. 둥글기는 일반 View 의 overflow 로 자른다 —
+  // 안드로이드에서 LinearGradient 자체의 borderRadius 는 테두리와 다른 곡선으로 그려진다.
+  // 테두리(1)만큼 작은 둥글기라 테두리 안쪽 곡선과 나란하다.
+  cardFill: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radii.lg - 1,
+    overflow: 'hidden',
   },
   profileEditBtn: {
     position: 'absolute',

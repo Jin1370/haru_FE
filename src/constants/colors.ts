@@ -24,6 +24,8 @@ const dayColors = {
   borderSoft: '#FBE8EF',
 
   error: '#FF6B7A',
+  // 되돌리기 어려운 행동의 버튼 (삭제·로그아웃·탈퇴·매칭 해제·신고 제출). 밤 테마는 남색.
+  danger: '#FF6B7A',
   success: '#78C99A',
   warning: '#F7C787',
 
@@ -68,6 +70,7 @@ const nightColors: typeof dayColors = {
   borderSoft: '#E8EBF0',
 
   like: '#325996',
+  danger: '#325996',
 
   overlay: 'rgba(18,24,38,0.5)',
 

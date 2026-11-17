@@ -100,7 +100,7 @@ export function AlertCard({
             styles.btn,
             stackedActions && styles.btnStacked,
             styles.btnPrimary,
-            { backgroundColor: primary.destructive ? colors.error : accent },
+            { backgroundColor: primary.destructive ? colors.danger : accent },
             pressed && styles.btnPressed,
           ]}
         >

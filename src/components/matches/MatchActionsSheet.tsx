@@ -178,7 +178,7 @@ export function MatchActionsSheet({
                 style={({ pressed }) => [styles.sheetItem, pressed && styles.sheetItemPressed]}
                 onPress={handleHidePress}
               >
-                <Ionicons name="trash-outline" size={20} color={colors.error} />
+                <Ionicons name="trash-outline" size={20} color={colors.danger} />
                 <Text style={[styles.sheetItemText, styles.sheetItemDanger]}>
                   {t('matches.actions.hide')}
                 </Text>
@@ -188,7 +188,7 @@ export function MatchActionsSheet({
                 style={({ pressed }) => [styles.sheetItem, pressed && styles.sheetItemPressed]}
                 onPress={handleUnmatchPress}
               >
-                <Ionicons name="heart-dislike-outline" size={20} color={colors.error} />
+                <Ionicons name="heart-dislike-outline" size={20} color={colors.danger} />
                 <Text style={[styles.sheetItemText, styles.sheetItemDanger]}>
                   {t('matches.actions.unmatch')}
                 </Text>
@@ -256,6 +256,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   sheetItemDanger: {
-    color: colors.error,
+    color: colors.danger,
   },
 });

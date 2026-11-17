@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   dangerText: {
-    color: colors.error,
+    color: colors.danger,
   },
   pressed: {
     opacity: 0.85,
