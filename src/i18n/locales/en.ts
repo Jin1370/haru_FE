@@ -174,7 +174,7 @@ export default {
       buyOne: 'It has {{count}} voice.',
       resetSoon: 'Resets in {{minutes}} min.',
       resetNote: 'Resets in {{time}}',
-      expired: "It's midnight, so your playlists have been reset.",
+      expired: "A new day has started, so your playlists have been reset.",
       noInterests: "Let's get to know each other",
       replaced: "We've added a new card.",
       swipeHintTitle: 'Tip',

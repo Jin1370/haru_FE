@@ -24,7 +24,7 @@ import { fonts, fs, HEADER_FONT_WEIGHT } from '@/constants/fonts';
 
 // 탐색 탭 2단계 — 연 플레이리스트의 카드. 좌우 버튼·스와이프로 순환하며 앞뒤로 오가고,
 // 넘긴다고 기록되지 않는다. 대화 신청(=좋아요)만 바로 보낸다. 처음 화면에 나온 카드는
-// 서버에 "봤다" 로 남겨, 자정에 본 카드만 pass 처리되고 안 본 카드는 후보로 돌아간다.
+// 서버에 "봤다" 로 남겨, 초기화 때 본 카드만 pass 처리되고 안 본 카드는 후보로 돌아간다.
 export default function PlaylistScreen() {
   const { t } = useTranslation();
   const idx = Number(useLocalSearchParams<{ idx: string }>().idx);
@@ -38,7 +38,7 @@ export default function PlaylistScreen() {
   const [pos, setPos] = useState(0);
   const [sending, setSending] = useState(false);
 
-  // 플레이리스트가 초기화되면 이 화면을 닫고 알린다. 자정 처리와 404(대화 신청 거절 뒤 다시 받기)가
+  // 플레이리스트가 초기화되면 이 화면을 닫고 알린다. 초기화 처리와 404(대화 신청 거절 뒤 다시 받기)가
   // 거의 동시에 올 수 있어 한 번만 — 두 번 닫으면 탐색 화면까지 닫힌다.
   const closed = useRef(false);
   const closeExpired = useCallback(() => {
@@ -54,7 +54,7 @@ export default function PlaylistScreen() {
       setCards(res.cards);
       setError(false);
     } catch (e) {
-      // 자정이 지나 플레이리스트가 사라졌다 (앱이 백그라운드여서 타이머를 놓친 경우 등).
+      // 초기화 시각이 지나 플레이리스트가 사라졌다 (앱이 백그라운드여서 타이머를 놓친 경우 등).
       if (e instanceof ApiRequestError && e.status === 404) {
         closeExpired();
         return;
@@ -70,7 +70,7 @@ export default function PlaylistScreen() {
     else load();
   }, [load]);
 
-  // 자정이 되면 보고 있던 카드도 닫고 선택 화면으로 돌아간다 (선택 화면은 focus 때 새로 받는다).
+  // 초기화 시각이 되면 보고 있던 카드도 닫고 선택 화면으로 돌아간다 (선택 화면은 focus 때 새로 받는다).
   // 이 화면 위에 다른 화면(채팅·별사탕 충전·목소리 등록)이 떠 있으면 그 화면이 닫히므로, 돌아왔을 때 닫는다.
   const navigation = useNavigation();
   const expiredWhileAway = useRef(false);
@@ -185,7 +185,7 @@ export default function PlaylistScreen() {
       // 409 = 다른 기기에서 이미 신청함. 신청 완료 상태가 맞다.
       if (status === 409) return;
       patchCard(candidate.id, { requested: false });
-      // 403 = 자정이 지나 오늘 플레이리스트가 아니다 — 다시 받으면 404 로 선택 화면에 간다.
+      // 403 = 초기화 시각이 지나 오늘 플레이리스트가 아니다 — 다시 받으면 404 로 선택 화면에 간다.
       if (status === 403) load();
       else showAlert({ variant: 'info', title: t('common.error'), message: t('common.tryAgainLater') });
     } finally {

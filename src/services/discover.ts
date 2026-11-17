@@ -10,7 +10,7 @@ import type {
 } from '@/types';
 
 export async function getDiscoverCandidates(limit = 10): Promise<DiscoverCandidate[]> {
-  // tz: 유료화 ON 의 카드 한도(로컬 자정 리셋) 계산용.
+  // tz: 유료화 ON 의 카드 한도(로컬 새벽 5시 리셋) 계산용.
   const tz = new Date().getTimezoneOffset();
   return api.get<DiscoverCandidate[]>(`/api/discover?limit=${limit}&tz_offset_minutes=${tz}`);
 }
@@ -23,14 +23,14 @@ export async function getReceivedLikes(): Promise<DiscoverCandidate[]> {
 }
 
 export async function swipe(data: SwipeRequest): Promise<SwipeResponse> {
-  // tz_offset_minutes 는 BE 서버측 일일 한도 하드 캡이 사용자 로컬 자정 경계를
+  // tz_offset_minutes 는 BE 서버측 일일 한도 하드 캡이 사용자 로컬 하루(새벽 5시) 경계를
   // quota 엔드포인트와 동일하게 계산하도록 전달 (getDiscoverQuota 와 동일 의미).
   const tz = new Date().getTimezoneOffset();
   return api.post<SwipeResponse>(`/api/discover/swipe?tz_offset_minutes=${tz}`, data);
 }
 
 // BE 가 sources of truth 로 들고 있는 "오늘 스와이프 수" 를 가져온다 (기기 간 동기화).
-// tz_offset_minutes 는 Date#getTimezoneOffset() 그대로 — 사용자 로컬 자정 경계를 BE 가 계산한다.
+// tz_offset_minutes 는 Date#getTimezoneOffset() 그대로 — 사용자 로컬 하루(새벽 5시) 경계를 BE 가 계산한다.
 export async function getDiscoverQuota(): Promise<DiscoverQuota> {
   const tz = new Date().getTimezoneOffset();
   return api.get<DiscoverQuota>(`/api/discover/quota?tz_offset_minutes=${tz}`);
@@ -38,7 +38,7 @@ export async function getDiscoverQuota(): Promise<DiscoverQuota> {
 
 // ── 별사탕 유료화 (BE mig 059) ──────────────────────────────────────
 
-// 오늘의 탐색 플레이리스트 3칸 (BE mig 063). tz = 사용자 로컬 자정 경계.
+// 오늘의 탐색 플레이리스트 3칸 (BE mig 063). tz = 사용자 로컬 하루(새벽 5시) 경계.
 export async function getPlaylists(): Promise<PlaylistsResponse> {
   const tz = new Date().getTimezoneOffset();
   const res = await api.get<PlaylistsResponse>(`/api/discover/playlists?tz_offset_minutes=${tz}`);
@@ -47,7 +47,7 @@ export async function getPlaylists(): Promise<PlaylistsResponse> {
 }
 
 // 마지막으로 받은 초기화 시각 — 카드 화면은 늘 선택 화면을 거쳐 들어가고 그날 세 칸은 같은
-// 시각에 끝나므로, 카드 화면의 자정 처리가 이 값을 쓴다.
+// 시각에 끝나므로, 카드 화면의 초기화 처리가 이 값을 쓴다.
 let lastResetsAt: string | null = null;
 export function playlistResetsAt(): string | null {
   return lastResetsAt;
@@ -71,7 +71,7 @@ export function takePreloadedPlaylistCards(idx: number): DiscoverCandidate[] | n
   return hit;
 }
 
-// 오늘 연 플레이리스트의 카드. 오늘 열지 않았거나 자정이 지났으면 404.
+// 오늘 연 플레이리스트의 카드. 오늘 열지 않았거나 초기화 시각이 지났으면 404.
 export async function getPlaylistCards(idx: number): Promise<PlaylistCards> {
   const tz = new Date().getTimezoneOffset();
   return api.get<PlaylistCards>(`/api/discover/playlists/${idx}?tz_offset_minutes=${tz}`);
@@ -95,7 +95,7 @@ export async function revealLike(likerId: string, free = false): Promise<{ revea
   return api.post('/api/discover/likes-received/reveal', { liker_id: likerId, free });
 }
 
-// 플레이리스트에서 처음 화면에 나온 카드. 자정에 본 카드만 pass 로 기록된다.
+// 플레이리스트에서 처음 화면에 나온 카드. 초기화 때 본 카드만 pass 로 기록된다.
 export async function markPlaylistSeen(idx: number, candidateIds: string[]): Promise<void> {
   const tz = new Date().getTimezoneOffset();
   await api.post(`/api/discover/playlists/${idx}/seen?tz_offset_minutes=${tz}`, { candidate_ids: candidateIds });

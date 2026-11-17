@@ -172,7 +172,7 @@ export default {
             buyOne: "{{count}}명의 목소리가 담겨있어요.",
             resetSoon: "{{minutes}}분 뒤에 초기화돼요.",
             resetNote: "초기화까지 {{time}}",
-            expired: "자정이 되어 플레이리스트가 초기화됐어요.",
+            expired: "새로운 하루가 시작되어 플레이리스트가 초기화됐어요.",
             noInterests: "대화하면서 알아가요",
             replaced: "새 카드를 넣어드렸어요.",
             swipeHintTitle: "안내",

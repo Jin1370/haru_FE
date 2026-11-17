@@ -172,7 +172,7 @@ export default {
             buyOne: "{{count}}人の声が入っています。",
             resetSoon: "{{minutes}}分後にリセットされます。",
             resetNote: "リセットまで {{time}}",
-            expired: "午前0時になり、プレイリストがリセットされました。",
+            expired: "新しい一日になったので、プレイリストがリセットされました。",
             noInterests: "話しながら知っていこう",
             replaced: "新しいカードを入れました。",
             swipeHintTitle: "ご案内",

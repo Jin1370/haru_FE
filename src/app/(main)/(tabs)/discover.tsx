@@ -41,7 +41,7 @@ import {
 // PLAY_SLIDE = LP 가 커버 밖으로 더 나오는 거리(커버 한 변 비율), PLAY_TURN = 그동안 추가 회전.
 // 플레이리스트 한 칸에 담기는 최대 인원 (BE CARD_RESET_AMOUNT 와 같아야 한다).
 const PLAYLIST_SIZE = 10;
-// 자정 조회 재시도 — 2초 간격 최대 30번(1분). 서버·휴대폰 시계 차이는 보통 1~2초라 짧게.
+// 초기화 조회 재시도 — 2초 간격 최대 30번(1분). 서버·휴대폰 시계 차이는 보통 1~2초라 짧게.
 const MIDNIGHT_RETRY_MS = 2000;
 const MIDNIGHT_RETRIES = 30;
 const SELECTED_SCALE = 1.06;
@@ -129,7 +129,7 @@ export default function DiscoverScreen() {
         load();
     }, [reloadVersion, load]);
 
-    // 자정이 지나면 새 플레이리스트를 받는다. 이 조회에서 서버가 어제 본 카드를 넘김으로 기록한다.
+    // 초기화 시각이 지나면 새 플레이리스트를 받는다. 이 조회에서 서버가 어제 본 카드를 넘김으로 기록한다.
     // 받기에 실패했거나, 휴대폰 시계가 서버보다 빨라 아직 초기화 전 값이 오면 잠시 뒤 다시 받는다
     // (그대로 두면 카운트다운이 00:00:00 에 멈춘다). 탭을 옮겨도 focus 때 다시 받으니 횟수는 제한한다.
     const midnightRetry = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -593,7 +593,7 @@ function PlaylistTile({
     );
 }
 
-// 하단 "플레이리스트 초기화까지 hh:mm:ss" — 서버 초기화 시각(없으면 로컬 자정)까지 1초마다 줄어든다.
+// 하단 "플레이리스트 초기화까지 hh:mm:ss" — 서버 초기화 시각(없으면 로컬 새벽 5시)까지 1초마다 줄어든다.
 function ResetCountdown({ resetsAt, due }: { resetsAt?: string; due: boolean }) {
     const { t } = useTranslation();
     const [now, setNow] = useState(() => Date.now());
