@@ -50,7 +50,6 @@ export default {
         profileSubtitle: "프로필에 표시될 기본 정보를 입력해주세요.",
         voiceTitle: "내 목소리 등록",
         voiceSubtitle: "음성 채팅에 사용할 목소리를 등록해요.",
-        voiceSkipWarning: "대화하려면 목소리 등록이 필요해요.",
         introTitle: "상태 메시지",
         introSubtitle: "고른 상태 메시지가 내 목소리로 자동 생성돼요.",
         photosTitle: "프로필 사진",
@@ -443,7 +442,6 @@ export default {
         nationality: "국적",
         nationalityPlaceholder: "국적을 선택하세요",
         selectNationalityRequired: "국적을 선택해주세요.",
-        nationalityLimitedNotice: "찾는 국가가 없나요? 곧 더 많은 국가에서 만날 수 있어요.",
         referralCode: "추천 코드 (선택)",
         referralCodeHint: "모임·행사에서 코드를 받으셨다면 입력해주세요.",
         referralCodePlaceholder: "AAAAA00",
@@ -595,20 +593,21 @@ export default {
 
     setupVoice: {
         processing: "음성을 처리 중입니다...",
-        cloneReady: "보이스 클론 등록 완료",
+        creating: "목소리 생성 중...",
+        cloneReady: "목소리 등록 완료",
         recordingGuide:
-            "• 최소 녹음 시간은 10초이나, 길게 녹음할 수록 실제 목소리와 유사하게 생성됩니다.\n• 다정한 목소리로 천천히, 부드럽게 읽어주세요.",
+            "• 길게 녹음할수록 실제 목소리와 유사하게 생성돼요.\n• 천천히 부드럽게 읽어주세요.",
         // 음성 등록 단계 이탈 완화 — voice-sample-removal sprint 정합(녹음 원본은
         // 클론 생성 후 즉시 폐기, 저희 서버에 저장하지 않음).
         recordingPrivacyNote: "• 음성 녹음은 저장되지 않으니 걱정하지 마세요.",
         exampleScriptTitle: "할말이 생각나지 않는다면 읽어주세요.",
         exampleScript:
             "안녕하세요. 오늘 하루는 어떠셨어요? 별일 없이 잘 보내셨길 바라요. 저는 매일 같은 길을 걷는데도 어떤 날은 마음이 살짝 가라앉기도 하고, 어떤 날은 작은 일에도 기분이 들뜨더라고요. 혹시 오늘, 누군가의 한마디 때문에 기분이 좋아진 적 있으세요? 아니면 반대로, 상처를 받지는 않으셨나요? 신기하게도 가까이 있는 사람보다 멀리 있는 누군가의 짧은 한마디가 더 와닿을 때가 있잖아요. 좋아하는 플레이리스트의 멜로디처럼, 어떤 목소리는 그저 듣는 것만으로도 위로가 되는 것 같아요. 그러니까 오늘은 서로에게 작은 안부 하나씩 건네보면 어떨까요?",
-        uploadVoice: "보이스 클론 생성",
+        uploadVoice: "목소리 등록",
         reRecord: "다시 녹음",
         processingHint: "잠시만 기다려주세요...",
-        regenerateVoiceClone: "보이스 클론 재생성",
-        regenerateConfirm: "새 녹음으로 기존 보이스 클론을 덮어쓰게 됩니다. 진행하시겠어요?",
+        regenerateVoiceClone: "목소리 재등록",
+        regenerateConfirm: "기존 목소리는 삭제돼요. 진행하시겠어요?",
         permissionRequired: "권한 필요",
         microphonePermissionRequired: "마이크 권한이 필요합니다.",
         fileTooLarge: "파일이 너무 큽니다",
@@ -621,9 +620,9 @@ export default {
         recloneLimitMessage:
             "이번 기간 보이스 재생성 한도에 도달했어요. 잠시 후 다시 시도해 주세요.",
         recloneExhausted: "재생성 한도에 도달했어요. {{date}}부터 다시 가능해요.",
-        tooShortTitle: "녹음이 너무 짧습니다",
+        tooShortTitle: "녹음이 너무 짧아요",
         tooShortMessage:
-            "보이스 클론을 만들려면 10초 이상 녹음이 필요합니다. 다시 녹음해주세요.",
+            "10초 이상 다시 녹음해주세요.",
         tooQuietTitle: "목소리가 들리지 않아요",
         tooQuietMessage:
             "녹음에서 목소리를 감지하지 못했어요. 마이크에 더 가까이 말하거나 조용한 곳에서 다시 녹음해주세요.",

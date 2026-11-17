@@ -50,7 +50,6 @@ export default {
     profileSubtitle: 'Enter the basics that will appear on your profile.',
     voiceTitle: 'Register My Voice',
     voiceSubtitle: 'Register the voice that will be used in voice chats.',
-    voiceSkipWarning: "Register your voice to start chatting.",
     introTitle: 'Status',
     introSubtitle: 'Your chosen status is auto-generated in your own voice.',
     photosTitle: 'Profile Photos',
@@ -444,7 +443,6 @@ export default {
     nationality: 'Nationality',
     nationalityPlaceholder: 'Select nationality',
     selectNationalityRequired: 'Please select a nationality.',
-    nationalityLimitedNotice: "Don't see your country? We'll be there soon.",
     referralCode: "Referral code (optional)",
     referralCodeHint: "Got a code from a meetup or event? Enter it here.",
     referralCodePlaceholder: "AAAAA00",
@@ -596,9 +594,10 @@ export default {
 
   setupVoice: {
     processing: 'Processing your voice...',
-    cloneReady: 'Voice clone ready',
+    creating: 'Creating voice...',
+    cloneReady: 'Voice registered',
     recordingGuide:
-      '• Minimum recording length is 10 seconds — the longer you record, the closer the result sounds to your real voice.\n• Please read in a warm voice, slowly and softly.',
+      '• The longer you record, the closer the result sounds to your real voice.\n• Please read slowly and softly.',
     // Reduces drop-off at the voice step — aligned with the voice-sample-removal
     // sprint (the raw recording is discarded right after the clone is created and
     // is never stored on our servers).
@@ -606,11 +605,11 @@ export default {
     exampleScriptTitle: "Read this if you're not sure what to say.",
     exampleScript:
       "Hello. How was your day today? I hope your day was kind to you. It's funny — I walk the same path every day, but some days my heart feels a little heavy, and other days I find myself lifted by the smallest things. Did anyone's words make you smile today? Or, on the other hand, was there something that hurt a little? It's strange — sometimes a brief word from someone far away resonates more deeply than anything from someone close. Like the melody of a favorite playlist, certain voices have a way of comforting you just by being heard. So today, why don't we share a small hello with each other?",
-    uploadVoice: 'Create Voice Clone',
+    uploadVoice: 'Register voice',
     reRecord: 'Re-record',
     processingHint: 'This may take a moment...',
-    regenerateVoiceClone: 'Regenerate voice clone',
-    regenerateConfirm: 'A new recording will overwrite your existing voice clone. Continue?',
+    regenerateVoiceClone: 'Re-register voice',
+    regenerateConfirm: 'Your current voice will be deleted. Continue?',
     permissionRequired: 'Permission',
     microphonePermissionRequired: 'Microphone permission is required.',
     fileTooLarge: 'File Too Large',
@@ -622,8 +621,8 @@ export default {
     recloneLimitMessage:
         'You\'ve reached the voice regeneration limit for this period. Please try again later.',
     recloneExhausted: 'You\'ve reached the regeneration limit. Available again on {{date}}.',
-    tooShortTitle: 'Recording Too Short',
-    tooShortMessage: 'Voice clone requires at least 10 seconds. Please record again.',
+    tooShortTitle: 'Recording too short',
+    tooShortMessage: 'Please record again for at least 10 seconds.',
     tooQuietTitle: 'No Voice Detected',
     tooQuietMessage:
       'We could not hear your voice in the recording. Move closer to the mic or record in a quieter place, then try again.',

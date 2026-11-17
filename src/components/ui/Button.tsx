@@ -34,12 +34,27 @@ export function Button({
   const isDisabled = isButtonDisabled(disabled, loading);
   const isPrimary = variant === 'primary';
 
-  const content = loading ? (
-    <ActivityIndicator color={variant === 'outline' ? colors.primary : colors.white} />
-  ) : (
-    <Text style={[styles.text, styles[`${variant}Text` as keyof typeof styles], textStyle]}>
-      {title}
-    </Text>
+  // 로딩 중에도 글자를 투명하게 남겨 버튼 크기를 그대로 두고, 스피너는 그 위에 겹친다.
+  // (글자를 스피너로 바꾸면 스피너가 글자 줄보다 낮아 버튼이 살짝 줄어들었다.)
+  const content = (
+    <>
+      <Text
+        style={[
+          styles.text,
+          styles[`${variant}Text` as keyof typeof styles],
+          textStyle,
+          loading && styles.hidden,
+        ]}
+      >
+        {title}
+      </Text>
+      {loading ? (
+        <ActivityIndicator
+          style={StyleSheet.absoluteFill}
+          color={variant === 'outline' ? colors.primary : colors.white}
+        />
+      ) : null}
+    </>
   );
 
   return (
@@ -101,6 +116,7 @@ const styles = StyleSheet.create({
     color: colors.white,
     letterSpacing: 0.3,
   },
+  hidden: { opacity: 0 },
   primaryText: {},
   secondaryText: {
     color: colors.text,

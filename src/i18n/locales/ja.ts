@@ -50,7 +50,6 @@ export default {
         profileSubtitle: "プロフィールに表示される基本情報を入力してください。",
         voiceTitle: "自分の声を登録",
         voiceSubtitle: "ボイスチャットに使う声を登録します。",
-        voiceSkipWarning: "会話するには、声の登録が必要です。",
         introTitle: "ステータスメッセージ",
         introSubtitle: "選んだステータスメッセージが、あなたの声で自動生成されます。",
         photosTitle: "プロフィール写真",
@@ -439,7 +438,6 @@ export default {
         nationality: "国籍",
         nationalityPlaceholder: "国籍を選んでください",
         selectNationalityRequired: "国籍を選んでください。",
-        nationalityLimitedNotice: "探している国がありませんか？まもなく対応国が増えます。",
         referralCode: "紹介コード（任意）",
         referralCodeHint: "集まりやイベントでコードを受け取った方は入力してください。",
         referralCodePlaceholder: "AAAAA00",
@@ -591,20 +589,21 @@ export default {
 
     setupVoice: {
         processing: "音声を処理中です...",
-        cloneReady: "ボイスクローン登録完了",
+        creating: "声を生成中...",
+        cloneReady: "声の登録完了",
         recordingGuide:
-            "• 最低録音時間は10秒ですが、長く録音するほど実際の声に近く生成されます。\n• 優しい声で、ゆっくり、柔らかく読んでください。",
+            "• 長く録音するほど実際の声に近く生成されます。\n• ゆっくり柔らかく読んでください。",
         // 音声登録ステップの離脱緩和 — voice-sample-removal sprint と整合（録音の
         // 元データはクローン生成後に即時破棄、サーバーには保存しない）。
         recordingPrivacyNote: "• 音声の録音は保存されないのでご安心ください。",
         exampleScriptTitle: "話す内容が思いつかない場合はお読みください。",
         exampleScript:
             "こんにちは。今日はどんな一日でしたか？穏やかに過ごせていたらいいなと思います。私は毎日同じ道を歩いているのに、ある日はふっと気持ちが沈んでしまうこともあれば、ある日は些細なことで心が弾んだりするんです。今日、誰かの一言で気分が良くなった瞬間はありましたか？それとも逆に、ちょっと傷ついたことはありませんでしたか？不思議と、近くにいる人よりも、遠くにいる誰かの短い一言の方が心に響くことってありますよね。お気に入りのプレイリストのメロディーみたいに、ある声はただ聴いているだけで、なんだか慰められる気がします。だから今日は、お互いに小さな挨拶をひとつずつ交わしてみませんか？",
-        uploadVoice: "ボイスクローンを作成",
+        uploadVoice: "声を登録",
         reRecord: "録り直す",
         processingHint: "少々お待ちください...",
-        regenerateVoiceClone: "ボイスクローン再生成",
-        regenerateConfirm: "新しい録音で既存のボイスクローンが上書きされます。続行しますか？",
+        regenerateVoiceClone: "声を再登録",
+        regenerateConfirm: "今の声は削除されます。続けますか？",
         permissionRequired: "権限が必要です",
         microphonePermissionRequired: "マイクの権限が必要です。",
         fileTooLarge: "ファイルが大きすぎます",
@@ -619,7 +618,7 @@ export default {
         recloneExhausted: "再生成の上限に達しました。{{date}}から再度可能になります。",
         tooShortTitle: "録音が短すぎます",
         tooShortMessage:
-            "ボイスクローンを作成するには10秒以上の録音が必要です。もう一度録音してください。",
+            "10秒以上、もう一度録音してください。",
         tooQuietTitle: "声が聞こえません",
         tooQuietMessage:
             "録音から声を検出できませんでした。マイクに近づくか、静かな場所で録音し直してください。",

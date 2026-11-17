@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   chipDisabled: { opacity: 0.4 },
-  chipText: { fontSize: fs(11), color: colors.textSecondary, fontFamily: fonts.medium },
+  chipText: { fontSize: fs(12), color: colors.textSecondary, fontFamily: fonts.medium },
   chipActiveText: { color: colors.white },
   chipDisabledText: { color: colors.textLight },
 });

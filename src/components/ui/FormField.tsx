@@ -10,7 +10,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { colors, radii, shadows } from '@/constants/colors';
-import { fonts, fs } from '@/constants/fonts';
+import { fonts, fs, PIXEL_INPUT_OFFSET_Y } from '@/constants/fonts';
 import { ErrorText } from './ErrorText';
 
 export interface FormFieldProps extends TextInputProps {
@@ -80,6 +80,8 @@ export const FormField = forwardRef<TextInput, FormFieldProps>(function FormFiel
                 color: colors.textLight,
                 fontFamily: fonts.pixel,
                 backgroundColor: 'transparent',
+                // 갈무리는 줄 상자(lineHeight 52) 안에서 위로 떠 보여 내린다 (기본 글씨체는 0).
+                transform: [{ translateY: PIXEL_INPUT_OFFSET_Y }],
               },
             ]}
             pointerEvents="none"

@@ -6,7 +6,7 @@ import {
   Pressable,
   BackHandler,
   Keyboard,
-  type ScrollView,
+  ScrollView,
   type LayoutChangeEvent,
 } from 'react-native';
 import { router, useNavigation, useFocusEffect } from 'expo-router';
@@ -294,36 +294,43 @@ export default function SetupProfile() {
           />
         </Pressable>
         {nationalityOpen && (
-          <View style={[styles.chipRow, styles.dropdownPanel]}>
-            {SUPPORTED_NATIONALITIES.map(({ code, labelKey }) => {
-              const selected = form.nationality === code;
-              return (
-                <Pressable
-                  key={code}
-                  style={[styles.chip, selected && styles.chipActive]}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setForm((f) => ({ ...f, nationality: code as NationalityCode }));
-                    setNationalityOpen(false);
-                    clearError('nationality');
-                  }}
-                >
-                  <Text style={[styles.chipText, selected && styles.chipActiveText]}>
-                    {t(labelKey)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-            <View style={styles.nationalityNoticeRow}>
-              <Ionicons
-                name="information-circle-outline"
-                size={16}
-                color={colors.primaryDark}
-              />
-              <Text style={styles.nationalityNotice}>
-                {t('setupProfile.nationalityLimitedNotice')}
-              </Text>
-            </View>
+          <View style={styles.dropdownPanel}>
+            {/* 국가는 한 줄에 하나씩, 흰 목록 안에서 스크롤해 고른다 (관심사처럼 여러 개 고르는 칩이 아님).
+                바깥 스크롤 안의 스크롤이라 Android 는 nestedScrollEnabled 필요. */}
+            <ScrollView
+              style={styles.nationalityList}
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+            >
+              {SUPPORTED_NATIONALITIES.map(({ code, labelKey }, i) => {
+                const selected = form.nationality === code;
+                return (
+                  <Pressable
+                    key={code}
+                    style={({ pressed }) => [
+                      styles.nationalityRow,
+                      i > 0 && styles.nationalityRowDivider,
+                      pressed && styles.nationalityRowPressed,
+                    ]}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setForm((f) => ({ ...f, nationality: code as NationalityCode }));
+                      setNationalityOpen(false);
+                      clearError('nationality');
+                    }}
+                  >
+                    <Text
+                      style={[styles.nationalityText, selected && styles.nationalityTextSelected]}
+                    >
+                      {t(labelKey)}
+                    </Text>
+                    {selected ? (
+                      <Ionicons name="checkmark" size={18} color={colors.primary} />
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
         )}
         <ErrorText>{errors.nationality ?? null}</ErrorText>
@@ -400,7 +407,7 @@ const styles = StyleSheet.create({
   },
   genderActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   genderText: {
-    fontSize: fs(11),
+    fontSize: fs(12),
     color: colors.textSecondary,
     fontFamily: fonts.medium,
     textTransform: 'capitalize',
@@ -422,41 +429,30 @@ const styles = StyleSheet.create({
   selectText: { fontSize: fs(14), color: colors.text, fontFamily: fonts.medium },
   selectPlaceholder: { color: colors.textLight },
   dropdownPanel: {
-    padding: 12,
     marginTop: 4,
     marginBottom: 16,
     borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
-    backgroundColor: colors.surface,
-  },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
     borderColor: colors.border,
-    backgroundColor: colors.card,
+    backgroundColor: colors.white,
+    overflow: 'hidden',
   },
-  chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
-  chipText: { fontSize: fs(11), color: colors.textSecondary, fontFamily: fonts.medium },
-  chipActiveText: { color: colors.white },
-  nationalityNoticeRow: {
-    width: '100%',
+  // 세 줄 반쯤 보이게 — 아래가 잘려 보여야 스크롤된다는 걸 안다.
+  nationalityList: { maxHeight: 165 },
+  nationalityRow: {
     flexDirection: 'row',
-    gap: 8,
-    alignItems: 'flex-start',
-    marginTop: 4,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
   },
-  nationalityNotice: {
-    flex: 1,
-    fontSize: fs(12),
-    lineHeight: fs(17),
-    letterSpacing: -0.6,
-    color: colors.primaryDark,
-    fontFamily: fonts.medium,
+  nationalityRowDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSoft,
   },
+  nationalityRowPressed: { backgroundColor: colors.cardAlt },
+  nationalityText: { fontSize: fs(14), color: colors.text, fontFamily: fonts.medium },
+  nationalityTextSelected: { color: colors.primary, fontFamily: fonts.semibold },
   footer: {
     position: 'absolute',
     left: 0,

@@ -130,101 +130,76 @@ const TAB_LABEL_KEY: Record<VoiceIntroSlotLanguage, string> = {
 };
 
 // 언어마다 "한국어 🔊" 버튼 하나 — 누르면 그 언어로 합성된 내 목소리를 재생한다.
-// 버튼마다 플레이어를 따로 두되, 한 버튼이 재생을 시작하면 나머지는 멈춘다 (activeLang).
+// 재생기는 누른 동안 하나만 만든다 (VoicePlayback). 버튼마다 미리 만들어 두면 탭이
+// 살아 있는 동안 안드로이드 오디오 디코더를 계속 붙잡아, 한도를 넘긴 다른 화면의
+// 재생(탐색 카드·녹음 미리듣기)이 시작 즉시 실패했다.
 export function VoiceIntroMultiLangPreview({
     authorLanguage,
     audioUrls,
     audioStatus,
 }: VoiceIntroMultiLangPreviewProps) {
+    const { t } = useTranslation();
     const [activeLang, setActiveLang] = useState<VoiceIntroSlotLanguage | null>(null);
+    const activeUrl = activeLang ? (audioUrls?.[activeLang] ?? null) : null;
     return (
         <View style={styles.row} testID="voice-intro-multilang-preview">
             {getVisibleSlots(authorLanguage).map((lang) => {
                 const body = resolveBodyBranch(lang, audioUrls, audioStatus);
+                const ready = body.branch === "ready" && !!body.url;
+                const playing = activeLang === lang;
                 return (
-                    <LangVoiceButton
-                        // url 이 바뀌면(재합성) 새 플레이어로 — useAudioPlayer 는 첫 source 를 고정한다.
-                        key={`${lang}-${body.url}`}
-                        lang={lang}
-                        branch={body.branch}
-                        url={body.url}
-                        status={audioStatus?.[lang] ?? "unknown"}
-                        active={activeLang === lang}
-                        onStart={() => setActiveLang(lang)}
-                    />
+                    <Pressable
+                        key={lang}
+                        // 재생 중이면 멈춤(재생기 해제), 아니면 이 언어로 새로 재생.
+                        onPress={() => setActiveLang(playing ? null : lang)}
+                        disabled={!ready}
+                        style={({ pressed }) => [
+                            styles.btn,
+                            playing && styles.btnPlaying,
+                            pressed && styles.btnPressed,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t(TAB_LABEL_KEY[lang])}, ${t(STATUS_A11Y_KEY[audioStatus?.[lang] ?? "unknown"])}`}
+                        testID={`voice-intro-btn-${lang}`}
+                    >
+                        <Text style={styles.label} numberOfLines={1}>
+                            {t(TAB_LABEL_KEY[lang])}
+                        </Text>
+                        {ready ? (
+                            <Ionicons
+                                name={playing ? "volume-high" : "volume-medium-outline"}
+                                size={ICON_SIZE}
+                                color={photoCard.icon}
+                            />
+                        ) : body.branch === "failed" ? (
+                            <Ionicons name="warning-outline" size={ICON_SIZE} color={colors.error} />
+                        ) : (
+                            <ActivityIndicator size="small" color={photoCard.icon} />
+                        )}
+                    </Pressable>
                 );
             })}
+            {activeUrl ? (
+                // key=url — 언어를 바꾸면 옛 재생기를 해제하고 새로 만든다.
+                <VoicePlayback key={activeUrl} url={activeUrl} onDone={() => setActiveLang(null)} />
+            ) : null}
         </View>
     );
 }
 
-function LangVoiceButton({
-    lang,
-    branch,
-    url,
-    status,
-    active,
-    onStart,
-}: {
-    lang: VoiceIntroSlotLanguage;
-    branch: VoiceIntroBodyBranch;
-    url: string | null;
-    status: VoiceIntroAudioStatus | "unknown";
-    active: boolean;
-    onStart: () => void;
-}) {
-    const { t } = useTranslation();
-    const { player, play } = useRecoverableAudioPlayer(url ?? undefined);
-    const playerStatus = useAudioPlayerStatus(player);
-    const playing = playerStatus.playing;
-    const ready = branch === "ready" && !!url;
-
-    // 다른 언어 버튼이 재생을 시작하면 멈춘다.
+// 마운트되면 재생하고, 끝나면 onDone — 부모가 언마운트해 재생기를 해제한다.
+function VoicePlayback({ url, onDone }: { url: string; onDone: () => void }) {
+    const { player, play } = useRecoverableAudioPlayer(url);
+    const status = useAudioPlayerStatus(player);
     useEffect(() => {
-        if (!active && playing) player.pause();
-    }, [active, playing, player]);
-
-    const onPress = () => {
-        if (playing) {
-            player.pause();
-            return;
-        }
-        if (playerStatus.duration > 0 && playerStatus.currentTime >= playerStatus.duration) {
-            player.seekTo(0);
-        }
-        onStart();
         play();
-    };
-
-    return (
-        <Pressable
-            onPress={onPress}
-            disabled={!ready}
-            style={({ pressed }) => [
-                styles.btn,
-                playing && styles.btnPlaying,
-                pressed && styles.btnPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={`${t(TAB_LABEL_KEY[lang])}, ${t(STATUS_A11Y_KEY[status])}`}
-            testID={`voice-intro-btn-${lang}`}
-        >
-            <Text style={styles.label} numberOfLines={1}>
-                {t(TAB_LABEL_KEY[lang])}
-            </Text>
-            {ready ? (
-                <Ionicons
-                    name={playing ? "volume-high" : "volume-medium-outline"}
-                    size={ICON_SIZE}
-                    color={photoCard.icon}
-                />
-            ) : branch === "failed" ? (
-                <Ionicons name="warning-outline" size={ICON_SIZE} color={colors.error} />
-            ) : (
-                <ActivityIndicator size="small" color={photoCard.icon} />
-            )}
-        </Pressable>
-    );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    useEffect(() => {
+        if (status.didJustFinish) onDone();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [status.didJustFinish]);
+    return null;
 }
 
 const ICON_SIZE = 20;

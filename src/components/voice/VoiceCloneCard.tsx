@@ -80,6 +80,8 @@ const formatDuration = (ms: number) => {
 export interface VoiceCloneCardState {
   voiceReady: boolean;
   isReRecording: boolean;
+  // 녹음을 마쳤고 아직 등록 전 — 마법사는 이때 다음/건너뛰기를 숨긴다.
+  hasRecording: boolean;
 }
 
 export function VoiceCloneCard({
@@ -236,10 +238,21 @@ export function VoiceCloneCard({
       {showRecordingUI ? (
         recordingUri ? (
           <View style={styles.actions}>
-            <Button title={t('setupVoice.uploadVoice')} onPress={handleUpload} loading={loading} />
-            <Button title={t('setupVoice.reRecord')} variant="outline" onPress={clear} />
+            {/* 등록 중(ElevenLabs 생성 ~15초)엔 스피너 대신 문구로 안내하고, 다시 녹음도 막는다 —
+                눌러도 이미 보낸 요청은 계속 진행돼 버린 녹음이 등록되고 재등록 횟수만 줄어든다. */}
+            <Button
+              title={loading ? t('setupVoice.creating') : t('setupVoice.uploadVoice')}
+              onPress={handleUpload}
+              disabled={loading}
+            />
+            <Button
+              title={t('setupVoice.reRecord')}
+              variant="outline"
+              onPress={clear}
+              disabled={loading}
+            />
             {isReRecording && (
-              <Button title={t('common.cancel')} variant="outline" onPress={handleCancelReRecord} />
+              <Button title={t('common.cancel')} variant="outline" onPress={handleCancelReRecord} disabled={loading} />
             )}
           </View>
         ) : (
@@ -300,7 +313,7 @@ export function VoiceCloneCard({
         </View>
       ) : null}
 
-      {footer?.({ voiceReady, isReRecording })}
+      {footer?.({ voiceReady, isReRecording, hasRecording: !!recordingUri })}
     </>
   );
 }
