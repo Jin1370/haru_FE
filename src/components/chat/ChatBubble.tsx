@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
 import { colors, radii, shadows } from '@/constants/colors';
+import { isNight } from '@/constants/theme';
 import { reactionEmoji } from '@/constants/messageReactions';
 import { fonts, fs } from '@/constants/fonts';
 import {
@@ -831,7 +832,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
   },
   mineBubble: {
-    backgroundColor: colors.primary,
+    // 밤: 남색 하늘 배경에 묻히지 않게 primary 보다 밝은 파랑 (흰 글자 대비 4.7:1).
+    backgroundColor: isNight ? '#4D74B4' : colors.primary,
     borderBottomRightRadius: 6,
   },
   theirsBubble: {

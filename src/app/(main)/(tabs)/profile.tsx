@@ -14,6 +14,7 @@ import { router, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CountryFlag from 'react-native-country-flag';
+import Svg, { Polygon } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { openPhotoEditor } from '@/stores/photoEditorStore';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -33,7 +34,7 @@ import { useInterestResolver } from '@/hooks/useInterestLabel';
 import { showAlert } from '@/stores/alertStore';
 import { usePhotoPreviewStore } from '@/stores/photoPreviewStore';
 import { usePendingPhotoUploadsStore } from '@/stores/pendingPhotoUploadsStore';
-import { colors, gradients, radii, shadows } from '@/constants/colors';
+import { colors, nightBar, photoCard, radii, shadows } from '@/constants/colors';
 import { isNight } from '@/constants/theme';
 import { fonts, fs } from '@/constants/fonts';
 import { calculateAge } from '@/utils/age';
@@ -148,7 +149,7 @@ export default function ProfileScreen() {
           hitSlop={12}
           style={({ pressed }) => [styles.headerGear, pressed && { opacity: 0.6 }]}
         >
-          <Ionicons name="settings-outline" size={22} color={colors.text} />
+          <Ionicons name="settings-outline" size={22} color={nightBar?.text ?? colors.text} />
         </Pressable>
       ),
     });
@@ -678,7 +679,7 @@ export default function ProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel={t('profile.addPhoto')}
           >
-            <Ionicons name="add" size={36} color={colors.textSecondary} />
+            <Ionicons name="add" size={36} color={photoCard.muted} />
           </Pressable>
         )}
 
@@ -733,7 +734,7 @@ export default function ProfileScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={t('profile.addPhoto')}
                 >
-                  <Ionicons name="add" size={24} color={colors.textSecondary} />
+                  <Ionicons name="add" size={24} color={photoCard.muted} />
                 </Pressable>
               );
             })}
@@ -780,7 +781,7 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <View style={styles.cardFill} pointerEvents="none">
           <LinearGradient
-            colors={[...gradients.blush]}
+            colors={[photoCard.card, photoCard.card]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -793,7 +794,7 @@ export default function ProfileScreen() {
           accessibilityLabel={t('profile.editProfile')}
           hitSlop={8}
         >
-          <Ionicons name="pencil" size={16} color={colors.primaryDark} />
+          <Ionicons name="pencil" size={16} color={photoCard.icon} />
         </Pressable>
         <Text style={styles.infoName} numberOfLines={1}>
           {profile.display_name}
@@ -843,7 +844,7 @@ export default function ProfileScreen() {
       <View style={styles.voiceCard}>
         <View style={styles.cardFill} pointerEvents="none">
           <LinearGradient
-            colors={[...gradients.blush]}
+            colors={[photoCard.card, photoCard.card]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -860,7 +861,7 @@ export default function ProfileScreen() {
             accessibilityLabel={t('profile.editBio')}
             hitSlop={8}
           >
-            <Ionicons name="pencil" size={16} color={colors.primaryDark} />
+            <Ionicons name="pencil" size={16} color={photoCard.icon} />
           </Pressable>
         </View>
         {/* Author-written text comes first so the multi-language tabs below
@@ -873,6 +874,10 @@ export default function ProfileScreen() {
           >
             {profile.voice_intro || t('profile.bioEmpty')}
           </Text>
+          {/* 탐색 탭 상단 대화창(DialogBox)과 같은 오른쪽 아래 ▼. */}
+          <Svg width={12} height={8} viewBox="0 0 12 8" style={styles.bioArrow}>
+            <Polygon points="0,0 12,0 6,8" fill={photoCard.dialogBorder} />
+          </Svg>
         </View>
         {bioSet ? (
           <View style={styles.voicePreviewWrap}>
@@ -884,7 +889,7 @@ export default function ProfileScreen() {
           </View>
         ) : synthesizing ? (
           <View style={styles.voicePreviewWrap}>
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="small" color={photoCard.icon} />
           </View>
         ) : null}
       </View>
@@ -1024,8 +1029,8 @@ const styles = StyleSheet.create({
   mainPhotoSlot: {
     borderRadius: radii.lg,
     overflow: 'hidden',
-    backgroundColor: colors.cardAlt,
-    ...shadows.card,
+    // 밝은 바탕이 둥근 모서리 가장자리로 비쳐 테두리처럼 보여 어두운 바탕 + 그림자 없음.
+    backgroundColor: photoCard.field,
   },
   mainBadge: {
     position: 'absolute',
@@ -1045,11 +1050,10 @@ const styles = StyleSheet.create({
   thumbSlot: {
     borderRadius: radii.lg,
     overflow: 'hidden',
-    backgroundColor: colors.cardAlt,
-    ...shadows.soft,
+    backgroundColor: photoCard.field,
   },
   addSlot: {
-    backgroundColor: colors.cardAlt,
+    backgroundColor: photoCard.field,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1165,9 +1169,9 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
+    borderColor: 'transparent',
     position: 'relative',
-    ...shadows.soft,
+    // 그림자 없음 — 반투명 카드에 elevation 그림자가 비친다 (MatchItem 참고).
   },
   // 카드 테두리 안쪽을 채우는 그라데이션의 틀. 둥글기는 일반 View 의 overflow 로 자른다 —
   // 안드로이드에서 LinearGradient 자체의 borderRadius 는 테두리와 다른 곡선으로 그려진다.
@@ -1183,7 +1187,7 @@ const styles = StyleSheet.create({
     right: 12,
     padding: 6,
     borderRadius: radii.pill,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: photoCard.chip,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
@@ -1191,7 +1195,7 @@ const styles = StyleSheet.create({
   infoName: {
     fontSize: fs(18),
     fontFamily: fonts.bold,
-    color: colors.text,
+    color: photoCard.text,
     letterSpacing: 0.3,
     marginBottom: 4,
   },
@@ -1204,7 +1208,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     width: 64,
     fontSize: fs(13),
-    color: colors.textLight,
+    color: photoCard.muted,
     fontFamily: fonts.medium,
     letterSpacing: 0.4,
     paddingTop: 2,
@@ -1215,7 +1219,7 @@ const styles = StyleSheet.create({
   infoValue: {
     flexShrink: 1,
     fontSize: fs(14),
-    color: colors.text,
+    color: photoCard.text,
     fontFamily: fonts.semibold,
     letterSpacing: 0.2,
     paddingTop: 2,
@@ -1238,16 +1242,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   infoTag: {
-    backgroundColor: colors.white,
+    backgroundColor: photoCard.chip,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'transparent',
   },
   infoTagText: {
     fontSize: fs(12),
-    color: colors.primaryDark,
+    color: photoCard.active,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
   },
@@ -1256,8 +1260,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
-    ...shadows.soft,
+    borderColor: 'transparent',
   },
   voiceCardHeader: {
     flexDirection: 'row',
@@ -1274,40 +1277,46 @@ const styles = StyleSheet.create({
   bioEditBtn: {
     padding: 6,
     borderRadius: radii.pill,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: photoCard.chip,
     alignItems: 'center',
     justifyContent: 'center',
   },
   voiceCardTitle: {
     fontSize: fs(15),
     fontFamily: fonts.bold,
-    color: colors.text,
+    color: photoCard.text,
     letterSpacing: 0.3,
   },
   voicePreviewWrap: {
     marginTop: 12,
   },
+  // 탐색 탭 상단 대화창(discover.tsx DialogBox)과 같은 모양 — 테두리 + 막 + 오른쪽 아래 ▼.
   bioRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
     marginTop: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderSoft,
-    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: photoCard.dialogBorder,
+    backgroundColor: photoCard.dialog,
+  },
+  bioArrow: {
+    position: 'absolute',
+    right: 10,
+    bottom: 9,
   },
   bio: {
     flex: 1,
     fontSize: fs(12),
-    color: colors.text,
-    fontFamily: fonts.medium,
+    color: photoCard.text,
+    fontFamily: fonts.bold,
     lineHeight: fs(18),
   },
   bioEmpty: {
-    color: colors.textLight,
+    color: photoCard.muted,
   },
   sheetBackdrop: {
     flex: 1,

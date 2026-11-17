@@ -8,6 +8,7 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Polygon } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { colors, radii } from '@/constants/colors';
@@ -39,21 +40,7 @@ interface BioPhrasePickerProps {
 }
 
 const CUSTOM_MAX = 500;
-const CUSTOM_TINT = '#B9BCC2'; // 연회색
-// 주제 태그 색상. 키는 BIO_PHRASES 의 `tag` (= i18n 키). 미등록 태그는 CUSTOM_TINT
-// 로 폴백하므로 문구를 추가할 때 색을 깜빡해도 렌더는 깨지지 않는다.
-// 목록 순서대로 나열 (BIO_PHRASES 와 동일 순서).
-const TAG_TINTS: Record<string, string> = {
-  greeting: '#F6B5C8', // 라이트핑크
-  daily: '#B8C8DD', // 블루그레이
-  listen: '#E9B949', // 골든 옐로우
-  talk: '#A6C97C', // 연두색
-  friend: '#8FC4E8', // 하늘색
-  food: '#7B94C4', // 파스텔 남색
-  music: '#A98BD0', // 파스텔 보라
-};
 // 직접 입력 카드와 프리셋 카드가 같은 높이로 시작하도록 공유하는 본문 최소 높이.
-// 두 카드 모두 위에 태그 칩 행이 붙으므로 이 값만 맞으면 총 높이가 같다.
 const CARD_CONTENT_MIN_HEIGHT = 60;
 
 export function BioPhrasePicker({
@@ -180,21 +167,12 @@ export function BioPhrasePicker({
               disabled && styles.cardDisabled,
             ]}
           >
-            <View
-              style={[
-                styles.tag,
-                { backgroundColor: TAG_TINTS[phrase.tag] ?? CUSTOM_TINT },
-              ]}
-            >
-              <Text style={styles.tagText}>
-                {t(`setupProfile.bioPicker.tags.${phrase.tag}`)}
-              </Text>
-            </View>
             <Text
               style={[styles.phraseText, selected && styles.phraseTextSelected]}
             >
               {localizedText}
             </Text>
+            <DialogArrow selected={selected} />
           </Pressable>
         );
       })}
@@ -219,14 +197,10 @@ export function BioPhrasePicker({
           error ? styles.cardError : null,
         ]}
       >
-        <View style={styles.customHeaderRow}>
-          <View style={[styles.tag, { backgroundColor: CUSTOM_TINT }]}>
-            <Text style={styles.tagText}>{t('setupProfile.bioPicker.customTag')}</Text>
-          </View>
-          {/* Counter only shows once the user is actively in custom mode —
-              otherwise it's noise. Turns red at the cap so the user
-              understands why typing stopped. */}
-          {selectedId === 'custom' ? (
+        {/* Counter only shows once the user is actively in custom mode —
+            otherwise it's noise. Turns red at the cap so the user
+            understands why typing stopped. */}
+        {selectedId === 'custom' ? (
             <Text
               style={[
                 styles.charCounter,
@@ -236,8 +210,7 @@ export function BioPhrasePicker({
             >
               {customText.length} / {CUSTOM_MAX}
             </Text>
-          ) : null}
-        </View>
+        ) : null}
         <CustomInput
           ref={customInputRef}
           value={customText}
@@ -249,6 +222,7 @@ export function BioPhrasePicker({
           onFocus={handleCustomFocus}
         />
         <ErrorText testID="bio-phrase-picker-error">{error ?? null}</ErrorText>
+        <DialogArrow selected={selectedId === 'custom'} />
       </Pressable>
 
       {disabled && lockedHint ? (
@@ -258,6 +232,15 @@ export function BioPhrasePicker({
         </View>
       ) : null}
     </View>
+  );
+}
+
+// 대화창 오른쪽 아래 ▼ (탐색 탭 대화창·프로필 상태 메시지 칸과 같은 모양). 색은 카드 테두리와 같다.
+function DialogArrow({ selected }: { selected: boolean }) {
+  return (
+    <Svg width={12} height={8} viewBox="0 0 12 8" style={styles.arrow}>
+      <Polygon points="0,0 12,0 6,8" fill={selected ? colors.primary : colors.secondary} />
+    </Svg>
   );
 }
 
@@ -293,14 +276,21 @@ const styles = StyleSheet.create({
   container: {
     gap: 10,
   },
+  // 대화창 모양 — 살짝 각진 모서리 + 테두리 + 오른쪽 아래 ▼ 자리(아래 여백).
   card: {
     backgroundColor: colors.card,
-    borderRadius: radii.md,
+    borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: colors.borderSoft,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderColor: colors.secondary,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 18,
     gap: 8,
+  },
+  arrow: {
+    position: 'absolute',
+    right: 10,
+    bottom: 8,
   },
   cardSelected: {
     borderColor: colors.primary,
@@ -312,26 +302,11 @@ const styles = StyleSheet.create({
   cardError: {
     borderColor: colors.error,
   },
-  customHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  tag: {
-    alignSelf: 'flex-start',
-    backgroundColor: CUSTOM_TINT,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radii.pill,
-  },
-  tagText: {
-    fontSize: fs(10),
-    fontFamily: fonts.semibold,
-    color: colors.white,
-    letterSpacing: 0.4,
-  },
+  // 카드 아래 여백(▼ 자리) 안, ▼ 왼쪽에 겹쳐 띄운다 — 줄을 차지하지 않아 선택해도 카드 높이가 그대로.
   charCounter: {
+    position: 'absolute',
+    right: 28,
+    bottom: 3,
     fontSize: fs(11),
     color: colors.textLight,
     fontFamily: fonts.regular,

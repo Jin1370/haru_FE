@@ -298,7 +298,7 @@ export default {
     voiceSettings: 'Register My Voice',
     editBio: 'Set status',
     bioEmpty: 'Pick a status.',
-    editBioSubtitle: 'Your chosen status is auto-generated in your own voice.',
+    editBioSubtitle: "Pick one and we'll create audio in your voice.",
     deletePhoto: 'Delete Photo',
     removePhotoConfirm: 'Remove this photo?',
     addPhoto: 'Add Profile Photo',
@@ -420,6 +420,10 @@ export default {
       intro: {
         title: 'Got a song on infinite repeat lately?',
         body: "Swap playlists that'll wake your ears up",
+      },
+      preferences: {
+        title: "Just for fun — what's your MBTI?",
+        body: "Curious if we'll click by being alike, or spark by being different.",
       },
       photos: {
         title: 'The one thing you want to do this year?',
@@ -642,15 +646,10 @@ export default {
     deleteAccount: 'Delete Account',
     deleteAccountTitle: 'Delete Account',
     deleteAccountConfirm: "Are you sure you want to delete your account? This cannot be undone.",
-    sections: {
-      app: 'General',
-      display: 'Display',
-      account: 'Account',
-    },
     notifications: {
       title: 'Notifications',
       messages: 'Message notifications',
-      matches: 'New chat notifications',
+      matches: 'New connection notifications',
       likes: 'Hello notifications',
       permissionDenied: 'Enable notifications in system settings.',
     },

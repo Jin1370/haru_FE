@@ -295,7 +295,7 @@ export default {
         voiceSettings: "自分の声を登録",
         editBio: "ステータスメッセージを登録",
         bioEmpty: "ステータスメッセージを選んでみましょう。",
-        editBioSubtitle: "選んだステータスメッセージが、あなたの声で自動生成されます。",
+        editBioSubtitle: "選ぶとあなたの声で音声が作られます。",
         deletePhoto: "写真を削除",
         removePhotoConfirm: "この写真を削除しますか？",
         addPhoto: "プロフィール写真を追加",
@@ -415,6 +415,10 @@ export default {
             intro: {
                 title: "最近、無限リピートしてる曲ありますか？",
                 body: "耳が冴えわたるプレイリストを交換しよう",
+            },
+            preferences: {
+                title: "重く考えないで、MBTIって何ですか？",
+                body: "似ていて落ち着くか、違っていて刺激的か、気になります。",
             },
             photos: {
                 title: "今年叶えたい『たった一つ』は？",
@@ -631,28 +635,23 @@ export default {
 
     settings: {
         title: "設定",
-        languageSettings: "言語設定",
+        languageSettings: "言語",
         changePassword: "パスワード変更",
         termsOfService: "利用規約",
         privacyPolicy: "プライバシーポリシー",
         deleteAccount: "退会する",
         deleteAccountTitle: "退会する",
         deleteAccountConfirm: "本当に退会しますか？復元はできません。",
-        sections: {
-            app: "一般",
-            display: "表示",
-            account: "アカウント",
-        },
         notifications: {
             title: "通知",
             messages: "メッセージ通知",
-            matches: "新しい会話の通知",
+            matches: "会話開始の通知",
             likes: "届いたあいさつの通知",
             permissionDenied: "システム設定で通知を許可してください。",
         },
         catAnimation: "猫のアニメーション",
         pixelFont: "ドットフォント",
-        theme: "テーマ変更",
+        theme: "テーマ",
         themeDay: "昼テーマ",
         themeNight: "夜テーマ",
         font: "フォント",

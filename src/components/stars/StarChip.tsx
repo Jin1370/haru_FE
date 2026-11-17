@@ -5,7 +5,7 @@ import { HaruIcon } from '@/components/ui/HaruIcon';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
-import { colors, radii } from '@/constants/colors';
+import { colors, nightBar, radii } from '@/constants/colors';
 import { fonts, fs, PIXEL_NUMBER_OFFSET_Y } from '@/constants/fonts';
 
 // 아이콘마다 여백이 달라서, 실제 도형 높이가 14.5px 로 같아지는 크기를 쓴다.
@@ -48,11 +48,11 @@ function CountChip({
 
   const content = (
     <View style={[styles.chip, charge ? styles.chargeChip : styles.quotaChip]}>
-      <HaruIcon name={icon} size={CHIP_ICON_SIZES[icon]} color={colors.primary} />
+      <HaruIcon name={icon} size={CHIP_ICON_SIZES[icon]} color={nightBar?.icon ?? colors.primary} />
       <Animated.Text style={[styles.text, { transform: [{ translateY: NUMBER_OFFSET_Y }, { scale }] }]}>
         {value}
       </Animated.Text>
-      {charge ? <Ionicons name="add" size={15} color={colors.primaryDark} /> : null}
+      {charge ? <Ionicons name="add" size={15} color={nightBar?.icon ?? colors.primaryDark} /> : null}
     </View>
   );
 
@@ -98,11 +98,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   quotaChip: { paddingHorizontal: 8 },
-  chargeChip: { paddingLeft: 10, paddingRight: 7, backgroundColor: colors.primaryLight },
+  // 밤: 남색 검정 헤더 위라 밝은 칩 대신 중간 톤 남색.
+  chargeChip: { paddingLeft: 10, paddingRight: 7, backgroundColor: nightBar?.chip ?? colors.primaryLight },
   text: {
     fontSize: fs(13),
     fontFamily: fonts.bold,
-    color: colors.text,
+    color: nightBar?.text ?? colors.text,
   },
   pressed: { opacity: 0.7 },
   lastGap: { marginRight: 16 },

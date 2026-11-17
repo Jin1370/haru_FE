@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, shadows } from '@/constants/colors';
+import { colors, nightBar, shadows } from '@/constants/colors';
 
 interface ChatPromptsToggleButtonProps {
   onPress: () => void;
@@ -23,7 +23,7 @@ export function ChatPromptsToggleButton({
       accessibilityLabel={t('chat.prompts.expandA11y')}
       style={({ pressed }) => [styles.btn, pressed && { opacity: 0.6 }]}
     >
-      <Ionicons name="bulb-outline" size={16} color={colors.primary} />
+      <Ionicons name="bulb-outline" size={16} color={nightBar?.icon ?? colors.primary} />
     </Pressable>
   );
 }
@@ -35,7 +35,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    // 밤: 남색 검정 헤더 위라 별사탕 칩과 같은 중간 남색.
+    backgroundColor: nightBar?.chip ?? colors.surface,
     marginRight: 4,
     ...shadows.soft,
   },

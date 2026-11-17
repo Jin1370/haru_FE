@@ -5,7 +5,7 @@ import { HaruIcon } from '@/components/ui/HaruIcon';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '@/constants/colors';
+import { colors, nightBar } from '@/constants/colors';
 import { fonts, fs, PIXEL_NUMBER_OFFSET_Y, HEADER_FONT_WEIGHT } from '@/constants/fonts';
 import { NavCat } from '@/components/cat/NavCat';
 
@@ -36,8 +36,8 @@ export default function TabLayout() {
     <View style={styles.container}>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textLight,
+          tabBarActiveTintColor: nightBar?.active ?? colors.primary,
+          tabBarInactiveTintColor: nightBar?.inactive ?? colors.textLight,
           tabBarShowLabel: false,
           headerShown: true,
           // react-navigation 헤더 타이틀 기본 정렬이 iOS='center' / Android='left' 라
@@ -46,22 +46,22 @@ export default function TabLayout() {
           headerTitleStyle: {
             fontFamily: fonts.bold,
             fontWeight: HEADER_FONT_WEIGHT,
-            color: colors.text,
+            color: nightBar?.text ?? colors.text,
             fontSize: fs(19),
             letterSpacing: 0.3,
             transform: [{ translateY: PIXEL_NUMBER_OFFSET_Y }],
           },
           headerStyle: {
             height: headerHeight,
-            backgroundColor: colors.background,
+            backgroundColor: nightBar?.bg ?? colors.background,
             shadowColor: 'transparent',
             elevation: 0,
             borderBottomWidth: 0,
           },
           tabBarStyle: {
-            borderTopColor: colors.borderSoft,
+            borderTopColor: nightBar?.border ?? colors.borderSoft,
             borderTopWidth: 0.5,
-            backgroundColor: colors.card,
+            backgroundColor: nightBar?.bg ?? colors.card,
             // 가시 영역 = 총 height - bottomInset (홈 인디케이터 safe area).
             // 탭 항목은 위쪽 정렬 + 패딩 5 + 아이콘 칸 28 이라, 아이콘 중심이 가시 영역
             // 가운데(26)에 오도록 패딩을 계산했다 (테두리 0.5 + 6.5 + 5 + 14 = 26).

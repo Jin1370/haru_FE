@@ -19,12 +19,18 @@ export function setAppTheme(theme: AppTheme): void {
 
 export const isNight = getAppTheme() === 'night';
 
+// appStars/loginStars: 밤 하늘의 별만 담은 투명 PNG. 배경 사진은 블러를 걸지만 별은
+// 또렷하게 보이도록 블러 없이 같은 크기·위치로 위에 겹친다 (PhotoBackground, login 참고).
 export const themeBackgrounds = isNight
   ? {
       app: require('../../assets/images/night-city.png'),
       login: require('../../assets/images/login-night.png'),
+      appStars: require('../../assets/images/night-stars.png'),
+      loginStars: require('../../assets/images/login-night-stars.png'),
     }
   : {
       app: require('../../assets/images/daytime-city.png'),
       login: require('../../assets/images/login-day.png'),
+      appStars: null,
+      loginStars: null,
     };

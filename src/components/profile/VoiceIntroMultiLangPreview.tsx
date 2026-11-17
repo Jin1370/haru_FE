@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     View,
     Text,
@@ -8,14 +8,15 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { AudioPlayer } from "@/components/chat/AudioPlayer";
+import { useAudioPlayerStatus } from "expo-audio";
+import { useRecoverableAudioPlayer } from "@/components/chat/sharedAudioPlayer";
 import {
     VOICE_INTRO_SLOT_LANGUAGES,
     type VoiceIntroSlotLanguage,
     type VoiceIntroAudioStatus,
 } from "@/types";
-import { colors, radii } from "@/constants/colors";
-import { fonts, fs } from "@/constants/fonts";
+import { colors, photoCard, radii } from "@/constants/colors";
+import { fonts, fs, PIXEL_INPUT_OFFSET_Y } from "@/constants/fonts";
 
 interface VoiceIntroMultiLangPreviewProps {
     /**
@@ -114,14 +115,6 @@ export function resolveBodyBranch(
     return { branch: "pending", url: null };
 }
 
-const STATUS_DOT_COLOR: Record<VoiceIntroAudioStatus | "unknown", string> = {
-    ready: colors.primary,
-    processing: colors.textLight,
-    pending: colors.textLight,
-    failed: colors.error,
-    unknown: colors.textLight,
-};
-
 const STATUS_A11Y_KEY: Record<VoiceIntroAudioStatus | "unknown", string> = {
     ready: "profile.voiceIntro.statusReady",
     processing: "profile.voiceIntro.statusPending",
@@ -136,176 +129,140 @@ const TAB_LABEL_KEY: Record<VoiceIntroSlotLanguage, string> = {
     en: "profile.voiceIntro.tabEn",
 };
 
+// 언어마다 "한국어 🔊" 버튼 하나 — 누르면 그 언어로 합성된 내 목소리를 재생한다.
+// 버튼마다 플레이어를 따로 두되, 한 버튼이 재생을 시작하면 나머지는 멈춘다 (activeLang).
 export function VoiceIntroMultiLangPreview({
     authorLanguage,
     audioUrls,
     audioStatus,
 }: VoiceIntroMultiLangPreviewProps) {
-    const { t } = useTranslation();
-    const visibleSlots = getVisibleSlots(authorLanguage);
-    const [selectedLang, setSelectedLang] = useState<VoiceIntroSlotLanguage>(
-        () => pickDefaultSlot(authorLanguage),
-    );
-
-    // `status` is read both inline (per-tab dot) and via `resolveBodyBranch`
-    // (selected slot body). The shared local handles the `undefined` BE
-    // response from the mig 011 backfill window without an `?? {}` repeat
-    // at every call site.
-    const status = audioStatus ?? {};
-    const body = resolveBodyBranch(selectedLang, audioUrls, audioStatus);
-
+    const [activeLang, setActiveLang] = useState<VoiceIntroSlotLanguage | null>(null);
     return (
-        <View style={styles.container} testID="voice-intro-multilang-preview">
-            <View style={styles.tabs} accessibilityRole="tablist">
-                {visibleSlots.map((lang) => {
-                    const isSelected = lang === selectedLang;
-                    const slotStatus: VoiceIntroAudioStatus | "unknown" =
-                        status[lang] ?? "unknown";
-                    return (
-                        <Pressable
-                            key={lang}
-                            onPress={() => setSelectedLang(lang)}
-                            style={[
-                                styles.tab,
-                                isSelected && styles.tabSelected,
-                            ]}
-                            accessibilityRole="tab"
-                            accessibilityState={{ selected: isSelected }}
-                            accessibilityLabel={`${t(TAB_LABEL_KEY[lang])}, ${t(STATUS_A11Y_KEY[slotStatus])}`}
-                            testID={`voice-intro-tab-${lang}`}
-                        >
-                            <Text
-                                style={[
-                                    styles.tabLabel,
-                                    isSelected && styles.tabLabelSelected,
-                                ]}
-                                numberOfLines={1}
-                            >
-                                {t(TAB_LABEL_KEY[lang])}
-                            </Text>
-                            <View
-                                style={[
-                                    styles.statusDot,
-                                    {
-                                        backgroundColor:
-                                            STATUS_DOT_COLOR[slotStatus],
-                                    },
-                                ]}
-                                testID={`voice-intro-status-dot-${lang}`}
-                            />
-                        </Pressable>
-                    );
-                })}
-            </View>
-
-            <View
-                style={styles.body}
-                testID={`voice-intro-body-${selectedLang}`}
-            >
-                {body.branch === "ready" && body.url ? (
-                    /*
-                     * `useAudioPlayer` captures its source on first mount; switching the
-                     * `url` prop in place keeps the previous audio. Re-key on slot+url so
-                     * tab transitions force a fresh player instance — matches the
-                     * `key={url}` pattern already used in profile.tsx.
-                     */
-                    <AudioPlayer
-                        key={`${selectedLang}-${body.url}`}
+        <View style={styles.row} testID="voice-intro-multilang-preview">
+            {getVisibleSlots(authorLanguage).map((lang) => {
+                const body = resolveBodyBranch(lang, audioUrls, audioStatus);
+                return (
+                    <LangVoiceButton
+                        // url 이 바뀌면(재합성) 새 플레이어로 — useAudioPlayer 는 첫 source 를 고정한다.
+                        key={`${lang}-${body.url}`}
+                        lang={lang}
+                        branch={body.branch}
                         url={body.url}
-                        showBar
+                        status={audioStatus?.[lang] ?? "unknown"}
+                        active={activeLang === lang}
+                        onStart={() => setActiveLang(lang)}
                     />
-                ) : body.branch === "failed" ? (
-                    <View style={styles.statusRow}>
-                        <Ionicons
-                            name="warning-outline"
-                            size={16}
-                            color={colors.error}
-                        />
-                        <Text
-                            style={styles.statusText}
-                            testID="voice-intro-failed-text"
-                        >
-                            {t("profile.voiceIntro.slotFailed")}
-                        </Text>
-                    </View>
-                ) : (
-                    <View style={styles.statusRow}>
-                        <ActivityIndicator
-                            size="small"
-                            color={colors.primary}
-                        />
-                        <Text
-                            style={styles.statusText}
-                            testID="voice-intro-pending-text"
-                        >
-                            {t("profile.voiceIntro.slotPending")}
-                        </Text>
-                    </View>
-                )}
-            </View>
+                );
+            })}
         </View>
     );
 }
 
+function LangVoiceButton({
+    lang,
+    branch,
+    url,
+    status,
+    active,
+    onStart,
+}: {
+    lang: VoiceIntroSlotLanguage;
+    branch: VoiceIntroBodyBranch;
+    url: string | null;
+    status: VoiceIntroAudioStatus | "unknown";
+    active: boolean;
+    onStart: () => void;
+}) {
+    const { t } = useTranslation();
+    const { player, play } = useRecoverableAudioPlayer(url ?? undefined);
+    const playerStatus = useAudioPlayerStatus(player);
+    const playing = playerStatus.playing;
+    const ready = branch === "ready" && !!url;
+
+    // 다른 언어 버튼이 재생을 시작하면 멈춘다.
+    useEffect(() => {
+        if (!active && playing) player.pause();
+    }, [active, playing, player]);
+
+    const onPress = () => {
+        if (playing) {
+            player.pause();
+            return;
+        }
+        if (playerStatus.duration > 0 && playerStatus.currentTime >= playerStatus.duration) {
+            player.seekTo(0);
+        }
+        onStart();
+        play();
+    };
+
+    return (
+        <Pressable
+            onPress={onPress}
+            disabled={!ready}
+            style={({ pressed }) => [
+                styles.btn,
+                playing && styles.btnPlaying,
+                pressed && styles.btnPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`${t(TAB_LABEL_KEY[lang])}, ${t(STATUS_A11Y_KEY[status])}`}
+            testID={`voice-intro-btn-${lang}`}
+        >
+            <Text style={styles.label} numberOfLines={1}>
+                {t(TAB_LABEL_KEY[lang])}
+            </Text>
+            {ready ? (
+                <Ionicons
+                    name={playing ? "volume-high" : "volume-medium-outline"}
+                    size={ICON_SIZE}
+                    color={photoCard.icon}
+                />
+            ) : branch === "failed" ? (
+                <Ionicons name="warning-outline" size={ICON_SIZE} color={colors.error} />
+            ) : (
+                <ActivityIndicator size="small" color={photoCard.icon} />
+            )}
+        </Pressable>
+    );
+}
+
+const ICON_SIZE = 20;
+
 const styles = StyleSheet.create({
-    container: {
-        gap: 10,
-    },
-    tabs: {
+    row: {
         flexDirection: "row",
-        gap: 6,
-        // Match the voice intro card's edit-button chip (`colors.primaryLight`)
-        // so the toggle container, play-bar track, and edit button all share
-        // one surface tone against the blush card gradient.
-        backgroundColor: colors.primaryLight,
-        padding: 4,
-        borderRadius: radii.pill,
+        gap: 8,
     },
-    tab: {
+    btn: {
         flex: 1,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: 6,
-        paddingVertical: 8,
+        paddingVertical: 10,
         paddingHorizontal: 10,
         borderRadius: radii.pill,
-    },
-    tabSelected: {
-        backgroundColor: colors.white,
         borderWidth: 1,
-        borderColor: colors.primary,
+        borderColor: "transparent",
+        backgroundColor: photoCard.chip,
     },
-    tabLabel: {
+    // 재생 중인 버튼만 테두리로 표시.
+    btnPlaying: {
+        borderColor: photoCard.icon,
+    },
+    btnPressed: {
+        opacity: 0.7,
+    },
+    label: {
         fontSize: fs(13),
-        fontFamily: fonts.medium,
-        color: colors.textLight,
-        letterSpacing: 0.2,
-    },
-    tabLabelSelected: {
-        color: colors.primaryDark,
         fontFamily: fonts.semibold,
-    },
-    statusDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-    },
-    body: {
-        minHeight: 40,
-        justifyContent: "center",
-    },
-    statusRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        flexShrink: 1,
-    },
-    statusText: {
-        flex: 1,
-        fontSize: fs(12),
-        color: colors.textLight,
-        fontFamily: fonts.medium,
+        color: photoCard.text,
         letterSpacing: 0.2,
+        // 아이콘과 같은 줄 높이로 세로 중앙을 맞추고, 갈무리 글자가 위로 떠 보이는 만큼 내린다.
+        lineHeight: ICON_SIZE,
+        includeFontPadding: false,
+        textAlignVertical: "center",
+        transform: [{ translateY: PIXEL_INPUT_OFFSET_Y }],
     },
 });

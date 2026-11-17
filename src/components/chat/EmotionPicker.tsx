@@ -1,7 +1,7 @@
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, radii, shadows } from '@/constants/colors';
+import { colors, nightBar, radii, shadows } from '@/constants/colors';
 import { fonts, fs } from '@/constants/fonts';
 import {
   SELECTABLE_EMOTIONS,
@@ -47,7 +47,7 @@ export function EmotionPicker({
       ]}
     >
       {isDefault ? (
-        <Ionicons name="happy-outline" size={22} color={colors.primary} />
+        <Ionicons name="happy-outline" size={22} color={nightBar?.icon ?? colors.primary} />
       ) : (
         <Text style={styles.toggleEmoji}>{currentMeta.emoji}</Text>
       )}
@@ -74,7 +74,7 @@ export function EmotionChipRow({ value, onSelect }: EmotionChipRowProps) {
     <View>
       <View style={styles.header}>
         <Text style={styles.headerText}>{t('chat.emotionPicker.header')}</Text>
-        <Ionicons name="pulse-outline" size={16} color={colors.primary} />
+        <Ionicons name="pulse-outline" size={16} color={nightBar?.icon ?? colors.primary} />
       </View>
       <ScrollView
         horizontal
@@ -121,18 +121,20 @@ export const EMOTION_PICKER_ROW_HEIGHT = 74;
 
 const styles = StyleSheet.create({
   toggle: {
-    width: 40,
+    // 44 원 (채팅 화면 photoButton 과 같은 값).
+    width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: nightBar?.field ?? colors.surface,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
+    // 입력 줄 버튼·입력칸은 테두리 없이 바탕색만 (두께는 남겨 크기 유지).
+    borderColor: 'transparent',
   },
   toggleActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
+    borderColor: 'transparent',
+    backgroundColor: nightBar?.field ?? colors.primaryLight,
   },
   toggleEmoji: {
     fontSize: fs(17),
@@ -150,7 +152,7 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: fs(13),
     lineHeight: fs(16),
-    color: colors.text,
+    color: nightBar?.text ?? colors.text,
     fontFamily: fonts.medium,
     letterSpacing: 0.3,
   },
@@ -168,15 +170,15 @@ const styles = StyleSheet.create({
     ...shadows.soft,
   },
   chipUnselected: {
-    backgroundColor: colors.card,
+    backgroundColor: nightBar?.field ?? colors.card,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
+    borderColor: nightBar?.fieldBorder ?? colors.borderSoft,
   },
   // 선택 칩도 같은 1px 테두리를 둬 선택/해제 시 높이가 튀지 않게 한다.
   chipSelected: {
-    backgroundColor: colors.primary,
+    backgroundColor: nightBar?.chipSelected ?? colors.primary,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: nightBar?.chipSelected ?? colors.primary,
   },
   chipInner: {
     flexDirection: 'row',
@@ -192,7 +194,7 @@ const styles = StyleSheet.create({
   },
   chipLabel: {
     fontSize: fs(12),
-    color: colors.text,
+    color: nightBar?.text ?? colors.text,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
   },

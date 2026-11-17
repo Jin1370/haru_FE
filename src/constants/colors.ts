@@ -84,6 +84,59 @@ const nightColors: typeof dayColors = {
 
 export const colors = isNight ? nightColors : dayColors;
 
+// 배경 사진 위에 뜨는 반투명 카드 (채팅 목록·내 프로필 카드) 와 그 안의 글자·칩.
+// 밤은 탐색 카드(SwipeCard)와 같은 어두운 반투명, 낮은 노을에 맞춘 흰 반투명.
+// dialog*: 프로필 상태 메시지 칸 (탐색 탭 대화창 모양).
+export const photoCard = isNight
+  ? {
+      card: 'rgba(8,12,30,0.62)',
+      text: '#FFFFFF',
+      muted: '#8D97B0',
+      faint: '#6B7896',
+      icon: '#A9BEE3',
+      active: '#DCE6F5',
+      chip: '#365795',
+      field: '#1A2240',
+      badge: '#4D74B4',
+      dialog: 'rgba(0,0,0,0.35)',
+      dialogBorder: '#FFFFFF',
+    }
+  : {
+      card: 'rgba(255,250,250,0.86)',
+      text: '#3A2340',
+      muted: '#7A5F76',
+      faint: '#C8ADBA',
+      icon: '#E27AA0',
+      active: '#B85478',
+      chip: '#FBDCE6',
+      field: '#FFF0F3',
+      badge: '#E27AA0',
+      dialog: '#FFF0F3',
+      dialogBorder: '#F6B5C8',
+    };
+
+// 밤 테마의 탭 헤더·탭바·채팅 헤더 — 사진 위아래를 밝은 띠 대신 남색 검정으로 감싼다.
+// 낮은 null (각 화면의 기존 색 그대로).
+export const nightBar = isNight
+  ? {
+      bg: '#0A0F24',
+      text: '#FFFFFF',
+      active: '#DCE6F5',
+      inactive: '#6B7896',
+      border: 'rgba(255,255,255,0.08)',
+      // 채팅 입력창 — 입력칸·버튼 바탕, 테두리, 흐린 글자(안내 문구), 아이콘.
+      field: '#1A2240',
+      fieldBorder: 'rgba(255,255,255,0.12)',
+      muted: '#8D97B0',
+      icon: '#A9BEE3',
+      chipSelected: '#4D74B4',
+      // 어두운 바탕 위 칩·버튼 (별사탕 칩, 프로필 카드 편집 버튼, 보이스 탭 등).
+      chip: '#365795',
+      // 반투명 남색 검정 카드 (탐색·채팅 목록·프로필 카드).
+      card: 'rgba(8,12,30,0.62)',
+    }
+  : null;
+
 export const gradients = isNight
   ? {
       primary: ['#7390C1', '#325996'] as const,

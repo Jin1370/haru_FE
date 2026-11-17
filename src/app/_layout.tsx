@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Platform, StyleSheet } from 'react-native';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -28,6 +28,7 @@ import { AcquisitionGate } from '@/components/setup/AcquisitionGate';
 import { UpdateRequiredScreen } from '@/components/UpdateRequiredScreen';
 import { useForceUpdate } from '@/hooks/useForceUpdate';
 import { showAlert } from '@/stores/alertStore';
+import { nightBar } from '@/constants/colors';
 import { SWRConfigProvider } from '@/lib/swr';
 import { APP_FONT_ASSETS, DEFERRED_FONT_ASSETS } from '@/constants/fonts';
 import { colors } from '@/constants/colors';
@@ -151,10 +152,13 @@ function RootShell() {
   // input screen below uses useKeyboardState to manually offset for the
   // visible keyboard height, so we need a consistent window mode underneath.
   useResizeMode();
+  // 밤 테마의 남색 헤더 화면(탭·채팅방·플레이리스트)에서만 상태표시줄 글자를 흰색으로.
+  const segments = useSegments() as string[];
+  const darkHeader = nightBar !== null && ['(tabs)', 'chat', 'playlist'].some((s) => segments.includes(s));
   return (
     <SafeAreaProvider>
       <SWRConfigProvider>
-        <StatusBar style="dark" />
+        <StatusBar style={darkHeader ? 'light' : 'dark'} />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(main)" />

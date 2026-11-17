@@ -19,7 +19,7 @@ import type { DiscoverCandidate } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
 import { useCatStore } from '@/stores/catStore';
 import { showAlert } from '@/stores/alertStore';
-import { colors } from '@/constants/colors';
+import { colors, nightBar } from '@/constants/colors';
 import { fonts, fs, HEADER_FONT_WEIGHT } from '@/constants/fonts';
 
 // 탐색 탭 2단계 — 연 플레이리스트의 카드. 좌우 버튼·스와이프로 순환하며 앞뒤로 오가고,
@@ -206,9 +206,9 @@ export default function PlaylistScreen() {
           headerShown: true,
           title: t('discover.playlist.title', { n: idx + 1 }),
           headerRight: () => <StarChip />,
-          headerStyle: { backgroundColor: colors.background },
+          headerStyle: { backgroundColor: nightBar?.bg ?? colors.background },
           headerShadowVisible: false,
-          headerTintColor: colors.text,
+          headerTintColor: nightBar?.text ?? colors.text,
           // 제목 앞에 이 플레이리스트의 커버.
           headerTitle: ({ children }) => (
             <View style={styles.titleRow}>
@@ -290,6 +290,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     fontWeight: HEADER_FONT_WEIGHT,
     fontSize: fs(17),
-    color: colors.text,
+    color: nightBar?.text ?? colors.text,
   },
 });

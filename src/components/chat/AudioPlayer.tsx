@@ -1,31 +1,18 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, Text, View, StyleSheet } from 'react-native';
+import { useCallback } from 'react';
+import { Pressable, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useAudioPlayerStatus } from 'expo-audio';
 import { useRecoverableAudioPlayer } from './sharedAudioPlayer';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, radii } from '@/constants/colors';
+import { colors } from '@/constants/colors';
 import { fonts, fs } from '@/constants/fonts';
 
 interface AudioPlayerProps {
   url: string;
   compact?: boolean;
   showProgressBar?: boolean;
-  /**
-   * Horizontal play-bar layout: play/pause button + linear progress fill +
-   * elapsed/total time. Used when an inline icon feels too sparse (e.g.
-   * voice intro preview under language tabs).
-   */
-  showBar?: boolean;
   tintColor?: string;
-}
-
-function formatClock(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
-  const m = Math.floor(seconds / 60);
-  const r = Math.floor(seconds % 60);
-  return `${m}:${r.toString().padStart(2, '0')}`;
 }
 
 const RING_SIZE = 56;
@@ -33,7 +20,7 @@ const RING_STROKE = 3;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-export function AudioPlayer({ url, compact = false, showProgressBar = false, showBar = false, tintColor = colors.primary }: AudioPlayerProps) {
+export function AudioPlayer({ url, compact = false, showProgressBar = false, tintColor = colors.primary }: AudioPlayerProps) {
   const { t } = useTranslation();
   // chat-audio-async-insert sprint: 모든 메시지가 cold-start path 만 거치도록
   // BE/useChat 구조가 바뀌었다 (POST 응답이 stub 이거나 동기 INSERT 결과 → 같은
@@ -53,51 +40,6 @@ export function AudioPlayer({ url, compact = false, showProgressBar = false, sho
   const currentTime = status.currentTime || 0;
   const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
 
-  // expo-audio surfaces playback status only every ~250–500ms, so binding the
-  // play-bar fill straight to `progress` makes it jump in discrete steps. We
-  // drive an Animated value instead: each status tick we animate linearly
-  // toward the end over the *remaining* real time, so the fill moves
-  // continuously between ticks. Only consumed by the `showBar` variant below.
-  const fillAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (isPlaying && duration > 0) {
-      let cancelled = false;
-      // Read where the bar actually is right now, then decide the start point.
-      fillAnim.stopAnimation((current) => {
-        if (cancelled) return;
-        // The reported currentTime lags the true playback head (worst right
-        // after play starts / during buffering), so `progress` can briefly be
-        // *behind* the bar. Snapping back to it is the "stutter + jump back".
-        // Keep the bar monotonic forward — only honor a backward move when it's
-        // large enough to be a real seek/replay (seek-to-0 on replay).
-        const isRealSeekBack = current - progress > 0.2;
-        const start = isRealSeekBack ? progress : Math.max(current, progress);
-        fillAnim.setValue(start);
-        const remainingMs = Math.max((duration - currentTime) * 1000, 0);
-        Animated.timing(fillAnim, {
-          toValue: 1,
-          duration: remainingMs,
-          easing: Easing.linear,
-          // width % can't be driven natively — keep it on the JS driver.
-          useNativeDriver: false,
-        }).start();
-      });
-      return () => {
-        cancelled = true;
-      };
-    }
-    // paused / stopped / ended → hold the fill at the real progress.
-    fillAnim.stopAnimation();
-    fillAnim.setValue(progress);
-  }, [isPlaying, duration, currentTime, progress, fillAnim]);
-
-  const fillWidth = fillAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
-    extrapolate: 'clamp',
-  });
-
   const toggle = useCallback(() => {
     if (isPlaying) {
       player.pause();
@@ -108,38 +50,6 @@ export function AudioPlayer({ url, compact = false, showProgressBar = false, sho
     }
     play();
   }, [player, play, isPlaying, duration, currentTime]);
-
-  if (showBar) {
-    return (
-      <View style={styles.barRow}>
-        <Pressable
-          onPress={toggle}
-          style={[styles.barPlayBtn, { borderColor: tintColor }]}
-          accessibilityRole="button"
-          accessibilityLabel={isPlaying ? t('audioPlayer.stop') : t('audioPlayer.play')}
-          hitSlop={6}
-        >
-          <Ionicons
-            name={isPlaying ? 'pause' : 'play'}
-            size={16}
-            color={tintColor}
-            style={isPlaying ? undefined : styles.playIconOffset}
-          />
-        </Pressable>
-        <View style={styles.barTrack}>
-          <Animated.View
-            style={[
-              styles.barFill,
-              { width: fillWidth, backgroundColor: tintColor },
-            ]}
-          />
-        </View>
-        <Text style={[styles.barTime, { color: tintColor }]} numberOfLines={1}>
-          {formatClock(currentTime)} / {formatClock(duration)}
-        </Text>
-      </View>
-    );
-  }
 
   if (showProgressBar) {
     return (
@@ -206,42 +116,6 @@ const styles = StyleSheet.create({
     fontSize: fs(13),
     color: colors.primary,
     fontFamily: fonts.medium,
-  },
-  barRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 4,
-  },
-  barPlayBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.white,
-  },
-  barTrack: {
-    flex: 1,
-    height: 5,
-    borderRadius: radii.pill,
-    // Match the voice intro card's edit-button chip (`colors.primaryLight`)
-    // so the toggle container, play-bar track, and edit button all share
-    // one surface tone against the blush card gradient.
-    backgroundColor: colors.primaryLight,
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: radii.pill,
-  },
-  barTime: {
-    fontSize: fs(11),
-    fontFamily: fonts.medium,
-    letterSpacing: 0.3,
-    minWidth: 56,
-    textAlign: 'right',
   },
   ringContainer: {
     width: RING_SIZE,

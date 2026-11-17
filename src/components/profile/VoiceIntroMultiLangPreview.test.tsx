@@ -7,7 +7,7 @@
  * compatible with the repo's `testEnvironment: 'node'` Jest config (no
  * jsdom, no @testing-library/react-native peer mismatch). Importing the
  * module pulls in react-native + @expo/vector-icons + react-i18next +
- * AudioPlayer at module-scope, so we mock the heavy dependencies before
+ * the audio player hooks at module-scope, so we mock the heavy dependencies before
  * `import` runs — same pattern as Button.test.tsx / EmptyState.test.tsx.
  */
 
@@ -30,8 +30,12 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-jest.mock('@/components/chat/AudioPlayer', () => ({
-  AudioPlayer: () => null,
+jest.mock('expo-audio', () => ({
+  useAudioPlayerStatus: () => ({}),
+}));
+
+jest.mock('@/components/chat/sharedAudioPlayer', () => ({
+  useRecoverableAudioPlayer: () => ({}),
 }));
 
 import {

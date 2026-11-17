@@ -11,6 +11,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
@@ -69,8 +70,10 @@ import { matchesKey } from '@/lib/swr';
 import { setActiveChatMatchId } from '@/lib/activeChat';
 import { showAlert } from '@/stores/alertStore';
 import { ApiRequestError } from '@/services/api';
-import { colors, gradients, radii, shadows } from '@/constants/colors';
-import { fonts, fs } from '@/constants/fonts';
+import { colors, gradients, nightBar, radii, shadows } from '@/constants/colors';
+import { isNight } from '@/constants/theme';
+import { PhotoBackground } from '@/components/ui/PhotoBackground';
+import { fonts, fs, PIXEL_INPUT_OFFSET_Y } from '@/constants/fonts';
 import { DEFAULT_EMOTION } from '@/constants/emotions';
 import * as matchService from '@/services/matches';
 import { CHAT_PROMPTS_SEEN_KEY_PREFIX } from '@/constants/chatPrompts';
@@ -85,6 +88,9 @@ import type { Emotion, MatchListItem, Message, ReplyQuote } from '@/types';
 const MIN_BOTTOM_SAFE_PAD = 12;
 
 // Visual breathing room between the last chat bubble and the input bar.
+// 최신 말풍선과 입력창 사이 여백. 리스트 뷰포트(marginBottom)가 아니라 콘텐츠 안쪽
+// (messageList 의 시각적 바닥 padding)에 둔다 — 뷰포트에 두면 입력창 위 8px 틈에서
+// 스크롤 중인 말풍선이 잘려 보인다 (밤하늘 배경에서 특히 눈에 띔).
 const EXTRA_BUBBLE_GAP = 8;
 
 // Distance (px) from the bottom of the list within which a newly appended
@@ -117,6 +123,12 @@ export default function ChatScreen() {
   const { t, i18n } = useTranslation();
   const { labelFor: interestLabelFor } = useInterestResolver();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  // 배경 이미지를 탐색 탭과 같은 크기·같은 위치에 — 탭 화면의 배경 영역(탭 헤더 아래 ~
+  // 탭바 위)에 그린다. 값은 (tabs)/_layout.tsx 의 headerHeight·tabBarHeight 와 같은 식.
+  const skyTop =
+    insets.top + (Platform.OS === 'ios' ? (insets.top > 50 ? 38.67 : 44) : 64) - 3;
+  const skyHeight = windowHeight - skyTop - (52 + Math.max(insets.bottom, 8));
   const {
     matchId,
     partnerPhoto: partnerPhotoParam,
@@ -863,8 +875,8 @@ export default function ChatScreen() {
   const bottomSafePad = 8 + safeInset;
   // The input dock (emotion row + input bar) is absolutely positioned over
   // the list. Reserve exactly its measured height as bottom padding so the
-  // last message is never occluded, plus EXTRA_BUBBLE_GAP for breathing
-  // room. inputDockHeight is measured by onLayout and falls back to a
+  // last message is never occluded (breathing room is EXTRA_BUBBLE_GAP inside
+  // the content). inputDockHeight is measured by onLayout and falls back to a
   // conservative estimate before the first measurement.
   const dockHeightFallback =
     54 +
@@ -875,7 +887,7 @@ export default function ChatScreen() {
   // added on top of these via the animated styles below so the three elements
   // that must move with the keyboard — the dock, the list viewport's bottom
   // margin, and the "new messages" badge — track it frame-by-frame.
-  const listBottomPadBase = (inputDockHeight || dockHeightFallback) + EXTRA_BUBBLE_GAP;
+  const listBottomPadBase = inputDockHeight || dockHeightFallback;
   const badgeBottomBase = 54 + bottomSafePad + 8;
 
   // --- Frame-synced keyboard tracking (kbAnimHeight: 0 closed -> -kbH open) ---
@@ -914,6 +926,10 @@ export default function ChatScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
+        {/* 탭 화면처럼 테마 배경 사진(낮/밤)을 깐다 (탐색 탭과 같은 크기·위치). 헤더·입력창은 자기 배경색을 유지. */}
+        <View style={[styles.skyBg, { top: skyTop, height: skyHeight }]} pointerEvents="none">
+          <PhotoBackground />
+        </View>
         {/* 완전 커스텀 헤더 — 네이티브 스택 헤더(iOS UINavigationBar /
             Android Toolbar)의 플랫폼별 백버튼·여백 차이를 없애고 뒤로/전구/
             메뉴 버튼을 양 플랫폼 동일하게 렌더. 상태바/노치 안전영역은 아래
@@ -963,9 +979,9 @@ export default function ChatScreen() {
             >
               {/* 다른 화면의 기본 헤더 뒤로가기와 같은 모양 (Android ←, iOS ‹). */}
               {Platform.OS === 'ios' ? (
-                <Ionicons name="chevron-back" size={28} color={colors.text} />
+                <Ionicons name="chevron-back" size={28} color={nightBar?.text ?? colors.text} />
               ) : (
-                <MaterialIcons name="arrow-back" size={24} color={colors.text} />
+                <MaterialIcons name="arrow-back" size={24} color={nightBar?.text ?? colors.text} />
               )}
             </Pressable>
             <View style={styles.headerRightRow}>
@@ -987,7 +1003,7 @@ export default function ChatScreen() {
                 <Ionicons
                   name="ellipsis-vertical"
                   size={22}
-                  color={colors.text}
+                  color={nightBar?.text ?? colors.text}
                 />
               </Pressable>
             </View>
@@ -1097,7 +1113,7 @@ export default function ChatScreen() {
             // marginBottom — 이유는 listAnimStyle 주석 참조.
             ListHeaderComponent={
               loadingNewer ? (
-                <ActivityIndicator color={colors.primary} style={{ padding: 12 }} />
+                <ActivityIndicator color={isNight ? colors.onPhotoText : colors.primary} style={{ padding: 12 }} />
               ) : null
             }
             ListFooterComponent={
@@ -1106,7 +1122,7 @@ export default function ChatScreen() {
               // renders at the visual TOP — exactly where the user is scrolling
               // when loadOlder fires, so the indicator lands in-context.
               loading || loadingOlder ? (
-                <ActivityIndicator color={colors.primary} style={{ padding: 12 }} />
+                <ActivityIndicator color={isNight ? colors.onPhotoText : colors.primary} style={{ padding: 12 }} />
               ) : null
             }
           />
@@ -1188,7 +1204,7 @@ export default function ChatScreen() {
               <Ionicons
                 name="information-circle-outline"
                 size={16}
-                color={colors.textSecondary}
+                color={nightBar?.muted ?? colors.textSecondary}
               />
               <Text style={styles.tombstoneNoticeText}>
                 {partnerDeleted
@@ -1222,7 +1238,7 @@ export default function ChatScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={t('common.cancel')}
                   >
-                    <Ionicons name="close" size={18} color={colors.textSecondary} />
+                    <Ionicons name="close" size={18} color={nightBar?.muted ?? colors.textSecondary} />
                   </Pressable>
                 </View>
               )}
@@ -1263,7 +1279,7 @@ export default function ChatScreen() {
                     pressed && { transform: [{ scale: 0.95 }] },
                   ]}
                 >
-                  <Ionicons name="image-outline" size={22} color={colors.primary} />
+                  <Ionicons name="image-outline" size={22} color={nightBar?.icon ?? colors.primary} />
                 </Pressable>
                 {/* Text overlay placeholder — RN drops fontFamily on the
                     native placeholder for multiline TextInputs (Android
@@ -1279,16 +1295,21 @@ export default function ChatScreen() {
                     // 20-px slot, the wrap grows in lockstep with the text
                     // up to a 110-px ceiling (~4 lines), then internal
                     // scrolling takes over.
+                    // 한 줄이면 글꼴과 무관하게 44 고정 — 기본 글씨체는 줄 높이(fs(18)≈20.9)+24 가
+                    // 44 를 넘어, 글자가 생기면 44.9 / 다 지우면(줄 높이 미적용) 44 로 흔들렸다.
+                    // 두 줄째부터만 내용 높이를 따라 키운다.
                     {
-                      height: Math.max(
-                        44,
-                        Math.min(110, inputContentHeight + 24),
-                      ),
+                      height:
+                        inputContentHeight > fs(18) * 1.5
+                          ? Math.min(110, inputContentHeight + 24)
+                          : 44,
                     },
                   ]}
                 >
                   <TextInput
                     style={styles.input}
+                    // iOS 키보드도 밤엔 어둡게 (Android 는 시스템 설정을 따른다).
+                    keyboardAppearance={nightBar ? 'dark' : 'default'}
                     value={text}
                     onChangeText={(v) => {
                       setText(v);
@@ -1520,10 +1541,16 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    // 사진이 닿지 않는 위쪽은 사진 맨 위 하늘색(블러 후)으로 이어 보이게.
+    backgroundColor: isNight ? '#0C1D5E' : '#F5839C',
+  },
+  skyBg: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
   },
   header: {
-    backgroundColor: colors.background,
+    backgroundColor: nightBar?.bg ?? colors.background,
   },
   // 헤더 본문 행 (백버튼 ↔ 우측 버튼). 높이는 네이티브 헤더와 유사한 52.
   headerRow: {
@@ -1552,7 +1579,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: fonts.bold,
     fontSize: fs(19),
-    color: colors.text,
+    color: nightBar?.text ?? colors.text,
     flexShrink: 1,
   },
   headerBackBtn: {
@@ -1573,7 +1600,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messageList: {
-    paddingTop: 10,
+    // inverted 라 paddingTop = 시각적 바닥 (최신 말풍선 아래 여백).
+    paddingTop: 10 + EXTRA_BUBBLE_GAP,
   },
   dateSeparator: {
     flexDirection: 'row',
@@ -1585,12 +1613,15 @@ const styles = StyleSheet.create({
   dateLine: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.textLight,
+    backgroundColor: colors.onPhotoTextSecondary,
     opacity: 0.5,
   },
   dateText: {
     fontSize: fs(12),
-    color: colors.textSecondary,
+    color: colors.onPhotoTextSecondary,
+    textShadowColor: colors.onPhotoTextShadow,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
   },
@@ -1599,27 +1630,29 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.card,
+    backgroundColor: nightBar?.bg ?? colors.card,
   },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 12,
-    paddingTop: 10,
+    // 아래 여백(bottomSafePad = 8 + 안전영역)에서 보이는 부분 8 과 맞춰 세로 중앙.
+    paddingTop: 8,
     borderTopWidth: 0.5,
-    borderTopColor: colors.borderSoft,
-    backgroundColor: colors.card,
-    gap: 8,
+    borderTopColor: nightBar?.border ?? colors.borderSoft,
+    backgroundColor: nightBar?.bg ?? colors.card,
+    gap: 6,
   },
   photoButton: {
-    width: 40,
+    // 감정·사진 버튼은 한 줄 입력칸 높이(44)와 같은 원 (EmotionPicker toggle 과 같은 값).
+    width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: nightBar?.field ?? colors.surface,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
+    borderColor: 'transparent',
   },
   replyPreview: {
     flexDirection: 'row',
@@ -1627,15 +1660,15 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: colors.card,
+    backgroundColor: nightBar?.bg ?? colors.card,
     borderTopWidth: 0.5,
-    borderTopColor: colors.borderSoft,
+    borderTopColor: nightBar?.border ?? colors.borderSoft,
   },
   replyPreviewBar: {
     width: 2,
     alignSelf: 'stretch',
     borderRadius: 1,
-    backgroundColor: colors.primary,
+    backgroundColor: nightBar?.icon ?? colors.primary,
   },
   replyPreviewThumb: {
     width: 30,
@@ -1647,20 +1680,20 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fs(11),
     lineHeight: fs(15),
-    color: colors.textSecondary,
+    color: nightBar?.muted ?? colors.textSecondary,
     fontFamily: fonts.regular,
   },
   emotionRowWrapper: {
-    backgroundColor: colors.card,
+    backgroundColor: nightBar?.bg ?? colors.card,
     borderTopWidth: 0.5,
-    borderTopColor: colors.borderSoft,
+    borderTopColor: nightBar?.border ?? colors.borderSoft,
   },
   composerErrorWrapper: {
-    backgroundColor: colors.card,
+    backgroundColor: nightBar?.bg ?? colors.card,
     paddingHorizontal: 18,
     paddingTop: 6,
     borderTopWidth: 0.5,
-    borderTopColor: colors.borderSoft,
+    borderTopColor: nightBar?.border ?? colors.borderSoft,
   },
   tombstoneNotice: {
     flexDirection: 'row',
@@ -1669,13 +1702,13 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 18,
     paddingTop: 14,
-    backgroundColor: colors.card,
+    backgroundColor: nightBar?.bg ?? colors.card,
     borderTopWidth: 0.5,
-    borderTopColor: colors.borderSoft,
+    borderTopColor: nightBar?.border ?? colors.borderSoft,
   },
   tombstoneNoticeText: {
     fontSize: fs(13),
-    color: colors.textSecondary,
+    color: nightBar?.muted ?? colors.textSecondary,
     fontFamily: fonts.medium,
     letterSpacing: 0.2,
   },
@@ -1689,10 +1722,12 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 22,
     paddingHorizontal: 18,
-    paddingVertical: 12,
-    backgroundColor: colors.surface,
+    // 갈무리 글자는 위쪽에 붙어 보여 위 여백을 늘려 내린다 (합은 24 그대로, 기본 글씨체는 12/12).
+    paddingTop: 12 + PIXEL_INPUT_OFFSET_Y,
+    paddingBottom: 12 - PIXEL_INPUT_OFFSET_Y,
+    backgroundColor: nightBar?.field ?? colors.surface,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
+    borderColor: 'transparent',
     justifyContent: 'center',
     alignSelf: 'flex-end',
     position: 'relative',
@@ -1708,7 +1743,7 @@ const styles = StyleSheet.create({
     //     visually centered in the 20-px content slot inside the wrap.
     fontSize: fs(13),
     lineHeight: fs(18),
-    color: colors.text,
+    color: nightBar?.text ?? colors.text,
     fontFamily: fonts.pixel,
     padding: 0,
     margin: 0,
@@ -1722,7 +1757,7 @@ const styles = StyleSheet.create({
     left: 18,
     right: 18,
     fontSize: fs(13),
-    color: colors.textLight,
+    color: nightBar?.muted ?? colors.textLight,
     fontFamily: fonts.pixel,
   },
   sendShell: {

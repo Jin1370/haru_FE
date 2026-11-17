@@ -2,7 +2,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
-import { colors, radii, shadows } from '@/constants/colors';
+import { colors, photoCard, radii } from '@/constants/colors';
 import { fonts, fs, getAppFont } from '@/constants/fonts';
 import { formatRelativeTime } from '@/utils/age';
 import type { MatchListItem } from '@/types';
@@ -106,7 +106,7 @@ export function MatchItem({ item, onPress, onLongPress }: MatchItemProps) {
             <Ionicons
               name="notifications-off"
               size={14}
-              color={colors.textLight}
+              color={photoCard.faint}
               style={styles.mutedIcon}
             />
           )}
@@ -150,11 +150,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 13,
     gap: 14,
-    backgroundColor: colors.card,
+    // 탐색 카드(SwipeCard)와 같은 반투명 어두운 바탕 — 배경 사진이 은은히 비친다.
+    backgroundColor: photoCard.card,
     borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.borderSoft,
-    ...shadows.soft,
+    // 테두리 없이 (두께는 남겨 크기 유지).
+    borderColor: 'transparent',
+    // 그림자 없음 — 반투명 카드라 안드로이드 elevation 그림자가 카드 안으로 비쳐
+    // 가장자리는 어둡고 가운데만 밝은 사각형처럼 보였다.
   },
   pressed: {
     opacity: 0.88,
@@ -171,7 +174,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: fs(16),
     fontFamily: fonts.semibold,
-    color: colors.text,
+    color: photoCard.text,
     flex: 1,
     letterSpacing: 0.2,
   },
@@ -180,7 +183,7 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: fs(12),
-    color: colors.textSecondary,
+    color: photoCard.muted,
     marginLeft: 8,
     fontFamily: fonts.regular,
   },
@@ -201,19 +204,19 @@ const styles = StyleSheet.create({
     // different intrinsic line metrics, so an explicit value keeps the row
     // height consistent across read/unread states.
     lineHeight: fs(18),
-    color: colors.textSecondary,
+    color: photoCard.muted,
     fontFamily: fonts.regular,
     flex: 1,
   },
   lastMessageUnread: {
-    color: colors.text,
+    color: photoCard.text,
     fontFamily: fonts.medium,
   },
   lastMessageTombstone: {
     // Galmuri11(픽셀 폰트)에는 italic 변형이 없어 fontStyle: 'italic' 을
     // 주면 RN 이 시스템 폰트로 폴백되어 픽셀 톤이 깨진다. 색만 약하게
     // 두어 구분.
-    color: colors.textLight,
+    color: photoCard.faint,
   },
   // 안 읽음 개수 배지 — 미리보기 행 우측 끝의 핑크 원형 pill. minWidth 로 한
   // 자리 숫자는 원형, 두 자리 이상은 좌우 패딩으로 자연 확장. 높이 20 은 행
@@ -222,7 +225,8 @@ const styles = StyleSheet.create({
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: colors.primary,
+    // 어두운 카드에서도 보이는 밝은 강조색.
+    backgroundColor: photoCard.badge,
     paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',

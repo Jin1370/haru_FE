@@ -11,12 +11,10 @@ import { userFacingError } from '@/utils/errors';
 import { colors, radii, shadows } from '@/constants/colors';
 import { fonts, fs } from '@/constants/fonts';
 import { LEGAL_URLS } from '@/constants/legal';
-import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { monetizationEnabled } = useDiscoverQuota();
   const profile = useAuthStore((s) => s.profile);
   const logout = useAuthStore((s) => s.logout);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
@@ -69,9 +67,6 @@ export default function SettingsScreen() {
         onBack={() => router.back()}
       />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 8 + insets.bottom }]}>
-        <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>
-          {t('settings.sections.app')}
-        </Text>
         <View style={styles.group}>
           <MenuCardButton
             label={t('settings.notifications.title')}
@@ -79,22 +74,17 @@ export default function SettingsScreen() {
           />
           <View style={styles.divider} />
           <MenuCardButton
+            label={t('profile.voiceSettings')}
+            onPress={() => router.push('/(main)/settings/voice')}
+          />
+        </View>
+
+        <View style={styles.group}>
+          <MenuCardButton
             label={t('settings.languageSettings')}
             onPress={() => router.push('/(main)/settings/language')}
           />
-          {monetizationEnabled ? (
-            <>
-              <View style={styles.divider} />
-              <MenuCardButton
-                label={t('stars.shopTitle')}
-                onPress={() => router.push('/(main)/settings/stars')}
-              />
-            </>
-          ) : null}
-        </View>
-
-        <Text style={styles.sectionTitle}>{t('settings.sections.display')}</Text>
-        <View style={styles.group}>
+          <View style={styles.divider} />
           <MenuCardButton
             label={t('settings.theme')}
             onPress={() => router.push('/(main)/settings/theme')}
@@ -119,13 +109,7 @@ export default function SettingsScreen() {
 
         {/* 로그아웃도 위 메뉴 카드와 동일한 톤 — 확인 모달이 파괴적 액션을
             안내하므로 버튼 자체는 빨간색을 쓰지 않는다. */}
-        <Text style={styles.sectionTitle}>{t('settings.sections.account')}</Text>
         <View style={styles.group}>
-          <MenuCardButton
-            label={t('profile.voiceSettings')}
-            onPress={() => router.push('/(main)/settings/voice')}
-          />
-          <View style={styles.divider} />
           {/* 구글·애플 전용 계정은 비밀번호가 없어 변경 자체가 불가능하다
               (BE 가 WRONG_CURRENT_PASSWORD 로 응답해 "틀렸다" 는 오해를 줌).
               has_password 가 undefined 인 옛 응답에서는 기존대로 노출. */}
@@ -175,7 +159,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: 20, paddingTop: 8 },
   // 같은 카테고리의 행들을 하나의 둥근 카드로 묶고, 행 사이는 divider 로 나눈다.
+  // 섹션 제목 없이 카드 사이 간격으로만 묶음을 나눈다.
   group: {
+    marginTop: 16,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.borderSoft,
@@ -188,17 +174,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.borderSoft,
     marginLeft: 18,
   },
-  sectionTitle: {
-    fontSize: fs(15),
-    fontFamily: fonts.semibold,
-    color: colors.textSecondary,
-    letterSpacing: 0.4,
-    // edit-profile 등 다른 설정 화면과 동일한 리듬 (섹션 간격 16 / 라벨 하단 8).
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  // 첫 섹션은 content padding(20) 이 이미 상단 여백이라 marginTop 제거.
-  sectionTitleFirst: { marginTop: 0 },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -223,13 +198,13 @@ const styles = StyleSheet.create({
   // (_layout 의 applyDefaultFont) 지정 안 하면 시스템 폰트로 폴백된다.
   legalLink: {
     color: colors.textSecondary,
-    fontSize: fs(12),
+    fontSize: fs(11),
     fontFamily: fonts.regular,
     textDecorationLine: 'underline',
   },
   legalSeparator: {
     color: colors.textSecondary,
-    fontSize: fs(12),
+    fontSize: fs(11),
     fontFamily: fonts.regular,
   },
 });

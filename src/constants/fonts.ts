@@ -32,6 +32,9 @@ export const fs = (size: number): number => (isPixel ? size : size * SYSTEM_FONT
 // 기본 글씨체는 숫자가 가운데에 놓여 보정하지 않는다.
 export const PIXEL_NUMBER_OFFSET_Y = isPixel ? -1 : 0;
 
+// Galmuri 글자는 입력칸 안에서 줄 상자 위쪽에 붙어 보인다. 내리는 보정값 (기본 글씨체는 0).
+export const PIXEL_INPUT_OFFSET_Y = isPixel ? 1 : 0;
+
 export const fonts = {
   regular: family,
   medium: family,

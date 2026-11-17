@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { INTEREST_SECTIONS, MAX_INTERESTS } from '@/constants/interests';
 import { colors, radii } from '@/constants/colors';
+import { isNight } from '@/constants/theme';
 import { fonts, fs } from '@/constants/fonts';
 
 // 관심사 선택을 항목별 아코디언으로 표시한다. 태그가 100개 가까이라 전부 펼쳐
@@ -54,7 +55,7 @@ export function InterestSelector({
         return (
           <View key={section.id} style={styles.section}>
             <Pressable
-              style={({ pressed }) => [styles.header, pressed && styles.headerPressed]}
+              style={styles.header}
               onPress={() => toggleSection(section.id)}
               accessibilityRole="button"
               accessibilityState={{ expanded: isOpen }}
@@ -104,8 +105,14 @@ export function InterestSelector({
 }
 
 const styles = StyleSheet.create({
+  // 카테고리 박스가 제목과 펼친 칩을 함께 감싼다 (칩은 박스의 흰 바탕 위에 놓인다).
   section: {
     marginBottom: 8,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -113,13 +120,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 14,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  headerPressed: {
-    backgroundColor: colors.cardAlt,
   },
   title: {
     fontSize: fs(13),
@@ -131,16 +131,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    paddingTop: 10,
-    paddingHorizontal: 2,
+    paddingTop: 2,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
   },
   chip: {
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: radii.pill,
     borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    // 테두리 없이 바탕색만 — 페이지 바탕(background)보다 진한 색으로 구분.
+    borderColor: 'transparent',
+    backgroundColor: isNight ? '#E3E8EF' : colors.surface,
   },
   chipActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   chipDisabled: { opacity: 0.4 },

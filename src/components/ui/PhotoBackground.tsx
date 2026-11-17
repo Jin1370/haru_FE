@@ -41,6 +41,14 @@ export function PhotoBackground({
                 resizeMode="cover"
                 style={styles.photo}
             />
+            {/* 기본 배경일 때만 — 별은 블러 없이 사진과 같은 크기·위치로 겹친다. */}
+            {!source && themeBackgrounds.appStars ? (
+                <Image
+                    source={themeBackgrounds.appStars}
+                    resizeMode="cover"
+                    style={styles.photo}
+                />
+            ) : null}
             <View style={styles.content}>{children}</View>
         </View>
     );

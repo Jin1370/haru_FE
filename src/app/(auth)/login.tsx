@@ -366,6 +366,10 @@ export default function LoginScreen() {
                 style={bgStyle}
                 blurRadius={LOGIN_BG_BLUR}
             />
+            {/* 밤 테마 별 — 블러 없이 배경과 같은 위치로 겹친다. */}
+            {themeBackgrounds.loginStars ? (
+                <Image source={themeBackgrounds.loginStars} style={bgStyle} />
+            ) : null}
             {/* 키보드를 내릴 때 폼(sheet)이 키보드보다 느리게 내려와 하단에 배경(핑크)이
           순간 노출되던 문제 — 시트와 같은 색(card) 백스톱을 시트 뒤 하단에 깔아
           그 틈이 시트와 같은 색으로 보이게 한다(키보드 라이브러리 무변경). 평소엔
