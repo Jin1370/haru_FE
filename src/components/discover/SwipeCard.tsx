@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
         borderColor: colors.primary,
     },
     chipText: {
-        fontSize: fs(11),
+        fontSize: fs(12),
         fontFamily: fonts.medium,
         color: "rgba(255,255,255,0.9)",
     },
