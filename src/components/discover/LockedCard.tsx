@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { PlaylistCard } from '@/components/discover/SwipeCard';
 import { radii } from '@/constants/colors';
+import { isNight } from '@/constants/theme';
 import type { DiscoverCandidate } from '@/types';
 
 // 잠긴 카드 (탐색 한도 초과 / 받은 좋아요 미공개). 일반 카드와 똑같이 그리고
@@ -93,7 +94,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   fallback: {
-    backgroundColor: 'rgba(20, 10, 25, 0.92)',
+    backgroundColor: isNight ? 'rgba(8, 12, 30, 0.92)' : 'rgba(20, 10, 25, 0.92)',
   },
   center: {
     justifyContent: 'center',

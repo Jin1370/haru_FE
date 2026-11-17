@@ -34,6 +34,7 @@ import { showAlert } from '@/stores/alertStore';
 import { usePhotoPreviewStore } from '@/stores/photoPreviewStore';
 import { usePendingPhotoUploadsStore } from '@/stores/pendingPhotoUploadsStore';
 import { colors, gradients, radii, shadows } from '@/constants/colors';
+import { isNight } from '@/constants/theme';
 import { fonts, fs } from '@/constants/fonts';
 import { calculateAge } from '@/utils/age';
 import { genderLabelKey } from '@/utils/gender';
@@ -1114,13 +1115,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.like,
     borderStyle: 'solid',
-    backgroundColor: 'rgba(255,82,82,0.06)',
+    backgroundColor: isNight ? 'rgba(50,89,150,0.06)' : 'rgba(255,82,82,0.06)',
   },
   statusRejectedSlot: {
     borderWidth: 1.5,
     borderColor: colors.like,
     borderStyle: 'solid',
-    backgroundColor: 'rgba(255,82,82,0.12)',
+    backgroundColor: isNight ? 'rgba(50,89,150,0.12)' : 'rgba(255,82,82,0.12)',
   },
   statusOverlayText: {
     fontSize: fs(10),

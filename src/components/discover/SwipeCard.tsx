@@ -609,7 +609,7 @@ function useVoiceIntro(audioUrl: string | null | undefined) {
 }
 
 // 대화를 신청한 카드 테두리·도장 색 — 낮엔 분홍 노을 위에서도 띄는 핫핑크, 밤엔 진한 테마색.
-export const REQUESTED_PINK = isNight ? colors.primaryDark : "#E05C9E";
+export const REQUESTED_PINK = isNight ? "#F4F1E6" : "#E05C9E";
 
 const styles = StyleSheet.create({
     card: {
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderWidth: 1,
         borderColor: "rgba(255,255,255,0.08)",
-        backgroundColor: "rgba(20,10,25,0.62)",
+        backgroundColor: isNight ? "rgba(8,12,30,0.62)" : "rgba(20,10,25,0.62)",
     },
     cover: {
         borderRadius: radii.lg,
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     // 대화를 신청한 카드 — 핫핑크 굵은 테두리 + 은은한 빛 (iOS 그림자. 안드로이드 elevation 은
     // 반투명 바탕 카드에서 그림자가 비쳐 보여 쓰지 않는다).
     cardRequested: {
-        shadowColor: isNight ? colors.primary : REQUESTED_PINK,
+        shadowColor: REQUESTED_PINK,
         shadowOpacity: 0.7,
         shadowRadius: 14,
         shadowOffset: { width: 0, height: 0 },

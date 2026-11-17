@@ -17,6 +17,7 @@ import { ApiRequestError } from '@/services/api';
 import { showAlert } from '@/stores/alertStore';
 import { ErrorText } from '@/components/ui/ErrorText';
 import { colors, radii, shadows } from '@/constants/colors';
+import { isNight } from '@/constants/theme';
 import { fonts, fs } from '@/constants/fonts';
 import { validateReportDescription } from '@/utils/validators';
 import { userFacingError } from '@/utils/errors';
@@ -329,7 +330,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 13,
     borderRadius: radii.pill,
-    backgroundColor: colors.error,
+    // 밤 테마는 다른 주요 버튼과 같은 남색.
+    backgroundColor: isNight ? colors.primary : colors.error,
     alignItems: 'center',
     justifyContent: 'center',
   },

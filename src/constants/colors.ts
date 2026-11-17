@@ -46,17 +46,17 @@ const dayColors = {
 };
 
 // 밤 테마 — 채도를 낮춘 슬레이트 블루 + 창문 불빛 같은 앰버 포인트.
-// 흰 배경 위 대비: primary 6.8:1, primaryMid 위 흰 글자 6.2:1.
+// 흰 배경 위 대비: primary 7.0:1, primaryMid 위 흰 글자 6.4:1.
 const nightColors: typeof dayColors = {
   ...dayColors,
-  primary: '#3E5C8A',
+  primary: '#325996',
   primaryLight: '#E1E6EE',
   primaryDark: '#263B5E',
-  primaryMid: '#46628F',
+  primaryMid: '#395F9C',
 
   secondary: '#9AAAC3',
 
-  background: '#F2F4F7',
+  background: '#F0F4F9',
   surface: '#E6EAF0',
   card: '#FAFBFC',
   cardAlt: '#EEF1F5',
@@ -67,7 +67,7 @@ const nightColors: typeof dayColors = {
   border: '#D9DEE6',
   borderSoft: '#E8EBF0',
 
-  like: '#B8862F',
+  like: '#325996',
 
   overlay: 'rgba(18,24,38,0.5)',
 
@@ -83,7 +83,7 @@ export const colors = isNight ? nightColors : dayColors;
 
 export const gradients = isNight
   ? {
-      primary: ['#7F93B5', '#3E5C8A'] as const,
+      primary: ['#7390C1', '#325996'] as const,
       blush: ['#F7F8FA', '#E6EAF0'] as const,
       glow: ['#9DB0CC', '#4A6390'] as const,
     }
