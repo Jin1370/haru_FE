@@ -1,9 +1,3 @@
-import type { PhotoAccess } from './photoAccess';
-
-// Re-exported for convenience so call sites can `import { PhotoAccess } from '@/types'`.
-export type { PhotoAccess } from './photoAccess';
-export { DEFAULT_PHOTO_ACCESS } from './photoAccess';
-
 // === Auth ===
 export interface AuthResponse {
   access_token: string;
@@ -176,8 +170,6 @@ export interface DiscoverCandidate {
   interests: string[];
   // Policy: BE restricts to `[photos[0]]`. FE always forceBlurs regardless.
   photos: string[];
-  // Optional until BE ships iter2. Always { false, false } by policy.
-  photo_access?: PhotoAccess;
   // 이 후보가 이미 나를 like 했는가(=like 하면 즉시 매치 = 매치 완성 like = 예산
   // 면제). 좋아요 소진 시 사전 게이트 분기에만 사용(카드에 시각 표시 없음).
   // 받은 좋아요 탭에선 항상 true. 구버전 BE 호환 위해 optional — 미제공 시 false 취급.
@@ -313,16 +305,6 @@ export interface MatchListItem {
     is_photo?: boolean;
   } | null;
   unread_count: number;
-  // Per-match, viewer-relative photo reveal flags aggregated by BE.
-  // Optional during BE migration window (iter2); will become required once
-  // `/api/matches` ships the field unconditionally. Undefined → treat as
-  // DEFAULT_PHOTO_ACCESS (fully locked).
-  photo_access?: PhotoAccess;
-  // mig 014 match-roundtrip-realtime: BE-sourced authoritative round-trip count.
-  // BE always normalises NULL (백필 실패 매치) to 0, so this is required not
-  // optional. Chat 화면이 클라이언트 윈도우 재계산(countRoundTrips) 대신
-  // 이 값을 직접 소비한다.
-  round_trip_count: number;
   // mig 022: per-match 푸시 알림 옵트아웃 상태. 채팅 목록 long-press 액션시트의
   // "알림 끄기/켜기" 토글이 이 값을 보고 라벨/아이콘을 분기. user_preferences.
   // notify_messages 전역 토글과 AND 결합되어 어느 한 쪽 OFF 면 푸시 미발송.
@@ -411,23 +393,6 @@ export interface Message {
   photo_width?: number | null;
   photo_height?: number | null;
   created_at: string;
-}
-
-// chat-audio-async-insert sprint: send 응답에서 match_after 제거.
-//
-// BE 가 더 이상 mid-session UPDATE 패턴을 쓰지 않음 — POST 응답 시점에 INSERT
-// 가 일어나지 않거나(voice clone 보유자: stub 202) 일어나도 14c 트리거 결과를
-// 동봉하던 SELECT 는 제거되었다. FE 는 realtime matches UPDATE 채널 (useChat
-// onMatchUpdate / useMatches subscribeToAllMatchUpdates) 을 단일 진실원으로
-// 사용하며, 자기 자신이 보낸 메시지로 인한 게이지 갱신도 같은 채널로 수신.
-// 친밀도 게이지 갱신 시점은 INSERT 직후 → POST 응답 후 5~10초 지연 (TTS 시간).
-//
-// MatchAfter 인터페이스는 useChat 내부의 photoUnlocked 시드 로직에서 계속
-// 사용하므로 정의는 유지하되, SendMessageResponse 의 nested 필드는 삭제.
-export interface MatchAfter {
-  round_trip_count: number;
-  main_photo_unlocked: boolean;
-  all_photos_unlocked: boolean;
 }
 
 // POST /api/matches/:matchId/messages 응답 타입. voice clone 보유 발신자는

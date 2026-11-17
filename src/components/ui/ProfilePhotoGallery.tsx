@@ -8,22 +8,16 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { usePhotoAccess } from '@/hooks/usePhotoAccess';
 import { colors } from '@/constants/colors';
 
 interface ProfilePhotoGalleryProps {
-  // Registry key for photo-access lookup.
-  userId: string;
   // Full photos array as returned by BE. photos[0] is the main photo.
   photos: string[];
 }
 
 // Horizontal-paging photo carousel used in the chat-screen partner modal.
-// photo-watercolor-pipeline sprint 후 메인 사진(변환본)은 항상 클리어 노출 —
-// 디스커버부터 채팅까지 동일 변환본. 10 라운드트립 도달 시 원본 5장 추가 carousel.
-// photos.length=1 또는 미도달이면 paging 비활성 (phantom slide 회피).
-export function ProfilePhotoGallery({ userId, photos }: ProfilePhotoGalleryProps) {
-  const access = usePhotoAccess(userId);
+// 사진이 1장이면 paging 비활성 (phantom slide 회피).
+export function ProfilePhotoGallery({ photos }: ProfilePhotoGalleryProps) {
   const [width, setWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -31,7 +25,7 @@ export function ProfilePhotoGallery({ userId, photos }: ProfilePhotoGalleryProps
     return null;
   }
 
-  const canSwipe = access.all_photos_unlocked && photos.length > 1;
+  const canSwipe = photos.length > 1;
   const visiblePhotos = canSwipe ? photos : [photos[0]];
 
   const onLayout = (e: LayoutChangeEvent) => {

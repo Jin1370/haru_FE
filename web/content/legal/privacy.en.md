@@ -2,22 +2,22 @@
 
 Last updated: October 17, 2026
 
-> haru (hereinafter the "Operator") publishes this Privacy Policy to protect members' personal information and to comply with applicable laws (the Personal Information Protection Act, the Network Act, etc.). This service is a voice-chat-based cross-language matching service and outsources some processing — such as voice synthesis, automatic translation, and content moderation — to overseas processors, as described in Article 3 below.
+> haru (hereinafter the "Operator") publishes this Privacy Policy to protect members' personal information and to comply with applicable laws (the Personal Information Protection Act, the Network Act, etc.). This service is a voice-chat-based cross-language chat service and outsources some processing — such as voice synthesis, automatic translation, and content moderation — to overseas processors, as described in Article 3 below.
 
 ## 1. Items of Personal Information Collected and Purpose of Use
 
-The Operator collects and uses the following personal information to the extent necessary for member identification and authentication, matching, chat, and safe operation of the service.
+The Operator collects and uses the following personal information to the extent necessary for member identification and authentication, chat partner recommendations, chat, and safe operation of the service.
 
 - **Account and profile information**: email or social login identifier, password, date of birth, gender, nationality, language, profile photo, self-introduction
-- **Voice data (biometric information)**: the member's voice and synthesized results, such as voice clone, voice intro, and voice messages
+- **Voice data (biometric information)**: the member's voice and synthesized results, such as voice clone, status messages, and voice messages
 - **Content**: messages the member creates or sends, and their translations
 - **Information generated during use**: usage records, device and access information, notification tokens, error diagnostics, and records needed for the safety and operation of the service
 
-Collected information is used only within the scope of the collection purpose. Date of birth is used to verify that the member is 18 or older and for the matching age criteria.
+Collected information is used only within the scope of the collection purpose. Date of birth is used to verify that the member is 18 or older and for the age criteria used in chat partner recommendations.
 
 ## 2. Processing of Voice Data
 
-The member's voice data processed by the Operator constitutes biometric (sensitive) information; the Operator classifies it as sensitive information under applicable laws and processes it with the member's consent. Members may decline consent to the processing of voice data, but in that case the core features of this service (voice intro, voice messages, etc.) cannot be used.
+The member's voice data processed by the Operator constitutes biometric (sensitive) information; the Operator classifies it as sensitive information under applicable laws and processes it with the member's consent. Members may decline consent to the processing of voice data, but in that case the core features of this service (status messages, voice messages, etc.) cannot be used.
 
 The voice used to train a voice clone is not separately retained by the Operator once the processing needed for synthesis is complete. Synthesized audio files are retained only for the period necessary to provide the service and are destroyed when the member changes the relevant content or deletes their account. Audio files are stored in a protected form that prevents unauthorized external access.
 

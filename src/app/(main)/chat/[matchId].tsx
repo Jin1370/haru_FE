@@ -28,7 +28,6 @@ import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import useSWR from 'swr';
 import { ChatBubble } from '@/components/chat/ChatBubble';
 import { AudioPlayer } from '@/components/chat/AudioPlayer';
-import { IntimacyGauge } from '@/components/chat/IntimacyGauge';
 import { ChatPromptsModal } from '@/components/chat/ChatPromptsModal';
 import { MessageActionsSheet } from '@/components/chat/MessageActionsSheet';
 import { PhotoViewerModal } from '@/components/chat/PhotoViewerModal';
@@ -78,10 +77,6 @@ import { CHAT_PROMPTS_SEEN_KEY_PREFIX } from '@/constants/chatPrompts';
 import { calculateAge } from '@/utils/age';
 import { genderLabelKey } from '@/utils/gender';
 import { userFacingError } from '@/utils/errors';
-import { fromRoundTrips } from '@/constants/photoAccess';
-import { photoAccessStore } from '@/stores/photoAccess';
-import { usePhotoAccess } from '@/hooks/usePhotoAccess';
-import type { PhotoAccess } from '@/types/photoAccess';
 import type { Emotion, MatchListItem, Message, ReplyQuote } from '@/types';
 
 // Minimum padding under the chat input bar so the send button never sits
@@ -163,11 +158,6 @@ export default function ChatScreen() {
   // First-time entry to a match auto-opens the modal once (see the effect
   // below); subsequent entries leave the user to tap the bulb explicitly.
   const [promptsModalOpen, setPromptsModalOpen] = useState(false);
-  // Photo-access unlock popup state. `unlockEvent` is null when there's no
-  // pending announcement; set to 'main' or 'all' the moment the store flips
-  // the corresponding flag from false -> true during this session.
-  const [unlockEvent, setUnlockEvent] = useState<'all' | null>(null);
-
   // push-notifications follow-up: 이 매치의 채팅창이 활성화된 동안 활성 ref 를
   // 설정하면 _layout.tsx 의 setNotificationHandler 가 동일 match_id 푸시를 OS
   // 트레이/배너/사운드 모두 OFF 로 처리. unmount 또는 다른 채팅으로 이동 시 해제.
@@ -264,7 +254,6 @@ export default function ChatScreen() {
     loadingOlder,
     hasMore,
     userId,
-    roundTrips: bRoundTrips,
     loadMessages,
     loadOlder,
     send,
@@ -321,12 +310,6 @@ export default function ChatScreen() {
   // isNearBottomRef 는 스크롤 콜백이 동기로 읽는 값이라 렌더에 못 쓴다.
   // "최신으로" 버튼 노출 판단용으로 같은 값을 state 로도 들고 간다.
   const [nearBottom, setNearBottom] = useState(true);
-
-  // mig 014 match-roundtrip-realtime: 클라이언트 윈도우 재계산 제거.
-  // BE 트리거가 single source of truth — useChat 이 노출하는 BE-sourced
-  // 카운트를 그대로 사용. 마운트 직후 매치 캐시 미스 + 송신 전 cold start
-  // 에서만 null 이며 0 으로 폴백.
-  const roundTrips = bRoundTrips ?? 0;
 
   const [text, setText] = useState('');
   const [composerError, setComposerError] = useState<string | null>(null);
@@ -692,71 +675,6 @@ export default function ChatScreen() {
     setSelectedEmotion((prev) => (prev === emotion ? DEFAULT_EMOTION : emotion));
   };
 
-  // mig 014 match-roundtrip-realtime: photoAccessStore 입력 경로.
-  // 형식은 유지하되, roundTrips 가 BE-sourced(useChat) 이므로 BE 진실과 store
-  // 가 같은 방향. store 의 downgrade guard 가 잠금 역행을 한 번 더 차단.
-  // fromRoundTrips 는 photoAccess.ts 의 임계치(5/10) 와 BE 014c SQL 리터럴이
-  // drift 가드 vitest 로 동기 보장된다.
-  useEffect(() => {
-    if (!partnerId) return;
-    photoAccessStore.update(partnerId, fromRoundTrips(roundTrips));
-  }, [partnerId, roundTrips]);
-
-  // Subscribe to the partner's photo-access flags and detect in-session
-  // unlock transitions (false -> true). The Zustand store's downgrade guard
-  // guarantees true flags are never flipped back, so the ref-based prev/curr
-  // diff here cannot fire twice for the same transition per partner.
-  const access = usePhotoAccess(partnerId);
-  const prevAccessRef = useRef<PhotoAccess | null>(null);
-  useEffect(() => {
-    // Gate on partnerId: while the match detail is still loading, `access`
-    // is the DEFAULT_PHOTO_ACCESS fallback and must not seed prevAccessRef.
-    if (!partnerId) return;
-    const prev = prevAccessRef.current;
-    // First pass after partnerId resolves: record the entry-state so that
-    // users joining an already-unlocked chat don't see the popup.
-    if (prev === null) {
-      prevAccessRef.current = access;
-      return;
-    }
-    // photo-watercolor-pipeline sprint 후 UNLOCK_MAIN === UNLOCK_ALL — 둘 다 같은
-    // tick 에 transit. 옛 main-only 분기는 사실상 도달 0 (5회 단계 사라짐).
-    if (!prev.all_photos_unlocked && access.all_photos_unlocked) {
-      setUnlockEvent('all');
-      // partnerPhotos was seeded at mount with the BE-sliced single-photo
-      // array. Refetch from /api/matches now that BE will return the full
-      // list, so the partner profile modal can render the gallery without
-      // requiring the user to leave/re-enter the chat.
-      (async () => {
-        try {
-          const list = await matchService.getMatches(50);
-          const partner = list.find((m) => m.match_id === matchId)?.partner;
-          if (partner?.photos && partner.photos.length > 0) {
-            setPartnerPhotos(partner.photos);
-          }
-        } catch {
-          // best-effort — next chat re-entry will pick up the full list
-        }
-      })();
-    }
-    prevAccessRef.current = access;
-  }, [partnerId, access, matchId]);
-
-  // Surface the unlock announcement through the unified alert host so it shares
-  // the pixel-tone treatment with the rest of the app's notifications.
-  useEffect(() => {
-    if (!unlockEvent) return;
-    const fallbackName = t('photoAccess.unlocked.fallbackName');
-    const name = partnerName || fallbackName;
-    showAlert({
-      variant: 'info',
-      title: t('photoAccess.unlocked.all.title'),
-      message: t('photoAccess.unlocked.all.description', { name }),
-      confirmText: t('photoAccess.unlocked.confirm'),
-    });
-    setUnlockEvent(null);
-  }, [unlockEvent, partnerName, t]);
-
   // Inverted-list source: data[0] is the newest message (rendered at the
   // visual bottom), data[N-1] is the oldest (visual top). The "previous"
   // chronological message of inverseMessages[index] is inverseMessages[index + 1].
@@ -1075,10 +993,9 @@ export default function ChatScreen() {
             </View>
           </View>
         </View>
-        <IntimacyGauge roundTrips={roundTrips} />
 
         {/* 캠페인 봇은 매치 직후 TTS 합성이 끝나야 첫 메시지가 도착한다(5~10초).
-            그동안 빈 화면이면 렉으로 오해하므로, 친밀도 게이지 바로 아래(메시지
+            그동안 빈 화면이면 렉으로 오해하므로, 채팅 헤더 바로 아래(메시지
             영역 최상단)에 안내 줄을 띄운다. 메시지가 하나라도 들어오면 사라진다
             — BE 는 TTS 가 실패해도 텍스트 메시지를 반드시 INSERT 하므로 영구
             로딩은 없다. */}
@@ -1455,7 +1372,7 @@ export default function ChatScreen() {
               <Ionicons name="close" size={22} color={colors.text} />
             </Pressable>
             {partnerId && partnerPhotos.length > 0 ? (
-              <ProfilePhotoGallery userId={partnerId} photos={partnerPhotos} />
+              <ProfilePhotoGallery photos={partnerPhotos} />
             ) : (
               <ProfilePhoto
                 userId={partnerId}
@@ -1823,7 +1740,7 @@ const styles = StyleSheet.create({
   sendBtnDisabled: {
     opacity: 0.4,
   },
-  // 날짜 구분선(dateSeparator)과 같은 모양이되, 친밀도 게이지 바로 아래 —
+  // 날짜 구분선(dateSeparator)과 같은 모양이되, 채팅 헤더 바로 아래 —
   // 메시지 영역 최상단에 일반 흐름으로 놓인다 (inverted 리스트의 header/footer
   // 는 뒤집혀 렌더되므로 리스트 안에 넣지 않는다).
   pendingNotice: {

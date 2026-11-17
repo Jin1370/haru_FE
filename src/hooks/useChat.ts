@@ -2,35 +2,22 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import * as Sentry from '@sentry/react-native';
-import useSWR from 'swr';
 import * as messageService from '@/services/messages';
 import { adoptLocalPhoto } from '@/components/chat/photoCache';
 import {
   subscribeToMessages,
   isKeychainLocked,
   unsubscribeFromMessages,
-  type MatchUpdatePayload,
 } from '@/services/realtime';
 import { useAuthStore } from '@/stores/authStore';
-import { matchesKey } from '@/lib/swr';
 import { computeBackoffDelay } from '@/utils/backoff';
 import { describeError } from '@/utils/errors';
 import { ApiRequestError } from '@/services/api';
 import type {
   Emotion,
-  MatchAfter,
-  MatchListItem,
   Message,
   MessageReaction,
 } from '@/types';
-
-// mig 014 match-roundtrip-realtime: useChat 이 노출하는 BE-sourced
-// 친밀도/사진 잠금 상태. 클라이언트 윈도우 재계산(countRoundTrips) 대신
-// trigger snapshot 을 single source of truth 로 사용한다.
-export interface PhotoUnlockedSnapshot {
-  main: boolean;
-  all: boolean;
-}
 
 // idempotent-send sprint: 낙관 stub 의 송신 상태. Message 타입을 오염시키지
 // 않도록 별도 맵으로 관리한다 (server shape 순정 유지).
@@ -61,7 +48,6 @@ export function useChat(matchId: string) {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [matchAfter, setMatchAfter] = useState<MatchAfter | null>(null);
   // chat-flatlist-pagination sprint: loadingMore was a ref so the inverted
   // FlatList had no way to surface a spinner while older pages were in flight.
   // Promoted to state (loadingOlder) and exposed below; a parallel ref is kept
@@ -83,34 +69,6 @@ export function useChat(matchId: string) {
   const [hasNewer, setHasNewer] = useState(false);
   const [loadingNewer, setLoadingNewer] = useState(false);
   const loadingNewerRef = useRef(false);
-
-  // useMatches 가 이미 채워둔 SWR 캐시에서 본 매치 row 를 selector 로 추출.
-  // fetcher null + revalidate off — useChat 이 추가 네트워크 호출을 하지 않고
-  // 캐시만 읽는다 (캐시 미스면 첫 send 응답까지 matchAfter 가 null 유지).
-  const { data: matchesCache } = useSWR<MatchListItem[]>(
-    userId ? matchesKey(userId) : null,
-    null,
-    {
-      revalidateOnFocus: false,
-      revalidateOnMount: false,
-      revalidateIfStale: false,
-      revalidateOnReconnect: false,
-    },
-  );
-
-  // 마운트 시 / 캐시 갱신 시 — useMatches 의 photo_access 와 round_trip_count 로
-  // 초기 시드. 캐시에 본 매치가 없으면 null 유지 → 첫 send 응답이 시드.
-  useEffect(() => {
-    if (matchAfter !== null) return;
-    if (!matchesCache) return;
-    const row = matchesCache.find((m) => m.match_id === matchId);
-    if (!row) return;
-    setMatchAfter({
-      round_trip_count: row.round_trip_count,
-      main_photo_unlocked: row.photo_access?.main_photo_unlocked ?? false,
-      all_photos_unlocked: row.photo_access?.all_photos_unlocked ?? false,
-    });
-  }, [matchesCache, matchId, matchAfter]);
 
   const loadMessages = useCallback(async () => {
     setLoading(true);
@@ -701,17 +659,6 @@ export function useChat(matchId: string) {
             scheduleRetry();
           }
         },
-        // mig 014 match-roundtrip-realtime: matches UPDATE 핸들러. 트리거가
-        // 갱신한 round_trip_count / *_unlocked_at 변화를 단일 채널로 수신.
-        // 상대방 발신으로 페어 +1 시 본 경로로 게이지가 갱신된다.
-        (payload: MatchUpdatePayload) => {
-          if (cancelled) return;
-          setMatchAfter({
-            round_trip_count: payload.round_trip_count ?? 0,
-            main_photo_unlocked: payload.main_photo_unlocked_at !== null,
-            all_photos_unlocked: payload.all_photos_unlocked_at !== null,
-          });
-        },
       );
     };
 
@@ -751,16 +698,6 @@ export function useChat(matchId: string) {
     hasMore,
     error,
     userId,
-    // mig 014 match-roundtrip-realtime: BE-sourced 친밀도/사진 잠금.
-    // null = 마운트 직후 매치 캐시도 없고 첫 send 응답도 없는 cold start.
-    // 호출처는 `roundTrips ?? 0` 으로 안전하게 처리.
-    roundTrips: matchAfter ? matchAfter.round_trip_count : null,
-    photoUnlocked: matchAfter
-      ? ({
-          main: matchAfter.main_photo_unlocked,
-          all: matchAfter.all_photos_unlocked,
-        } satisfies PhotoUnlockedSnapshot)
-      : null,
     loadMessages,
     loadOlder,
     // message-reply(점프): 인용 원본으로 이동 / 아래로 더 / 최신으로 복귀.

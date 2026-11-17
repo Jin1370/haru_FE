@@ -9,7 +9,7 @@
     "subtitle": "Swipe through profiles and listen to each person's voice. You'll pick up the mood and the way they talk — things a photo can't show.",
     "ctaPrimary": "Get free early access",
     "ctaStore": "Google Play",
-    "imageAlt": "haru Discover screen — listening to someone's voice intro on a profile card"
+    "imageAlt": "haru Discover screen — listening to someone's status in their own voice on a profile card"
   },
   "features": {
     "eyebrow": "Three things that make haru, haru",
@@ -36,16 +36,16 @@
       "imageAlt": "haru chat screen — sending a message with emotion in the voice"
     },
     "voiceintro": {
-      "tag": "Voice intro",
+      "tag": "Status",
       "title": "Just a casual hello",
       "body": "Pick a line you'd like to share or write your own, and it's auto-generated in your own voice. It appears next to your profile photo on the Discover tab.",
-      "imageAlt": "haru voice intro screen — a chosen line synthesized in your own voice"
+      "imageAlt": "haru status screen — a chosen line synthesized in your own voice"
     }
   },
   "recommend": {
     "eyebrow": "Who haru is for",
     "title": "Who haru is for",
-    "imageAlt": "haru matching preferences screen — choosing preferred age, gender, and nationality",
+    "imageAlt": "haru chat preferences screen — choosing preferred age, gender, and nationality",
     "items": [
       "Anyone who wants to make foreign friends or exchange languages",
       "Anyone who just wants to talk with someone and unwind",
@@ -56,21 +56,21 @@
   },
   "faq": {
     "metaTitle": "FAQ — haru",
-    "metaDescription": "Answers to common questions about haru's voice intro, auto-translation, art profiles, age requirement, and privacy.",
+    "metaDescription": "Answers to common questions about haru's voice status, auto-translation, art profiles, age requirement, and privacy.",
     "eyebrow": "Have a question?",
     "title": "Frequently Asked Questions",
     "subtitle": "The things people most often ask about haru.",
     "items": [
       {
         "q": "What is haru?",
-        "a": "haru is a voice-first app for making friends around the world and language exchange. Swipe through profiles and listen to each person's voice intro, so you can feel their real vibe and tone instead of judging by photos alone. If you click, it can naturally grow into dating and matching too."
+        "a": "haru is a voice-first app for making friends around the world and language exchange. Swipe through profiles and listen to each person's status in their own voice, so you can feel their real vibe and tone instead of judging by photos alone. If you click, the conversation flows naturally from there."
       },
       {
         "q": "Is haru free?",
         "a": "Yes, haru is free to start. Download it from the App Store or Google Play and begin right away."
       },
       {
-        "q": "How does the voice intro work?",
+        "q": "How does the voice status work?",
         "a": "Pick a line you want others to hear or write your own, and haru generates it in your own voice. It appears alongside your profile photo in the Explore tab, letting your voice make the first impression."
       },
       {

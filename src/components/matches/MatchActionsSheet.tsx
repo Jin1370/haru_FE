@@ -188,7 +188,7 @@ export function MatchActionsSheet({
                 style={({ pressed }) => [styles.sheetItem, pressed && styles.sheetItemPressed]}
                 onPress={handleUnmatchPress}
               >
-                <Ionicons name="heart-dislike-outline" size={20} color={colors.danger} />
+                <Ionicons name="exit-outline" size={20} color={colors.danger} />
                 <Text style={[styles.sheetItemText, styles.sheetItemDanger]}>
                   {t('matches.actions.unmatch')}
                 </Text>

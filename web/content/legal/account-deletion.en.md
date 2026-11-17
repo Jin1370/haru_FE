@@ -42,10 +42,10 @@ When a member deletes their account, the member's data is handled in the followi
 The following data is completely removed from the operator's infrastructure immediately upon deletion.
 
 - Profile photos (Supabase Storage `photos` bucket)
-- Voice intro audio files (Supabase Storage `voice-intro-audio` bucket)
-- Matching preferences (age, gender, language, country, notification opt-out)
-- Matching swipe history
-- Match mute history
+- Status message audio files (Supabase Storage `voice-intro-audio` bucket)
+- Chat partner preferences (age, gender, language, country, notification opt-out)
+- Discover card pass history
+- Chat room mute history
 - Device push tokens
 - Profile photo metadata
 - ElevenLabs voice ID — a deletion request is sent to the external API (best-effort, subject to ElevenLabs' processing policy)
@@ -65,7 +65,7 @@ On the screen of any partner the member had chatted with, the member is shown as
 
 The following audit records are automatically purged by the operator server's periodic sweep job (24-hour cycle) when 1 year has elapsed from the time of the audit event itself, not from the time of account deletion.
 
-- Content block history — moderation-blocked messages / voice intros authored by the member, audit records
+- Content block history — moderation-blocked messages / status messages authored by the member, audit records
 - Auto-suspension history — automatic account suspension audit records resulting from accumulated reports
 - User report history — both reports filed by the member against other members and reports filed by other members against the member, bidirectional
 - User block history — both members the user blocked and members who blocked the user, bidirectional
@@ -85,14 +85,14 @@ Records of purchases of paid items (Stars) are retained for 5 years from the pay
 
 ### Permanent retention
 
-The following data is permanently retained on a per-match basis to protect chat records and match history for partner members.
+The following data is permanently retained on a per-chat-room basis to protect chat records and conversation history for partner members.
 
-- Match records
+- Chat room records
 - Message text and automatic translation results
 
 Since the message sender's identifying information is anonymized in the "Immediate anonymization" step above, partner members perceive these as messages from a "Deleted user".
 
-Voice message files are subject to the general policy (automatic purge 30 days after the recipient completes listening). At the time of the sender's account deletion, unlistened voice files remain for the duration of the match and are retained for up to 30 days at most (the countdown starts when the recipient listens).
+Voice message files are subject to the general policy (automatic purge 30 days after the recipient completes listening). At the time of the sender's account deletion, unlistened voice files remain while the conversation continues and are retained for up to 30 days at most (the countdown starts when the recipient listens).
 
 ## Related Documents
 

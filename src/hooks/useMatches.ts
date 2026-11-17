@@ -11,34 +11,17 @@ import {
   unsubscribeFromAllMatchUpdates,
   type MatchUpdatePayload,
 } from '@/services/realtime';
-import { photoAccessStore } from '@/stores/photoAccess';
 import { useAuthStore } from '@/stores/authStore';
 import { matchesKey, matchesFetcher, MATCHES_PAGE_SIZE } from '@/lib/swr';
 import { computeBackoffDelay } from '@/utils/backoff';
-import { DEFAULT_PHOTO_ACCESS } from '@/types/photoAccess';
 import type { Message, MatchListItem } from '@/types';
 
 // 페이지 크기는 lib/swr 의 프리로드 fetcher 와 공유 — 값이 갈라지면 부팅
 // 프리로드가 채운 캐시를 화면 훅이 다른 키로 다시 받아온다.
 const PAGE_SIZE = MATCHES_PAGE_SIZE;
 
-// Push each match's photo_access into the registry so any screen (Matches tab,
-// Chat screen, profile detail) can render consistent blur state without the
-// caller having to thread the flag down. undefined from BE → DEFAULT (locked).
-function ingestMatches(matches: MatchListItem[]) {
-  const entries = matches
-    .map((m) => {
-      const userId = m.partner?.id;
-      if (!userId) return null;
-      return { userId, access: m.photo_access ?? DEFAULT_PHOTO_ACCESS };
-    })
-    .filter((e): e is { userId: string; access: typeof DEFAULT_PHOTO_ACCESS } => e !== null);
-  photoAccessStore.ingest(entries);
-}
-
-// mig 014 match-roundtrip-realtime: matches UPDATE payload 를 리스트 row 에 머지.
-// 014c 트리거가 갱신한 round_trip_count / *_unlocked_at 변화 + photoAccessStore
-// 동기화. payload 의 match 가 캐시에 없으면 prev 를 그대로 반환 (no-op).
+// matches UPDATE payload 의 unmatched_at 을 리스트 row 에 머지.
+// payload 의 match 가 캐시에 없으면 prev 를 그대로 반환 (no-op).
 function applyMatchUpdate(
   prev: MatchListItem[],
   update: MatchUpdatePayload,
@@ -46,28 +29,9 @@ function applyMatchUpdate(
   const idx = prev.findIndex((m) => m.match_id === update.id);
   if (idx === -1) return prev;
   const row = prev[idx];
-  const nextAccess = {
-    main_photo_unlocked: update.main_photo_unlocked_at !== null,
-    all_photos_unlocked: update.all_photos_unlocked_at !== null,
-  };
-  // 백필 실패 매치(NULL)는 0 으로 정규화 — BE GET /api/matches 와 동일 규칙.
-  const nextRT = update.round_trip_count ?? 0;
-  // photo_access 가 달라지지 않고 카운트도 그대로면 새 row 객체 생성 회피
-  // (FlatList re-render 절약).
-  if (
-    row.round_trip_count === nextRT &&
-    (row.photo_access?.main_photo_unlocked ?? false) === nextAccess.main_photo_unlocked &&
-    (row.photo_access?.all_photos_unlocked ?? false) === nextAccess.all_photos_unlocked &&
-    row.unmatched_at === update.unmatched_at
-  ) {
-    return prev;
-  }
-  const next: MatchListItem = {
-    ...row,
-    round_trip_count: nextRT,
-    photo_access: nextAccess,
-    unmatched_at: update.unmatched_at,
-  };
+  // 그대로면 새 row 객체 생성 회피 (FlatList re-render 절약).
+  if (row.unmatched_at === update.unmatched_at) return prev;
+  const next: MatchListItem = { ...row, unmatched_at: update.unmatched_at };
   return [...prev.slice(0, idx), next, ...prev.slice(idx + 1)];
 }
 
@@ -120,7 +84,7 @@ export function useMatches() {
     mutate,
     isValidating,
     error: swrError,
-  } = useSWR<MatchListItem[]>(swrKey, matchesFetcher, { onSuccess: ingestMatches });
+  } = useSWR<MatchListItem[]>(swrKey, matchesFetcher);
 
   const [extraPages, setExtraPages] = useState<MatchListItem[]>([]);
   const [hasMore, setHasMore] = useState(true);
@@ -214,7 +178,6 @@ export function useMatches() {
       if (loaded.length === 0) return;
       const oldest = loaded.reduce((a, b) => (b.last_activity_at < a.last_activity_at ? b : a));
       const newPage = await matchService.getMatches(PAGE_SIZE, oldest.last_activity_at);
-      ingestMatches(newPage);
       // 스크롤 중 다음 페이지 행이 새 대화로 앞 페이지에 이미 들어와 있을 수 있다 —
       // 중복 키로 같은 방이 두 번 그려지지 않게 거른다.
       const seen = new Set(loaded.map((m) => m.match_id));
@@ -363,17 +326,6 @@ export function useMatches() {
             { revalidate: false },
           );
           setExtraPages((prev) => applyMatchUpdate(prev, payload));
-          // photoAccessStore 동기화 — partner.id 는 update payload 에 없으므로
-          // 현 캐시에서 매치를 찾아 추출. downgrade guard 가 잠금 역행 차단.
-          const cached = dataRef.current?.find((m) => m.match_id === payload.id)
-            ?? extraPagesRef.current.find((m) => m.match_id === payload.id);
-          const partnerUserId = cached?.partner?.id;
-          if (partnerUserId) {
-            photoAccessStore.update(partnerUserId, {
-              main_photo_unlocked: payload.main_photo_unlocked_at !== null,
-              all_photos_unlocked: payload.all_photos_unlocked_at !== null,
-            });
-          }
         },
         (status) => {
           if (cancelled) return;
