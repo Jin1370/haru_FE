@@ -16,7 +16,8 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { BackIcon } from '@/components/ui/BackIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import CountryFlag from 'react-native-country-flag';
 import { useTranslation } from 'react-i18next';
@@ -977,12 +978,7 @@ export default function ChatScreen() {
                 pressed && { opacity: 0.6 },
               ]}
             >
-              {/* 다른 화면의 기본 헤더 뒤로가기와 같은 모양 (Android ←, iOS ‹). */}
-              {Platform.OS === 'ios' ? (
-                <Ionicons name="chevron-back" size={28} color={nightBar?.text ?? colors.text} />
-              ) : (
-                <MaterialIcons name="arrow-back" size={24} color={nightBar?.text ?? colors.text} />
-              )}
+              <BackIcon color={nightBar?.text ?? colors.text} />
             </Pressable>
             <View style={styles.headerRightRow}>
               {matchId && !partnerDeleted && !matchUnmatched && (

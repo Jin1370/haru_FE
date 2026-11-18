@@ -136,8 +136,8 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
     borderRadius: radii.pill,
     borderWidth: 1.5,
     // 테두리 없이 바탕색만 — 페이지 바탕(background)보다 진한 색으로 구분.

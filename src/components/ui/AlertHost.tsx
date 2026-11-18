@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Modal, View, Pressable, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAlertStore, AlertSpec } from '@/stores/alertStore';
@@ -30,13 +31,23 @@ function AlertHostModal({
 }) {
   const { t } = useTranslation();
   const visible = spec !== null;
+  // 한 창의 버튼은 한 번만 처리한다. 닫히는 그리기 전에 두 번 누르면 onConfirm 이 두 번 불려
+  // 같은 결제·요청이 두 번 나갔다 (바로 바뀌는 ref 로 막는다).
+  const handledId = useRef<string | null>(null);
+  const once = () => {
+    if (!spec || handledId.current === spec.id) return false;
+    handledId.current = spec.id;
+    return true;
+  };
 
   const handleConfirm = () => {
+    if (!once()) return;
     const cb = spec?.onConfirm;
     onDismiss(spec?.id);
     cb?.();
   };
   const handleCancel = () => {
+    if (!once()) return;
     const cb = spec?.onCancel;
     onDismiss(spec?.id);
     cb?.();

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BackIcon } from '@/components/ui/BackIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -58,7 +59,7 @@ export function ConsentForm({
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         {onBack ? (
           <Pressable onPress={onBack} hitSlop={8} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <BackIcon color={colors.text} />
           </Pressable>
         ) : (
           <View style={styles.backBtn} />

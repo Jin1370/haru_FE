@@ -24,6 +24,7 @@ function CountChip({
   label,
   onPress,
   charge = false,
+  endGap = true,
 }: {
   icon: keyof typeof CHIP_ICON_SIZES;
   value: number;
@@ -31,6 +32,7 @@ function CountChip({
   onPress?: () => void;
   // 별사탕: 충전 가능한 재화라 배경을 입히고 + 를 붙여 버튼처럼 보이게 한다.
   charge?: boolean;
+  endGap?: boolean;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const prev = useRef<number | null>(null);
@@ -59,7 +61,7 @@ function CountChip({
   return onPress ? (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.lastGap, pressed && styles.pressed]}
+      style={({ pressed }) => [endGap && styles.lastGap, pressed && styles.pressed]}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -73,7 +75,8 @@ function CountChip({
 
 // 탐색·받은 좋아요 탭 헤더 오른쪽의 별사탕 잔액. 누르면 충전 화면.
 // 유료화 OFF 면 아무것도 그리지 않는다.
-export function StarChip() {
+// endGap=false: 헤더가 오른쪽 여백을 이미 주는 곳(네이티브 스택 헤더 등)에서 칩 자체 여백(16)을 뺀다.
+export function StarChip({ endGap = true }: { endGap?: boolean } = {}) {
   const { t } = useTranslation();
   const { monetizationEnabled, starsTotal } = useDiscoverQuota();
   if (!monetizationEnabled) return null;
@@ -84,6 +87,7 @@ export function StarChip() {
       label={t('stars.balance', { count: starsTotal })}
       onPress={() => router.push('/(main)/settings/stars')}
       charge
+      endGap={endGap}
     />
   );
 }

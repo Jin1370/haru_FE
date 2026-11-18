@@ -190,7 +190,12 @@ export default function DiscoverScreen() {
         goTo(idx);
     };
 
+    // 화면 상태(opening)는 다음 그리기에야 바뀌어 거의 동시에 두 번 불리면 둘 다 통과한다 — ref 로 막는다.
+    // (서버는 같은 칸을 두 번 열어도 차감 없이 먼저 열린 쪽을 돌려주지만, 카드 화면이 두 번 열린다.)
+    const openingRef = useRef(false);
     const open = async (idx: number, expectedCount?: number) => {
+        if (openingRef.current) return;
+        openingRef.current = true;
         setOpening(idx);
         setPlaying(idx);
         try {
@@ -214,6 +219,7 @@ export default function DiscoverScreen() {
             ) {
                 // 곡 수나 가격이 바뀌었다 (차감 없음). 새 값으로 다시 묻는다.
                 const fresh = await load();
+                openingRef.current = false; // 다시 묻는 창에서 바로 여는 경우(무료)가 막히지 않게
                 if (fresh) confirmOpen(idx, fresh, expectedCount !== undefined);
             } else {
                 showAlert({
@@ -223,6 +229,7 @@ export default function DiscoverScreen() {
                 });
             }
         } finally {
+            openingRef.current = false;
             setOpening(null);
         }
     };

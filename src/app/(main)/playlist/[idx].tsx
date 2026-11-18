@@ -205,7 +205,7 @@ export default function PlaylistScreen() {
         options={{
           headerShown: true,
           title: t('discover.playlist.title', { n: idx + 1 }),
-          headerRight: () => <StarChip />,
+          headerRight: () => <StarChip endGap={false} />,
           headerStyle: { backgroundColor: nightBar?.bg ?? colors.background },
           headerShadowVisible: false,
           headerTintColor: nightBar?.text ?? colors.text,

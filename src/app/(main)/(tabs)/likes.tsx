@@ -218,6 +218,9 @@ export default function LikesScreen() {
   // 모자이크 카드 공개 — 확인 후 별사탕 2개. 별사탕이 모자라면 사용하기가 충전 화면으로 보낸다.
   // 공개 중인 카드 — 버튼 대신 카드 위에 스피너를 띄운다.
   const [revealingId, setRevealingId] = useState<string | null>(null);
+  // 확인 창이 떠 있거나 공개 요청 중이면 공개 버튼을 다시 받지 않는다. 화면 상태는 다음 그리기에야
+  // 바뀌어, 빠르게 두 번 누르면 확인 창이 두 개 쌓였다 (바로 바뀌는 ref 로 막는다).
+  const revealBusy = useRef(false);
   const runReveal = async (likerId: string) => {
     setRevealingId(likerId);
     try {
@@ -239,18 +242,29 @@ export default function LikesScreen() {
           : { variant: 'info', title: t('common.error'), message: t('common.tryAgainLater') },
       );
     } finally {
+      revealBusy.current = false;
       setRevealingId(null);
     }
   };
 
   const onReveal = (likerId: string) => {
+    if (revealBusy.current) return;
+    revealBusy.current = true;
     showAlert({
       variant: 'confirm',
       title: t('likes.locked.confirmPaid'),
       starCost: 2,
       cancelText: t('common.cancel'),
       confirmText: t('stars.useConfirm'),
-      onConfirm: () => (starsTotal < 2 ? router.push('/(main)/settings/stars') : runReveal(likerId)),
+      onCancel: () => {
+        revealBusy.current = false;
+      },
+      onConfirm: () => {
+        if (starsTotal < 2) {
+          revealBusy.current = false;
+          router.push('/(main)/settings/stars');
+        } else runReveal(likerId);
+      },
     });
   };
 

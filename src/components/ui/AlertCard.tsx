@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radii, shadows } from '@/constants/colors';
 import { fonts, fs } from '@/constants/fonts';
@@ -11,6 +11,10 @@ export interface AlertCardAction {
   onPress: () => void;
   destructive?: boolean;
   variant?: 'primary' | 'secondary';
+  /** 요청 중: 글자 대신 스피너를 보이고 버튼을 막는다 (연타로 같은 요청이 여러 번 가지 않게). */
+  loading?: boolean;
+  /** 누를 수 없는 상태 — 흐리게 보이고 눌리지 않는다. */
+  disabled?: boolean;
 }
 
 interface AlertCardProps {
@@ -80,13 +84,16 @@ export function AlertCard({
         {secondary ? (
           <Pressable
             onPress={secondary.onPress}
+            disabled={secondary.disabled}
             accessibilityRole="button"
             accessibilityLabel={secondary.label}
+            accessibilityState={{ disabled: !!secondary.disabled }}
             style={({ pressed }) => [
               styles.btn,
               stackedActions && styles.btnStacked,
               styles.btnSecondary,
               pressed && styles.btnPressed,
+              secondary.disabled && styles.btnDisabled,
             ]}
           >
             <Text style={[styles.btnText, styles.btnSecondaryText]}>{secondary.label}</Text>
@@ -94,8 +101,10 @@ export function AlertCard({
         ) : null}
         <Pressable
           onPress={primary.onPress}
+          disabled={primary.loading}
           accessibilityRole="button"
           accessibilityLabel={primary.label}
+          accessibilityState={{ busy: !!primary.loading }}
           style={({ pressed }) => [
             styles.btn,
             stackedActions && styles.btnStacked,
@@ -104,7 +113,11 @@ export function AlertCard({
             pressed && styles.btnPressed,
           ]}
         >
-          <Text style={[styles.btnText, styles.btnPrimaryText]}>{primary.label}</Text>
+          {primary.loading ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={[styles.btnText, styles.btnPrimaryText]}>{primary.label}</Text>
+          )}
         </Pressable>
       </View>
     </View>
@@ -173,6 +186,7 @@ const styles = StyleSheet.create({
     flex: 0,
     alignSelf: 'stretch',
   },
+  btnDisabled: { opacity: 0.4 },
   btnPressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
