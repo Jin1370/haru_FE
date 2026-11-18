@@ -181,23 +181,30 @@ export default function EditProfileScreen() {
           <RequiredLabel text={t('setupProfile.displayName')} />
           {monetizationEnabled ? (
             // 유료화 ON: 칸 전체가 버튼 — 누르면 키보드 대신 별사탕 변경 창이 뜬다. 연필은 그 표시.
+            // 누르는 동안은 테두리만 분홍으로 (입력 칸 포커스와 같은 표시). 투명도로 흐리게 하면
+            // Android 에서 칸 그림자(elevation)가 회색 사각형으로 드러난다.
             <Pressable
               onPress={() => setRenameOpen(true)}
-              style={({ pressed }) => pressed && { opacity: 0.7 }}
               accessibilityRole="button"
               accessibilityLabel={t('stars.nicknameChangeTitle')}
             >
-              {/* 안의 입력칸이 터치를 가져가지 않게 막는다. */}
-              <View pointerEvents="none">
-                <FormField
-                  value={displayName}
-                  editable={false}
-                  inputStyle={[styles.inputCompact, styles.inputLocked]}
-                />
-                <View style={styles.changeButton}>
-                  <Ionicons name="pencil" size={16} color={photoCard.icon} />
+              {({ pressed }) => (
+                // 안의 입력칸이 터치를 가져가지 않게 막는다.
+                <View pointerEvents="none">
+                  <FormField
+                    value={displayName}
+                    editable={false}
+                    inputStyle={[
+                      styles.inputCompact,
+                      styles.inputLocked,
+                      pressed && { borderColor: colors.primary },
+                    ]}
+                  />
+                  <View style={styles.changeButton}>
+                    <Ionicons name="pencil" size={16} color={photoCard.icon} />
+                  </View>
                 </View>
-              </View>
+              )}
             </Pressable>
           ) : (
             <FormField
@@ -256,14 +263,12 @@ const styles = StyleSheet.create({
   inputCompact: { fontSize: fs(14) },
   // 잠긴 닉네임 칸 — 연필 표시 자리만큼 비운다.
   inputLocked: { paddingRight: 52 },
-  // 프로필 탭 연필 버튼(profileEditBtn)과 같은 모양 (누르는 곳은 칸 전체). 입력 칸(높이 52) 안 오른쪽 세로 가운데.
+  // 연필 표시 (배경 없음, 누르는 곳은 칸 전체). 입력 칸(높이 52) 안 오른쪽 세로 가운데.
   changeButton: {
     position: 'absolute',
     right: 12,
     top: 12,
     padding: 6,
-    borderRadius: radii.pill,
-    backgroundColor: photoCard.chip,
     alignItems: 'center',
     justifyContent: 'center',
   },
