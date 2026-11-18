@@ -650,6 +650,7 @@ export default {
       messages: 'Message notifications',
       matches: 'New connection notifications',
       likes: 'Hello notifications',
+      playlist: 'Playlist notifications',
       permissionDenied: 'Enable notifications in system settings.',
     },
     catAnimation: 'Cat animation',

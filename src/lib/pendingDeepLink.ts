@@ -11,7 +11,8 @@ export type DeepLink =
   | { type: 'message'; match_id: string }
   | { type: 'match' }
   | { type: 'like' }
-  | { type: 'voice_reminder' };
+  | { type: 'voice_reminder' }
+  | { type: 'playlist' };
 
 let pending: DeepLink | null = null;
 let bootDecided = false;
@@ -58,11 +59,14 @@ export function hrefForDeepLink(link: DeepLink): string {
     case 'message':
       return `/(main)/chat/${link.match_id}`;
     case 'like':
-      return '/(main)/(tabs)/likes';
+      // focus=latest — 받은 인사 탭이 가장 최근에 인사한 사람 카드에서 시작한다.
+      return '/(main)/(tabs)/likes?focus=latest';
     case 'voice_reminder':
       return '/(main)/settings/voice';
     case 'match':
       return '/(main)/(tabs)/matches';
+    case 'playlist':
+      return '/(main)/(tabs)/discover';
   }
 }
 

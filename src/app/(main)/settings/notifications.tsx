@@ -29,6 +29,7 @@ export default function NotificationsSettingsScreen() {
     notify_messages: true,
     notify_matches: true,
     notify_likes: true,
+    notify_playlist: true,
   });
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
@@ -99,6 +100,16 @@ export default function NotificationsSettingsScreen() {
             <Switch
               value={prefs.notify_likes}
               onValueChange={(v) => togglePref('notify_likes', v)}
+              trackColor={{ false: colors.borderSoft, true: colors.primary }}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor={colors.borderSoft}
+            />
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>{t('settings.notifications.playlist')}</Text>
+            <Switch
+              value={prefs.notify_playlist}
+              onValueChange={(v) => togglePref('notify_playlist', v)}
               trackColor={{ false: colors.borderSoft, true: colors.primary }}
               thumbColor="#FFFFFF"
               ios_backgroundColor={colors.borderSoft}

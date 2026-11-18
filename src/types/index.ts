@@ -184,6 +184,8 @@ export interface DiscoverCandidate {
   free_next?: boolean;
   // 받은 인사: 이번 조회에서 서버가 무료로 막 연 카드 — 탭이 이 카드에서 시작한다.
   just_revealed?: boolean;
+  // 받은 인사: 가장 최근에 인사한 사람 (잠긴 카드 포함) — 인사 알림으로 들어오면 이 카드에서 시작.
+  latest_like?: boolean;
 }
 
 // 탐색 플레이리스트 (BE mig 063). 안 연 칸의 price = 지금 열면 낼 별사탕 (0 = 무료).

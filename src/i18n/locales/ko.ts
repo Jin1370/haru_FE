@@ -650,6 +650,7 @@ export default {
             messages: "메시지 알림",
             matches: "대화 연결 알림",
             likes: "받은 인사 알림",
+            playlist: "플레이리스트 알림",
             permissionDenied: "시스템 설정에서 알림을 허용해주세요.",
         },
         catAnimation: "고양이 애니메이션",

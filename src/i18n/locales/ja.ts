@@ -646,6 +646,7 @@ export default {
             messages: "メッセージ通知",
             matches: "会話開始の通知",
             likes: "届いたあいさつの通知",
+            playlist: "プレイリストの通知",
             permissionDenied: "システム設定で通知を許可してください。",
         },
         catAnimation: "猫のアニメーション",

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useTranslation } from 'react-i18next';
 import { PlaylistCard } from '@/components/discover/SwipeCard';
@@ -79,8 +79,31 @@ export default function LikesScreen() {
   // 무료로 막 열려 처음 보는 카드 — "New!" 배지. 다른 카드로 넘기거나 탭을 나가면 사라진다.
   const [newId, setNewId] = useState<string | null>(null);
 
-  // 시작 위치: 방금 무료로 열린 카드 → 첫 모자이크 카드 → 첫 카드.
+  // 받은 인사 알림으로 들어왔다 (?focus=latest) — 다음 시작 위치를 가장 최근에 인사한 사람으로.
+  // 이미 이 탭을 보고 있었으면 focus 가 다시 오지 않으니 여기서 새로 받는다.
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  const wantLatest = useRef(false);
+  useEffect(() => {
+    if (focus !== 'latest') return;
+    wantLatest.current = true;
+    router.setParams({ focus: undefined });
+    if (focusedRef.current && !focusLoadingRef.current) {
+      focusLoadingRef.current = true;
+      loadCandidates().finally(() => {
+        focusLoadingRef.current = false;
+        setEpoch((e) => e + 1);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus]);
+
+  // 시작 위치: (알림으로 들어왔으면) 가장 최근 인사 → 방금 무료로 열린 카드 → 첫 모자이크 카드 → 첫 카드.
   const startIndex = (list: DiscoverCandidate[]) => {
+    const latest = wantLatest.current ? list.findIndex((c) => c.latest_like) : -1;
+    if (latest >= 0) {
+      setNewId(list[latest].id);
+      return latest;
+    }
     const fresh = freshId.current ? list.findIndex((c) => c.id === freshId.current) : -1;
     if (fresh >= 0) setNewId(list[fresh].id);
     return fresh >= 0 ? fresh : Math.max(0, list.findIndex((c) => c.locked));
@@ -110,6 +133,7 @@ export default function LikesScreen() {
     if (candidates.length === 0) return;
     setPos(startIndex(candidates));
     freshId.current = null;
+    wantLatest.current = false;
     // 시작 위치는 다시 정리할 때(epoch)만 정한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [epoch]);

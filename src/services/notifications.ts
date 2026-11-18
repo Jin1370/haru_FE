@@ -7,6 +7,7 @@ export interface NotificationPreferences {
   notify_messages: boolean;
   notify_matches: boolean;
   notify_likes: boolean;
+  notify_playlist: boolean;
 }
 
 export function registerToken(

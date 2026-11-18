@@ -140,6 +140,9 @@ function extractDeepLink(
   if (data.type === 'voice_reminder') {
     return { type: 'voice_reminder' };
   }
+  if (data.type === 'playlist') {
+    return { type: 'playlist' };
+  }
   return null;
 }
 
