@@ -15,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import { ProfilePhoto } from '@/components/ui/ProfilePhoto';
 import { colors, radii, shadows } from '@/constants/colors';
 import { isNight } from '@/constants/theme';
+// 내 말풍선 위 글자·아이콘. 낮엔 말풍선이 딸기우유색(#FFDEDE)이라 흰색이 안 보여 본문색(#3A2340)으로.
+const mineOn = (a: number) => (isNight ? `rgba(255,255,255,${a})` : `rgba(58,35,64,${a})`);
 import { reactionEmoji } from '@/constants/messageReactions';
 import { fonts, fs } from '@/constants/fonts';
 import {
@@ -561,7 +563,7 @@ export function ChatBubble({
           <Ionicons
             name="refresh"
             size={18}
-            color={isMine ? 'rgba(255,255,255,0.85)' : colors.textSecondary}
+            color={isMine && isNight ? mineOn(0.85) : colors.textSecondary}
           />
           <Text style={[styles.photoExpiredText, isMine && styles.mineText]}>
             {t('chat.photo.loadFailed')}
@@ -572,7 +574,7 @@ export function ChatBubble({
           <Ionicons
             name="image-outline"
             size={20}
-            color={isMine ? 'rgba(255,255,255,0.85)' : colors.textSecondary}
+            color={isMine && isNight ? mineOn(0.85) : colors.textSecondary}
           />
           <Text style={[styles.photoExpiredText, isMine && styles.mineText]}>
             {t('chat.photo.expired')}
@@ -605,7 +607,7 @@ export function ChatBubble({
               <Ionicons
                 name={isPlayingThis ? 'pause-circle' : 'play-circle'}
                 size={24}
-                color={isMine ? 'rgba(255,255,255,0.95)' : colors.primary}
+                color={isMine && isNight ? mineOn(0.95) : colors.primary}
               />
             </Pressable>
           </Animated.View>
@@ -627,7 +629,7 @@ export function ChatBubble({
             <Ionicons
               name={regenerating ? 'hourglass-outline' : 'refresh-circle'}
               size={24}
-              color={isMine ? 'rgba(255,255,255,0.95)' : colors.primary}
+              color={isMine && isNight ? mineOn(0.95) : colors.primary}
             />
           </Pressable>
         )}
@@ -639,7 +641,7 @@ export function ChatBubble({
             <Ionicons
               name="hourglass-outline"
               size={14}
-              color={isMine ? 'rgba(255,255,255,0.75)' : colors.textSecondary}
+              color={isMine && isNight ? mineOn(0.75) : colors.textSecondary}
             />
           </View>
         )}
@@ -657,7 +659,7 @@ export function ChatBubble({
             <Ionicons
               name="refresh"
               size={14}
-              color={isMine ? 'rgba(255,255,255,0.9)' : colors.textSecondary}
+              color={isMine && isNight ? mineOn(0.9) : colors.textSecondary}
             />
             <Text style={[styles.retryText, isMine && styles.retryTextMine]}>
               {t('chat.send.retry')}
@@ -674,7 +676,7 @@ export function ChatBubble({
             <Ionicons
               name="hourglass-outline"
               size={14}
-              color="rgba(255,255,255,0.75)"
+              color={isNight ? mineOn(0.75) : colors.textSecondary}
             />
           </View>
         )}
@@ -691,7 +693,7 @@ export function ChatBubble({
           <Ionicons
             name="checkmark-done"
             size={14}
-            color={isPhoto ? colors.primary : colors.white}
+            color={isPhoto || !isNight ? colors.primary : mineOn(1)}
             style={{ marginLeft: 4 }}
           />
         )}
@@ -833,7 +835,8 @@ const styles = StyleSheet.create({
   },
   mineBubble: {
     // 밤: 남색 하늘 배경에 묻히지 않게 primary 보다 밝은 파랑 (흰 글자 대비 4.7:1).
-    backgroundColor: isNight ? '#4D74B4' : colors.primary,
+    // 낮: 딸기우유색.
+    backgroundColor: isNight ? '#4D74B4' : '#FFDEDE',
     borderBottomRightRadius: 6,
   },
   theirsBubble: {
@@ -850,7 +853,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   mineText: {
-    color: colors.white,
+    color: mineOn(1),
   },
   // linkify 는 봇 메시지(수신자 측 말풍선)에만 켜지므로 mine 대비는 불필요.
   link: {
@@ -865,7 +868,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   mineTranslation: {
-    color: 'rgba(255,255,255,0.8)',
+    color: mineOn(0.8),
   },
   footer: {
     flexDirection: 'row',
@@ -906,7 +909,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   retryTextMine: {
-    color: 'rgba(255,255,255,0.9)',
+    color: mineOn(0.9),
   },
   time: {
     fontSize: fs(9),
@@ -914,7 +917,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   mineTime: {
-    color: 'rgba(255,255,255,0.8)',
+    color: mineOn(0.8),
   },
   // chat-photos: 말풍선 없이 단독으로 보이는 이미지. 높이는 서버가 준 원본
   // 비율(aspectRatio)로 잡아 로드 전에 자리를 확보한다.
@@ -997,7 +1000,7 @@ const styles = StyleSheet.create({
   flashFillMine: {
     borderRadius: radii.lg,
     borderBottomRightRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.55)',
+    backgroundColor: isNight ? 'rgba(255, 255, 255, 0.55)' : colors.primaryLight,
   },
   flashFillTheirs: {
     borderRadius: radii.lg,
