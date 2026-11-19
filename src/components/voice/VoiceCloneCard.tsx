@@ -257,11 +257,8 @@ export function VoiceCloneCard({
           </View>
         ) : (
           <View style={styles.recordSection}>
-            {/* 음성 등록 이탈 완화 — 녹음 원본이 클론 생성 후 즉시 폐기됨을 가이드
-                문구 위에 같은 불릿 목록으로 안내. 두 키를 한 Text 로 합쳐 단락
-                간격(이중 줄바꿈) 없이 불릿 간 \n 한 번만 들어가게 한다. */}
             <Text style={styles.guideText}>
-              {`${t('setupVoice.recordingPrivacyNote')}\n${t('setupVoice.recordingGuide')}`}
+              {t('setupVoice.recordingGuide')}
             </Text>
             <View style={styles.scriptBox}>
               <Pressable style={styles.scriptHeader} onPress={() => setScriptExpanded((v) => !v)}>
