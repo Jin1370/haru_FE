@@ -1,6 +1,6 @@
 # Terms of Service
 
-Last updated: May 29, 2026
+Last updated: November 18, 2026
 
 > These Terms govern the conditions for using the voice-chat-based cross-language chat service (the "Service") provided by haru (the "Operator"), as well as the rights and obligations of the Operator and members.
 
@@ -40,6 +40,16 @@ The Operator enforces a strict zero-tolerance policy toward objectionable conten
 ## Content Moderation
 
 For the safety of the Service, the Operator reviews content such as messages and status messages created or sent by members, and may automatically block prohibited content such as sexual, drug-related, minor-related, or self-harm-inciting content. If reports against the same member accumulate to a certain number, the Operator may suspend the account without prior notice, and a suspended member can find the appeal channel through in-app guidance. The retention and handling of records related to blocking, suspension, and reports are governed by the Privacy Policy.
+
+## Paid Services (Stars)
+
+1. Stars are a virtual currency used for paid features within the Service (such as opening additional discovery playlists, opening received-hello cards, and changing your nickname). Stars can be purchased through app store payments (App Store, Google Play) or received as a reward for watching ads.
+2. When you use Stars, Stars received from ads are deducted first, and any remaining amount is deducted from purchased Stars.
+3. Purchased Stars may be withdrawn (refunded) within 7 days of purchase, only for the unused portion. Used Stars cannot be withdrawn because the provision of digital content has begun. Stars received from ads are not eligible for withdrawal.
+4. Withdrawal requests can be made through each app store's refund process or by contacting customer support (haru.official.app@gmail.com). Whether a refund is granted through an app store is decided under that app store's policies, and the Operator may provide the app store with the usage history of the Stars from the relevant purchase for its refund review.
+5. When a refund is made, the Stars granted by that purchase are revoked. If some of those Stars have already been used, your Star balance will be shown as negative, and you cannot use Stars until you purchase more.
+6. Any remaining Stars are forfeited and cannot be restored when you delete your account. Members who wish to request a withdrawal must do so before deleting their account.
+7. If the Operator ends the Service, unused purchased Stars will be refunded in accordance with applicable laws.
 
 ## Processing of Personal Information and Voice Data
 

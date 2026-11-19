@@ -91,7 +91,7 @@
       },
       {
         "q": "Is my voice data kept safe?",
-        "a": "Your voice is used only to synthesize voice messages, and the original training audio used to create your voice clone is discarded right after generation. You can find the details in our Privacy Policy."
+        "a": "Your voice is used only to synthesize voice messages. Your original recording is kept in private storage that can't be accessed externally, and is deleted as soon as you delete your account. You can find the details in our Privacy Policy."
       }
     ]
   },

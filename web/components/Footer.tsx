@@ -50,6 +50,18 @@ export default function Footer() {
             {t('childSafety')}
           </Link>
           <span className="text-[color:var(--color-text-light)]">·</span>
+          {/* 사업자 정보 — 한국·일본 법상 의무라 두 언어에만 있다. */}
+          {(locale === 'ko' || locale === 'ja') && (
+            <>
+              <Link
+                href={`${prefix}/business-info`}
+                className="transition hover:text-[color:var(--color-primary-dark)] hover:underline"
+              >
+                {locale === 'ja' ? '特定商取引法に基づく表記' : '사업자 정보'}
+              </Link>
+              <span className="text-[color:var(--color-text-light)]">·</span>
+            </>
+          )}
           <span>© {year} haru</span>
         </div>
         <p>

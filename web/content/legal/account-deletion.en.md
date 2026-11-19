@@ -1,6 +1,6 @@
 # Account Deletion Guide
 
-Last updated: October 17, 2026
+Last updated: November 18, 2026
 
 > This page describes the account deletion procedure for the haru service and the data that is deleted or retained. The page is published for alignment with the Google Play Data Safety policy (requirement to publicly disclose the account deletion procedure).
 
@@ -43,6 +43,7 @@ The following data is completely removed from the operator's infrastructure imme
 
 - Profile photos (Supabase Storage `photos` bucket)
 - Status message audio files (Supabase Storage `voice-intro-audio` bucket)
+- Original voice registration recordings (Supabase Storage `voice-samples` private bucket)
 - Chat partner preferences (age, gender, language, country, notification opt-out)
 - Discover card pass history
 - Chat room mute history

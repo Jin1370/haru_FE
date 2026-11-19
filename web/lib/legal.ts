@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { AppLocale } from '@/i18n/routing';
 
-export type LegalDoc = 'terms' | 'privacy' | 'account-deletion' | 'child-safety';
+export type LegalDoc = 'terms' | 'privacy' | 'account-deletion' | 'child-safety' | 'business-info';
 
 const CONTENT_ROOT = path.join(process.cwd(), 'content', 'legal');
 

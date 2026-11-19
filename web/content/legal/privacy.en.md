@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: October 17, 2026
+Last updated: November 18, 2026
 
 > haru (hereinafter the "Operator") publishes this Privacy Policy to protect members' personal information and to comply with applicable laws (the Personal Information Protection Act, the Network Act, etc.). This service is a voice-chat-based cross-language chat service and outsources some processing — such as voice synthesis, automatic translation, and content moderation — to overseas processors, as described in Article 3 below.
 
@@ -11,6 +11,7 @@ The Operator collects and uses the following personal information to the extent 
 - **Account and profile information**: email or social login identifier, password, date of birth, gender, nationality, language, profile photo, self-introduction
 - **Voice data (biometric information)**: the member's voice and synthesized results, such as voice clone, status messages, and voice messages
 - **Content**: messages the member creates or sends, and their translations
+- **Payment and ad information**: Star purchase records (product, quantity, store transaction ID), ad-view reward records, and the device's advertising identifier. Payment details such as card numbers are handled by each app store and are not received by the Operator. You can reset the advertising identifier or turn off personalized ads in your device settings.
 - **Information generated during use**: usage records, device and access information, notification tokens, error diagnostics, and records needed for the safety and operation of the service
 
 Collected information is used only within the scope of the collection purpose. Date of birth is used to verify that the member is 18 or older and for the age criteria used in chat partner recommendations.
@@ -19,7 +20,7 @@ Collected information is used only within the scope of the collection purpose. D
 
 The member's voice data processed by the Operator constitutes biometric (sensitive) information; the Operator classifies it as sensitive information under applicable laws and processes it with the member's consent. Members may decline consent to the processing of voice data, but in that case the core features of this service (status messages, voice messages, etc.) cannot be used.
 
-The voice used to train a voice clone is not separately retained by the Operator once the processing needed for synthesis is complete. Synthesized audio files are retained only for the period necessary to provide the service and are destroyed when the member changes the relevant content or deletes their account. Audio files are stored in a protected form that prevents unauthorized external access.
+The original recording made when registering a voice is retained so that, if the voice clone needs to be recreated (for example, when the voice synthesis processor is replaced or its model is updated), the member is not asked to record again. Only the most recent recording per member is retained; it is replaced when the member registers their voice again and is destroyed without delay when the member deletes their account. Original recordings are kept in private storage that cannot be accessed externally and is accessible only to the service's operating servers. Synthesized audio files are retained only for the period necessary to provide the service and are destroyed when the member changes the relevant content or deletes their account. Audio files are stored in a protected form that prevents unauthorized external access.
 
 ## 3. Outsourcing of Processing and Cross-Border Transfer
 
@@ -35,8 +36,10 @@ For the provision, operation, and safety of the service, the Operator outsources
 | Expo (650 Industries, Inc.) ([policy](https://expo.dev/privacy)) | Push notification delivery | USA |
 | Functional Software, Inc. (Sentry) ([policy](https://sentry.io/privacy/)) | Error and fault diagnostics | USA |
 | Apple Inc. / Google LLC ([Apple](https://www.apple.com/legal/privacy/) · [Google](https://firebase.google.com/support/privacy)) | Push message transmission | USA |
+| RevenueCat, Inc. ([policy](https://www.revenuecat.com/privacy)) | In-app purchase verification and Star delivery | USA |
+| Google LLC (AdMob) ([policy](https://policies.google.com/privacy)) | Rewarded ad display and view verification | USA |
 
-The information transferred to each processor is limited to the text, audio, images, notification tokens, and the like necessary to fulfill the above purposes, and is processed in accordance with each processor's privacy policy. Members have the right to decline the above cross-border transfer and may request refusal via the contact in Article 7 below. However, because this processing is essential to core features (authentication, voice synthesis, translation, data storage, notifications), refusing may restrict use of the service.
+The information transferred to each processor is limited to the text, audio, images, notification tokens, purchase records, advertising identifiers, and the like necessary to fulfill the above purposes, and is processed in accordance with each processor's privacy policy. Members have the right to decline the above cross-border transfer and may request refusal via the contact in Article 7 below. However, because this processing is essential to core features (authentication, voice synthesis, translation, data storage, notifications), refusing may restrict use of the service.
 
 This outsourcing and cross-border transfer is conducted under the Network Act and the Personal Information Protection Act, and members consent to the above at sign-up and at voice registration.
 
