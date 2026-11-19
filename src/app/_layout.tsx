@@ -14,6 +14,7 @@ import { registerOnSessionExpired, registerOnAccountFrozen } from '@/services/ap
 import { requestAndRegisterPushToken } from '@/hooks/usePushToken';
 import { getActiveChatMatchId, isMatchesTabActive } from '@/lib/activeChat';
 import {
+  baseHrefForDeepLink,
   hrefForDeepLink,
   isBootDecided,
   isResponseHandled,
@@ -132,7 +133,7 @@ function extractDeepLink(
     return { type: 'message', match_id: data.match_id };
   }
   if (data.type === 'match') {
-    return { type: 'match' };
+    return { type: 'match', match_id: data.match_id };
   }
   if (data.type === 'like') {
     return { type: 'like' };
@@ -277,6 +278,9 @@ function RootLayout() {
     // 목적지가 이미 정해진 뒤 도착 — 앱이 살아있는 동안의 탭이거나, 콜드 응답이
     // index 렌더보다 늦게 온 경우. 화면이 안착한 상태라 그 자리에서 얹으면 된다.
     if (__DEV__) console.log('[deeplink] push now', JSON.stringify(link));
+    // 채팅방이면 채팅 목록 탭으로 옮긴 뒤 연다 — 뒤로 가면 채팅 목록 (보던 화면이 아니라).
+    const base = baseHrefForDeepLink(link);
+    if (base) router.navigate(base);
     router.push(hrefForDeepLink(link));
   }, [lastResponse]);
 

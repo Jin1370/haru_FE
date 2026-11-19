@@ -40,7 +40,10 @@ export default function EditProfileScreen() {
   // 저장 버튼 상태는 이 버튼의 저장에만 묶는다. useProfile 의 loading 은 닉네임 변경 창의
   // 요청에도 켜져서, 그걸 쓰면 '사용하기' 를 눌렀을 때 저장 버튼이 같이 잠긴다.
   const [saving, setSaving] = useState(false);
-  const { monetizationEnabled } = useDiscoverQuota();
+  // quota 를 받기 전엔 유료화 여부를 몰라 닉네임 칸이 무료 입력칸으로 보인다 — 그때 바꾼 이름이
+  // 저장되면 확인 없이 별사탕이 빠질 수 있어, 받기 전엔 입력·저장하지 않는다.
+  const { monetizationEnabled, loaded: quotaLoaded } = useDiscoverQuota();
+  const nameEditable = quotaLoaded && !monetizationEnabled;
   const [renameOpen, setRenameOpen] = useState(false);
   // Lift the absolute footer above the keyboard and extend ScrollView
   // paddingBottom by kbHeight (root KeyboardProvider feeds a unified value
@@ -112,7 +115,7 @@ export default function EditProfileScreen() {
     try {
       await upsertProfile({
         // 유료화 ON: 닉네임은 별사탕 변경 창에서만 바꾸므로 저장 버튼은 관심사만 (저장된 닉네임 그대로).
-        display_name: monetizationEnabled ? profile.display_name : displayName.trim(),
+        display_name: nameEditable ? displayName.trim() : profile.display_name,
         birth_date: profile.birth_date,
         gender: profile.gender,
         nationality: profile.nationality,
@@ -217,6 +220,7 @@ export default function EditProfileScreen() {
               maxLength={DISPLAY_NAME_MAX}
               inputStyle={styles.inputCompact}
               error={nameError}
+              editable={nameEditable}
             />
           )}
         </View>

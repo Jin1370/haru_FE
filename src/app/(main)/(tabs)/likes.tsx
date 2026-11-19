@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
+import * as Notifications from 'expo-notifications';
 import { useTranslation } from 'react-i18next';
 import { PlaylistCard } from '@/components/discover/SwipeCard';
 import { PlaylistCarousel, useDeckArea } from '@/components/discover/PlaylistCarousel';
@@ -43,9 +44,22 @@ export default function LikesScreen() {
   const [pos, setPos] = useState(0);
 
   // 다음 무료 카드 시각이 지나면 목록·별사탕을 다시 받는다.
+  // 타이머 카드를 보며 기다렸는데 그사이 그 사람이 사라졌고 대신 열 카드도 없으면, 카드만 말없이
+  // 빠지지 않게 알린다 (무료 카드는 남아 다음 인사가 오면 열린다). 열 카드가 있었으면 아래
+  // just_revealed 효과가 freeSwitched 로 알린다.
   const handleRefresh = useCallback(async () => {
-    await Promise.all([loadCandidates(), syncQuota()]);
-  }, [loadCandidates, syncQuota]);
+    const watching = candidatesRef.current.find((c) => c.id === viewingId.current);
+    const [list] = await Promise.all([loadCandidates(), syncQuota()]);
+    if (
+      focusedRef.current &&
+      watching?.free_next &&
+      list &&
+      !list.some((c) => c.id === watching.id || c.just_revealed)
+    ) {
+      showAlert({ variant: 'info', title: t('common.notice'), message: t('likes.freeKept') });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadCandidates, syncQuota, t]);
 
   // 탭 focus 마다 refetch — 다른 탭에 머무는 사이 새 인사가 왔을 수 있다. 다 받으면 서버
   // 순서(연 카드 앞, 모자이크 뒤)로 다시 정리하고 시작 위치를 정한다: 방금 무료로 열린 카드 →
@@ -72,9 +86,15 @@ export default function LikesScreen() {
   // 서버는 무료 카드를 연 그 한 번의 응답에만 just_revealed 를 붙인다. 그 응답은 탭에 들어올 때의
   // 중복 요청(SWR 첫 로드 + focus) 중 하나일 수도, 다른 탭에 있는 동안 무료 타이머가 끝나 받은
   // 배경 응답일 수도 있다 — 받은 순간 기억해 두고 다음 시작 위치를 정할 때 쓴다.
+  // 응답이 새로 왔을 때 한 번만 읽는다 — 그리기마다 읽으면 이미 New! 를 보여 주고 지운 뒤에도
+  // 같은 응답에서 다시 기억해, 다음에 탭에 들어올 때 그 카드에 New! 가 또 붙는다.
   const freshId = useRef<string | null>(null);
-  const justRevealedInResponse = serverCards.find((c) => c.just_revealed)?.id;
-  if (justRevealedInResponse) freshId.current = justRevealedInResponse;
+  const readResponse = useRef<DiscoverCandidate[] | null>(null);
+  if (serverCards !== readResponse.current) {
+    readResponse.current = serverCards;
+    const justRevealedInResponse = serverCards.find((c) => c.just_revealed)?.id;
+    if (justRevealedInResponse) freshId.current = justRevealedInResponse;
+  }
 
   // 무료로 막 열려 처음 보는 카드 — "New!" 배지. 다른 카드로 넘기거나 탭을 나가면 사라진다.
   const [newId, setNewId] = useState<string | null>(null);
@@ -83,9 +103,13 @@ export default function LikesScreen() {
   // 이미 이 탭을 보고 있었으면 focus 가 다시 오지 않으니 여기서 새로 받는다.
   const { focus } = useLocalSearchParams<{ focus?: string }>();
   const wantLatest = useRef(false);
+  // 알림으로 들어왔으면 새 목록을 받을 때까지 카드 대신 로딩 — 받아 둔 목록의 다른 카드가 보였다가
+  // 가장 최근 인사 카드로 옮겨 가지 않게.
+  const [holdForLatest, setHoldForLatest] = useState(false);
   useEffect(() => {
     if (focus !== 'latest') return;
     wantLatest.current = true;
+    setHoldForLatest(true);
     router.setParams({ focus: undefined });
     if (focusedRef.current && !focusLoadingRef.current) {
       focusLoadingRef.current = true;
@@ -129,7 +153,32 @@ export default function LikesScreen() {
     }, [loadCandidates]),
   );
 
+  // 이 탭을 보는 중에 인사 알림이 오면 목록을 다시 받는다 — 알림만 오고 카드가 안 보이면 어색하다.
+  // 새 카드는 보던 순서 뒤에 붙고(epoch 그대로), 보던 카드에 머문다. 알림을 꺼 둔 사람은 다음
+  // 진입 때 보인다.
   useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener((n) => {
+      const data = n.request.content.data as { type?: string } | undefined;
+      if (data?.type !== 'like' || !focusedRef.current || focusLoadingRef.current) return;
+      loadCandidates();
+    });
+    return () => sub.remove();
+  }, [loadCandidates]);
+
+  // 들어올 때 목록이 비어 있었으면(앱을 켠 뒤 처음) 첫 목록(미리 받아 둔 응답)이 오는 순간 시작
+  // 위치를 잡는다 — 새 목록을 다 받을 때(epoch)까지 기다리면 그동안 첫 카드가 보였다가 옮겨 간다.
+  const hadCards = useRef(false);
+  useEffect(() => {
+    if (candidates.length > 0 && !hadCards.current && focusLoadingRef.current) {
+      setPos(startIndex(candidates));
+    }
+    hadCards.current = candidates.length > 0;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidates]);
+
+  useEffect(() => {
+    // 처음 그릴 때(epoch 0)는 아직 새 목록을 받기 전이다.
+    if (epoch > 0) setHoldForLatest(false);
     if (candidates.length === 0) return;
     setPos(startIndex(candidates));
     freshId.current = null;
@@ -333,7 +382,7 @@ export default function LikesScreen() {
         // 오류 중엔 자동 재시도(SWR errorRetry)가 로딩 화면을 띄우지 않게 한다 —
         // 띄우면 오류 화면 ↔ "불러오는 중..." 이 수 초마다 번갈아 깜빡이고 재시도
         // 버튼이 누르는 순간 사라진다. 사용자가 버튼을 누른 경우(retrying)만 로딩을 보여준다.
-        loading={(loading && candidates.length === 0 && !error) || retrying}
+        loading={(loading && candidates.length === 0 && !error) || retrying || holdForLatest}
       >
         {current ? (
           <View style={{ paddingBottom: deck.navOverlap, opacity: deck.measured ? 1 : 0 }}>

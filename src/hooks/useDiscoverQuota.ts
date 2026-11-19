@@ -17,6 +17,8 @@ export function useDiscoverQuota() {
   return {
     // 별사탕 유료화 (BE MONETIZATION_ENABLED). quota 도착 전·OFF 면 false.
     monetizationEnabled: data?.monetization_enabled === true,
+    // quota 를 받았는가 — 받기 전에는 유료화 여부를 모른다 (monetizationEnabled 가 false 로 보인다).
+    loaded: data !== undefined,
     starsTotal: data?.stars?.total ?? 0,
     nextFreeRevealAt: data?.next_free_reveal_at ?? null,
     adsRemaining: data?.ads_remaining ?? 0,

@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { SWRConfig, preload } from 'swr';
 import * as matchService from '@/services/matches';
 import * as discoverService from '@/services/discover';
+import type { DiscoverCandidate } from '@/types';
 
 // 키와 fetcher 를 한 곳에 둔다 — 부팅 프리로드(main/_layout)와 화면 훅이 같은
 // 함수를 쓰지 않으면 인자가 어긋나 캐시가 두 벌로 갈라진다(프리로드 무효).
@@ -25,11 +26,21 @@ export const quotaFetcher = () => discoverService.getDiscoverQuota();
 // liker 최대 300 명 + 프로필/사진 조인이라 무겁다). 그래서 디스커버의 첫 후보
 // 응답이 도착한 뒤에 탐색 탭(플레이리스트 화면)이 이 함수를 부른다. 세션당 계정별 1회.
 let preloadedFor: string | null = null;
+let likesPreload: Promise<DiscoverCandidate[]> | null = null;
 export function preloadTabData(userId: string) {
   if (preloadedFor === userId) return;
   preloadedFor = userId;
   preload(matchesKey(userId), matchesFetcher);
-  preload(likesKey(userId), likesFetcher);
+  likesPreload = preload(likesKey(userId), likesFetcher) ?? null;
+}
+
+// 받은 인사 탭이 처음 들어올 때 미리 받아 둔 응답을 꺼낸다 (1회). 화면의 다시 받기(mutate())는
+// SWR 의 프리로드를 버리는데, 프리로드 요청이 무료 카드를 열었으면 "방금 열림" 표시가 그 응답에만
+// 있어 버리면 New! 와 시작 위치를 잃는다.
+export function takeLikesPreload(): Promise<DiscoverCandidate[]> | null {
+  const p = likesPreload;
+  likesPreload = null;
+  return p;
 }
 
 export function SWRConfigProvider({ children }: { children: ReactNode }) {

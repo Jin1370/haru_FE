@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -75,8 +75,12 @@ export default function StarsScreen() {
     }
   };
 
+  // 화면 상태(busy)는 다음 그리기에야 바뀌어 빠르게 두 번 누르면 둘 다 통과한다 — 바로 바뀌는 ref 로 막는다.
+  const busyRef = useRef(false);
+
   const onBuy = async (product: StarProduct) => {
-    if (!userId || busy) return;
+    if (!userId || busyRef.current) return;
+    busyRef.current = true;
     setBusy(product.id);
     try {
       const result = await buyStarProduct(userId, product);
@@ -89,18 +93,21 @@ export default function StarsScreen() {
     } catch {
       showAlert({ variant: 'info', title: t('common.error'), message: t('stars.purchaseFailed') });
     } finally {
+      busyRef.current = false;
       setBusy(null);
     }
   };
 
   const onAd = async () => {
-    if (!userId || busy) return;
+    if (!userId || busyRef.current) return;
+    busyRef.current = true;
     setBusy('ad');
     try {
       if (await watchRewardedAd(userId)) void syncAfterGrant();
     } catch {
       showAlert({ variant: 'info', title: t('common.notice'), message: t('stars.adsUnavailable') });
     } finally {
+      busyRef.current = false;
       setBusy(null);
     }
   };

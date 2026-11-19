@@ -4,7 +4,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import * as discoverService from '@/services/discover';
 import { useAuthStore } from '@/stores/authStore';
 import { useCatStore } from '@/stores/catStore';
-import { matchesKey, likesKey, likesFetcher } from '@/lib/swr';
+import { matchesKey, likesKey, likesFetcher, takeLikesPreload } from '@/lib/swr';
 import { useDiscoverQuota } from '@/hooks/useDiscoverQuota';
 import type { DiscoverCandidate, SwipeResponse } from '@/types';
 
@@ -43,7 +43,10 @@ export function useReceivedLikes() {
   }, [candidates]);
 
   const loadCandidates = useCallback(async () => {
-    await mutate();
+    // 미리 받아 둔 응답을 먼저 넣고(무료 카드 "방금 열림" 표시를 화면이 읽게) 새로 받는다.
+    const pre = takeLikesPreload();
+    if (pre) await mutate(pre, { revalidate: false }).catch(() => undefined);
+    return mutate();
   }, [mutate]);
 
   const { syncQuota } = quota;

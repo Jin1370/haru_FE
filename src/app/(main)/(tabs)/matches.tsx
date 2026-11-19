@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   FlatList,
@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { useTranslation } from 'react-i18next';
 import { MatchItem } from '@/components/matches/MatchItem';
 import { MatchActionsSheet } from '@/components/matches/MatchActionsSheet';
@@ -18,7 +19,7 @@ import { showAlert } from '@/stores/alertStore';
 import { useAuthStore } from '@/stores/authStore';
 import { computeDiscoverGate, emptyStateNeed, NEED_ROUTE } from '@/components/discover/DiscoverGate';
 import { userFacingError } from '@/utils/errors';
-import { setMatchesTabActive } from '@/lib/activeChat';
+import { isMatchesTabActive, setMatchesTabActive } from '@/lib/activeChat';
 import { colors } from '@/constants/colors';
 import type { MatchListItem } from '@/types';
 
@@ -44,6 +45,22 @@ export default function MatchesScreen() {
     } finally {
       setRefreshing(false);
     }
+  }, [loadMatches]);
+
+  // 이 탭을 보는 중에 새 대화방이 생기면 목록을 다시 받는다. 실시간 구독은 이미 있는 방의 새 메시지만
+  // 반영하고 새 방은 받지 않는다 — 대화 연결 알림, 또는 목록에 없는 방의 메시지 알림이 오면 새로 받는다.
+  // 알림을 꺼 둔 사람은 다음 진입 때 보인다.
+  const matchesRef = useRef(matches);
+  matchesRef.current = matches;
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener((n) => {
+      if (!isMatchesTabActive()) return;
+      const data = n.request.content.data as { type?: string; match_id?: string } | undefined;
+      const unknownRoom =
+        data?.type === 'message' && !matchesRef.current.some((m) => m.match_id === data.match_id);
+      if (data?.type === 'match' || unknownRoom) loadMatches();
+    });
+    return () => sub.remove();
   }, [loadMatches]);
 
   // mig 022: 액션시트의 "알림 끄기/켜기" 발화 시 옵티미스틱 토글 + BE 호출

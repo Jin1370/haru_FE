@@ -132,6 +132,11 @@ export function showMatchAlert(t: (key: string) => string, matchId: string) {
     cancelText: t('discover.keepDiscovering'),
     confirmText: t('discover.sendMessage'),
     stackedActions: true,
-    onConfirm: () => router.push(`/(main)/chat/${matchId}`),
+    // 채팅 목록 탭으로 옮긴 뒤 채팅방을 연다 — 뒤로 가면 채팅 목록 (보던 탐색·받은 인사 화면이 아니라).
+    // 두 호출은 순서대로 처리된다 (알림으로 채팅방에 들어갈 때와 같은 방식, app/index.tsx).
+    onConfirm: () => {
+      router.navigate('/(main)/(tabs)/matches');
+      router.push(`/(main)/chat/${matchId}`);
+    },
   });
 }

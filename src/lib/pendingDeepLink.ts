@@ -9,7 +9,7 @@
 // 알림 탭 (b) 콜드 스타트 응답이 index 렌더보다 늦게 도착한 경우.
 export type DeepLink =
   | { type: 'message'; match_id: string }
-  | { type: 'match' }
+  | { type: 'match'; match_id?: string }
   | { type: 'like' }
   | { type: 'voice_reminder' }
   | { type: 'playlist' };
@@ -64,7 +64,8 @@ export function hrefForDeepLink(link: DeepLink): string {
     case 'voice_reminder':
       return '/(main)/settings/voice';
     case 'match':
-      return '/(main)/(tabs)/matches';
+      // 대화방 id 가 있으면 그 채팅방으로 (옛 알림엔 없어 채팅 목록).
+      return link.match_id ? `/(main)/chat/${link.match_id}` : '/(main)/(tabs)/matches';
     case 'playlist':
       return '/(main)/(tabs)/discover';
   }
@@ -80,6 +81,8 @@ export function baseHrefForDeepLink(link: DeepLink): string | null {
     case 'message':
       // 뒤로가기 → 채팅 목록. 카톡/라인/iMessage 공통 동작.
       return '/(main)/(tabs)/matches';
+    case 'match':
+      return link.match_id ? '/(main)/(tabs)/matches' : null;
     case 'voice_reminder':
       // 설정 화면은 프로필 탭 하위 흐름.
       return '/(main)/(tabs)/profile';
