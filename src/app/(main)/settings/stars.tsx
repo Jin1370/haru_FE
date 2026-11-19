@@ -171,7 +171,7 @@ export default function StarsScreen() {
                 <Text style={styles.subLabel}>{adProgress}</Text>
               </View>
             ) : (
-              <Text style={styles.label}>{t('stars.watchAdDone')}</Text>
+              <Text style={[styles.subLabel, styles.adDone]}>{t('stars.watchAdDone')}</Text>
             )}
             {busy === 'ad' ? (
               <ActivityIndicator color={colors.primary} />
@@ -248,6 +248,8 @@ const styles = StyleSheet.create({
   },
   // 긴 문구(ja 등)가 오른쪽 재생 버튼에 붙지 않게 줄어들며 간격 유지.
   adText: { flexShrink: 1, marginRight: 12 },
+  // 광고 소진 안내 — 상품명(label)이 아니라 진행 표시와 같은 크기.
+  adDone: { marginTop: 0, fontSize: fs(13), flexShrink: 1, marginRight: 12 },
   subLabel: {
     marginTop: 3,
     fontSize: fs(12),
