@@ -19,12 +19,19 @@ export async function uploadWithTimeout<T>(
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      reject(new ApiRequestError(0, 'Upload timeout. Please try again.'));
+      // 'network_timeout' → "응답이 지연되고 있어요" (userFacingError). 60초 초과는
+      // 사용자 네트워크인지 서버(ElevenLabs 등) 지연인지 구별 불가라 단정하지 않는 문구.
+      reject(new ApiRequestError(0, 'Upload timeout. Please try again.', 'network_timeout'));
     }, timeoutMs);
   });
 
   try {
     return await Promise.race([task, timeout]);
+  } catch (e) {
+    if (e instanceof ApiRequestError) throw e;
+    // uploadAsync 가 거부하는 건 연결 끊김 같은 네이티브 오류 → "네트워크가 불안정해요".
+    // status 0 이라 사진 업로드 재시도 판정(isRetryableUploadError)도 그대로 재시도.
+    throw new ApiRequestError(0, e instanceof Error ? e.message : String(e), 'network_error');
   } finally {
     if (timer) clearTimeout(timer);
   }

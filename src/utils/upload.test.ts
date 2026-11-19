@@ -20,14 +20,19 @@ describe('uploadWithTimeout', () => {
     await expect(uploadWithTimeout(neverSettles, 10)).rejects.toMatchObject({
       name: 'ApiRequestError',
       status: 0,
+      code: 'network_timeout',
       errorMessage: expect.stringMatching(/timeout/i),
     });
   });
 
-  it('propagates the original rejection when the task fails first', async () => {
-    const original = new Error('network down');
-    const task = Promise.reject(original);
-    await expect(uploadWithTimeout(task, 5_000)).rejects.toBe(original);
+  it('wraps a native rejection as network_error when the task fails first', async () => {
+    const task = Promise.reject(new Error('network down'));
+    await expect(uploadWithTimeout(task, 5_000)).rejects.toMatchObject({
+      name: 'ApiRequestError',
+      status: 0,
+      code: 'network_error',
+      errorMessage: 'network down',
+    });
   });
 
   it('throws an ApiRequestError that downstream catch blocks can narrow', async () => {
