@@ -29,7 +29,7 @@ import { fonts, fs, PIXEL_NUMBER_OFFSET_Y } from '@/constants/fonts';
 
 // 별사탕 충전 — 스토어 상품 2개 + 보상형 광고. 지급은 서버(웹훅/광고 콜백)가 하므로
 // 결제·시청 뒤엔 잔액을 몇 초 간격으로 다시 읽는다.
-const COUNT_BY_PRODUCT: Record<string, number> = { star_30: 30, star_80: 80 };
+const COUNT_BY_PRODUCT: Record<string, number> = { star_10: 10, star_30: 30 };
 const SYNC_DELAYS_MS = [2000, 5000];
 // BE constants/stars.ts 의 AD_REWARD_STARS / AD_REWARD_DAILY_MAX 와 같은 값.
 const AD_REWARD_STARS = 1;
@@ -46,8 +46,8 @@ function StarCount({ count, textStyle }: { count: number; textStyle: StyleProp<T
 }
 
 const DEV_PREVIEW_PRODUCTS: StarProduct[] = [
-  { id: 'star_30', priceString: '₩3,900', raw: null },
-  { id: 'star_80', priceString: '₩8,900', raw: null },
+  { id: 'star_10', priceString: '₩2,200', raw: null },
+  { id: 'star_30', priceString: '₩5,900', raw: null },
 ];
 
 export default function StarsScreen() {
@@ -60,11 +60,12 @@ export default function StarsScreen() {
 
   useEffect(() => {
     if (!userId) return;
+    // dev 빌드에서만: 스토어 상품을 못 불러와도(상품 미등록·네이티브 모듈 없음·dev 패키지라
+    // 스토어가 빈 목록을 줌) 화면 확인·심사용 스크린샷이 가능하도록 고정 가격 미리보기. 구매는 실패한다.
+    const fallback = __DEV__ ? DEV_PREVIEW_PRODUCTS : [];
     getStarProducts(userId)
-      .then(setProducts)
-      // dev 빌드에서만: 스토어 상품을 못 불러와도(상품 미등록·네이티브 모듈 없음)
-      // 화면 확인·심사용 스크린샷이 가능하도록 고정 가격 미리보기. 구매는 실패한다.
-      .catch(() => setProducts(__DEV__ ? DEV_PREVIEW_PRODUCTS : []));
+      .then((p) => setProducts(p.length > 0 ? p : fallback))
+      .catch(() => setProducts(fallback));
   }, [userId]);
 
   const syncAfterGrant = async () => {

@@ -89,7 +89,8 @@ export async function watchRewardedAd(userId: string): Promise<boolean> {
 
 // ── 스토어 구매 ────────────────────────────────────────────────────
 
-export const STAR_PRODUCT_IDS = ['star_30', 'star_80'] as const;
+// 가격은 스토어 설정값이 그대로 표시된다 (2026-11-18: 10개 2,200원 · 30개 5,900원).
+export const STAR_PRODUCT_IDS = ['star_10', 'star_30'] as const;
 
 export interface StarProduct {
   id: string;
