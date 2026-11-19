@@ -211,9 +211,11 @@ export default {
 
     stars: {
         balance: "所持金平糖 {{count}}個",
+        balanceShort: "所持 {{count}}個",
+        sectionBuy: "購入",
+        sectionFree: "無料でもらう",
         useConfirm: "使う",
-        watchAd: "広告を見て1個もらう",
-        watchAdRemaining: "残り{{count}}回",
+        watchAdProgress: "広告を見てもらう({{current}}/{{max}})",
         watchAdDone: "今日の広告特典はすべて受け取りました。",
         adsUnavailable: "現在広告を読み込めません。しばらくしてからもう一度お試しください。",
         insufficient: "金平糖が足りません",
@@ -225,6 +227,7 @@ export default {
         purchaseFailed: "購入を完了できませんでした。もう一度お試しください。",
         purchasePendingTitle: "お支払い待ちです",
         purchasePending: "お支払いが完了すると、金平糖が自動で届きます。",
+        refundNote: "購入後7日以内の未使用の金平糖は申込みの撤回が可能",
     },
 
     matches: {

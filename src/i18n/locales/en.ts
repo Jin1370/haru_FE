@@ -213,9 +213,11 @@ export default {
 
   stars: {
     balance: 'Stars: {{count}}',
+    balanceShort: '{{count}} owned',
+    sectionBuy: 'Buy',
+    sectionFree: 'Get for free',
     useConfirm: 'Use',
-    watchAd: 'Watch an ad, get 1 Star',
-    watchAdRemaining: '{{count}} left',
+    watchAdProgress: 'Watch an ad ({{current}}/{{max}})',
     watchAdDone: "You've claimed all of today's ad rewards.",
     adsUnavailable: "Ads can't be loaded right now. Please try again later.",
     insufficient: 'Not enough Stars',
@@ -227,6 +229,7 @@ export default {
     purchaseFailed: "The purchase couldn't be completed. Please try again.",
     purchasePendingTitle: 'Payment pending',
     purchasePending: 'Your Stars will be added automatically once the payment is complete.',
+    refundNote: 'Unused Stars can be withdrawn from purchase within 7 days',
   },
 
   matches: {

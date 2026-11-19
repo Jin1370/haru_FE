@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  ActivityIndicator,
+  type StyleProp,
+  type TextStyle,
+} from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { HaruIcon } from '@/components/ui/HaruIcon';
@@ -16,12 +25,25 @@ import {
   type StarProduct,
 } from '@/lib/starPurchases';
 import { colors, radii } from '@/constants/colors';
-import { fonts, fs } from '@/constants/fonts';
+import { fonts, fs, PIXEL_NUMBER_OFFSET_Y } from '@/constants/fonts';
 
 // 별사탕 충전 — 스토어 상품 2개 + 보상형 광고. 지급은 서버(웹훅/광고 콜백)가 하므로
 // 결제·시청 뒤엔 잔액을 몇 초 간격으로 다시 읽는다.
 const COUNT_BY_PRODUCT: Record<string, number> = { star_30: 30, star_80: 80 };
 const SYNC_DELAYS_MS = [2000, 5000];
+// BE constants/stars.ts 의 AD_REWARD_STARS / AD_REWARD_DAILY_MAX 와 같은 값.
+const AD_REWARD_STARS = 1;
+const AD_DAILY_MAX = 2;
+
+// 별사탕 아이콘 + "× N".
+function StarCount({ count, textStyle }: { count: number; textStyle: StyleProp<TextStyle> }) {
+  return (
+    <View style={styles.labelRow}>
+      <HaruIcon name="star-candy" size={18} color={colors.primary} />
+      <Text style={[textStyle, styles.count]}>× {count}</Text>
+    </View>
+  );
+}
 
 const DEV_PREVIEW_PRODUCTS: StarProduct[] = [
   { id: 'star_30', priceString: '₩3,900', raw: null },
@@ -82,16 +104,23 @@ export default function StarsScreen() {
     }
   };
 
+  // 오늘 본 횟수 / 하루 최대. 처음 (0/2), 하나 보면 (1/2).
+  const adProgress = t('stars.watchAdProgress', {
+    current: AD_DAILY_MAX - adsRemaining,
+    max: AD_DAILY_MAX,
+  });
+
   return (
     <View style={styles.container}>
       <WizardHeader compact title={t('stars.shopTitle')} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom }]}>
         <View style={styles.balanceCard}>
-          <HaruIcon name="star-candy" size={22} color={colors.primary} />
-          <Text style={styles.balanceText}>{t('stars.balance', { count: starsTotal })}</Text>
+          <HaruIcon name="star-candy" size={18} color={colors.primary} />
+          <Text style={styles.balanceText}>{t('stars.balanceShort', { count: starsTotal })}</Text>
         </View>
 
         <View style={styles.list}>
+          <Text style={styles.sectionTitle}>{t('stars.sectionBuy')}</Text>
           {products === null ? (
             <ActivityIndicator color={colors.primary} style={styles.loader} />
           ) : products.length === 0 ? (
@@ -103,13 +132,10 @@ export default function StarsScreen() {
                 style={({ pressed }) => [styles.row, pressed && styles.pressed]}
                 onPress={() => onBuy(p)}
                 disabled={busy !== null}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('stars.shopProduct', { count: COUNT_BY_PRODUCT[p.id] ?? 0 })}, ${p.priceString}`}
               >
-                <View style={styles.labelRow}>
-                  <HaruIcon name="star-candy" size={18} color={colors.primary} />
-                  <Text style={styles.label}>
-                    {t('stars.shopProduct', { count: COUNT_BY_PRODUCT[p.id] ?? 0 })}
-                  </Text>
-                </View>
+                <StarCount count={COUNT_BY_PRODUCT[p.id] ?? 0} textStyle={styles.label} />
                 {busy === p.id ? (
                   <ActivityIndicator color={colors.primary} />
                 ) : (
@@ -119,15 +145,22 @@ export default function StarsScreen() {
             ))
           )}
 
+          <Text style={[styles.sectionTitle, styles.sectionGap]}>{t('stars.sectionFree')}</Text>
           <Pressable
             style={({ pressed }) => [styles.row, adsRemaining <= 0 && styles.disabled, pressed && styles.pressed]}
             onPress={onAd}
             disabled={adsRemaining <= 0 || busy !== null}
+            accessibilityRole="button"
+            accessibilityLabel={
+              adsRemaining > 0
+                ? `${t('stars.shopProduct', { count: AD_REWARD_STARS })}, ${adProgress}`
+                : t('stars.watchAdDone')
+            }
           >
             {adsRemaining > 0 ? (
               <View style={styles.adText}>
-                <Text style={styles.label}>{t('stars.watchAd')}</Text>
-                <Text style={styles.subLabel}>{t('stars.watchAdRemaining', { count: adsRemaining })}</Text>
+                <StarCount count={AD_REWARD_STARS} textStyle={styles.label} />
+                <Text style={styles.subLabel}>{adProgress}</Text>
               </View>
             ) : (
               <Text style={styles.label}>{t('stars.watchAdDone')}</Text>
@@ -135,10 +168,13 @@ export default function StarsScreen() {
             {busy === 'ad' ? (
               <ActivityIndicator color={colors.primary} />
             ) : (
-              <Ionicons name="play-circle-outline" size={32} color={colors.primary} />
+              <Ionicons name="play-circle-outline" size={26} color={colors.primary} />
             )}
           </Pressable>
         </View>
+
+        {/* 전자상거래법 제17조 — 청약철회 조건은 구매 과정에서 보여야 한다 (약관만으로는 부족). */}
+        <Text style={styles.refundNote}>{t('stars.refundNote')}</Text>
       </ScrollView>
     </View>
   );
@@ -146,23 +182,31 @@ export default function StarsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: 20 },
+  // flexGrow + 환불 안내의 marginTop auto = 안내가 화면 맨 아래에 붙는다.
+  content: { flexGrow: 1, padding: 20 },
   balanceCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 18,
+    paddingVertical: 14,
     borderRadius: radii.md,
     backgroundColor: colors.surface,
     marginBottom: 16,
   },
   balanceText: {
-    fontSize: fs(17),
+    fontSize: fs(15),
     fontFamily: fonts.bold,
     color: colors.text,
   },
   list: { gap: 10 },
+  sectionTitle: {
+    marginLeft: 4,
+    fontSize: fs(13),
+    fontFamily: fonts.semibold,
+    color: colors.textSecondary,
+  },
+  sectionGap: { marginTop: 14 },
   loader: { marginVertical: 20 },
   empty: {
     fontSize: fs(14),
@@ -175,8 +219,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.borderSoft,
@@ -187,6 +231,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  // 아이콘 옆 숫자 — Galmuri 는 숫자가 낮아 보여 StarChip 과 같은 값으로 올린다.
+  count: { transform: [{ translateY: PIXEL_NUMBER_OFFSET_Y }] },
   label: {
     fontSize: fs(15),
     fontFamily: fonts.semibold,
@@ -202,8 +248,18 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: fs(15),
-    fontFamily: fonts.bold,
+    fontFamily: fonts.semibold,
     color: colors.primaryDark,
+  },
+  refundNote: {
+    marginTop: 'auto',
+    paddingTop: 24,
+    fontSize: fs(11),
+    lineHeight: fs(16),
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    opacity: 0.7,
+    textAlign: 'center',
   },
   disabled: { opacity: 0.4 },
   pressed: { opacity: 0.75 },

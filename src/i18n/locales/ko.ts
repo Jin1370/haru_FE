@@ -212,9 +212,11 @@ export default {
     // 별사탕 (유료화 화폐). 일본어는 金平糖, 영어는 Stars.
     stars: {
         balance: "보유 별사탕 {{count}}개",
+        balanceShort: "보유 {{count}}개",
+        sectionBuy: "구매",
+        sectionFree: "무료로 받기",
         useConfirm: "사용하기",
-        watchAd: "광고 보고 1개 받기",
-        watchAdRemaining: "{{count}}회 남음",
+        watchAdProgress: "광고 보고 받기({{current}}/{{max}})",
         watchAdDone: "오늘 광고 보상을 모두 받았어요.",
         adsUnavailable: "지금은 광고를 불러올 수 없어요. 잠시 후 다시 시도해 주세요.",
         insufficient: "별사탕이 부족해요",
@@ -226,6 +228,7 @@ export default {
         purchaseFailed: "결제를 완료하지 못했어요. 다시 시도해 주세요.",
         purchasePendingTitle: "결제 대기 중이에요",
         purchasePending: "결제가 완료되면 별사탕이 자동으로 들어와요.",
+        refundNote: "구매 후 7일 이내 미사용 별사탕은 청약철회 가능",
     },
 
     matches: {
