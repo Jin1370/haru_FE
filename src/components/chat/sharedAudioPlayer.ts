@@ -49,13 +49,33 @@ function publish(next: SharedAudioState) {
   listeners.forEach((l) => l());
 }
 
+// 재생을 눌렀는데 아직 소리가 나기 전(파일 받는 중·준비 중) — 버튼은 이미 재생 중으로 보여 준다.
+// 그대로 두면 재생 버튼 → 재생 중 → 재생 버튼 순으로 바뀌어 눌렀는데 안 눌린 것처럼 보인다.
+// 실제 재생이 시작되거나, 끝나거나, 멈추면 해제. 시작을 못 하면 STARTING_TIMEOUT_MS 뒤 해제.
+const STARTING_TIMEOUT_MS = 10_000;
+let starting = false;
+let startingTimer: ReturnType<typeof setTimeout> | null = null;
+
+function setStarting(on: boolean) {
+  starting = on;
+  if (startingTimer) clearTimeout(startingTimer);
+  startingTimer = null;
+  if (on) {
+    startingTimer = setTimeout(() => {
+      setStarting(false);
+      publish({ ...state, isPlaying: !!player?.playing });
+    }, STARTING_TIMEOUT_MS);
+  }
+}
+
 function ensurePlayer(): AudioPlayer {
   if (player) return player;
   const created = createAudioPlayer();
   created.addListener('playbackStatusUpdate', (status: AudioStatus) => {
+    if (starting && (status.playing || status.didJustFinish)) setStarting(false);
     publish({
       currentUrl,
-      isPlaying: status.playing,
+      isPlaying: status.playing || starting,
       duration: status.duration ?? 0,
       currentTime: status.currentTime ?? 0,
       isLoaded: status.isLoaded ?? false,
@@ -94,6 +114,7 @@ function playOrRecover(uri: string, key: string): void {
   } catch {}
   player = null;
   currentUrl = null;
+  setStarting(false);
   publish({ currentUrl: null, isPlaying: false, duration: 0, currentTime: 0, isLoaded: false });
   // 서버 재시작 시 세션 카테고리도 기본값으로 돌아가므로 무음모드 재생 설정 재적용.
   setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false })
@@ -150,6 +171,7 @@ export function playSharedAudio(url: string): void {
   } else if (state.duration > 0 && state.currentTime >= state.duration) {
     p.seekTo(0).catch(() => {});
   }
+  markStarting();
   playOrRecover(cachedUri(url) ?? url, url);
   cacheAudio(url); // 다음 재생부터 로컬 (이번 재생은 그대로 스트리밍)
 }
@@ -162,11 +184,22 @@ export function playLocalAudio(uri: string): void {
     currentUrl = uri;
     publish({ currentUrl: uri, isPlaying: false, duration: 0, currentTime: 0, isLoaded: false });
   }
+  markStarting();
   playOrRecover(uri, uri);
 }
 
 export function pauseSharedAudio(): void {
+  if (starting) {
+    setStarting(false);
+    publish({ ...state, isPlaying: false });
+  }
   if (player) player.pause();
+}
+
+// 재생을 누른 순간부터 재생 중으로 보이게 (위 starting 주석).
+function markStarting() {
+  setStarting(true);
+  publish({ ...state, isPlaying: true });
 }
 
 function subscribe(listener: () => void): () => void {
