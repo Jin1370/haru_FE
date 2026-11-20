@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Modal, View, Pressable, StyleSheet, Text } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAlertStore, AlertSpec } from '@/stores/alertStore';
@@ -40,11 +40,25 @@ function AlertHostModal({
     return true;
   };
 
+  // waitForConfirm 창은 확인 후 onConfirm 이 끝날 때까지 버튼에 스피너를 띄운 채 남는다. 그동안
+  // 다른 버튼·바깥 탭은 once() 가 막는다. 실패 안내는 호출처가 띄우고, 이 창이 닫힌 뒤 보인다.
+  const [busyId, setBusyId] = useState<string | null>(null);
   const handleConfirm = () => {
-    if (!once()) return;
-    const cb = spec?.onConfirm;
-    onDismiss(spec?.id);
-    cb?.();
+    if (!once() || !spec) return;
+    const { id, onConfirm: cb, waitForConfirm } = spec;
+    if (!waitForConfirm) {
+      onDismiss(id);
+      cb?.();
+      return;
+    }
+    setBusyId(id);
+    Promise.resolve()
+      .then(() => cb?.())
+      .catch((e) => console.error('[alert] confirm failed:', e))
+      .finally(() => {
+        setBusyId(null);
+        onDismiss(id);
+      });
   };
   const handleCancel = () => {
     if (!once()) return;
@@ -81,6 +95,7 @@ function AlertHostModal({
               label: spec.confirmText ?? t('common.confirm'),
               onPress: handleConfirm,
               destructive: spec.destructive,
+              loading: busyId === spec.id,
             }}
             secondary={
               spec.cancelText

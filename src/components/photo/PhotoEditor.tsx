@@ -32,6 +32,9 @@ const ASPECT_X = 3;
 const ASPECT_Y = 4;
 const FRAME_PADDING = 16;
 const MAX_SCALE = 5;
+// 업로드 전 긴 변 상한. 서버는 768x1024 로 줄여 수채화로 변환하고 원본은 버리므로
+// (BE photoConversion.ts), 그 2배면 화질 손실 없이 업로드·서버 디코드 시간만 줄어든다.
+const OUTPUT_MAX_EDGE = 2048;
 
 const EDITOR_BG = '#1C1320'; // deep plum — on-brand dark surround, photo pops
 const TOOL_FG = '#FFFFFF';
@@ -94,7 +97,7 @@ export function PhotoEditor({
     (async () => {
       try {
         const ref = await ImageManipulator.manipulate(uri).renderAsync();
-        const out = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 1 });
+        const out = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.9 });
         if (!active) return;
         setWorking({ uri: out.uri, w: out.width, h: out.height });
         resetTransforms();
@@ -192,7 +195,7 @@ export function PhotoEditor({
       else if (op === 'flipH') ctx.flip('horizontal');
       else ctx.flip('vertical');
       const ref = await ctx.renderAsync();
-      const out = await ref.saveAsync({ format: SaveFormat.PNG });
+      const out = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.95 });
       setWorking({ uri: out.uri, w: out.width, h: out.height });
       resetTransforms();
     } catch {
@@ -216,9 +219,11 @@ export function PhotoEditor({
       cropH = Math.round(Math.min(cropH, working.h));
       originX = Math.round(Math.min(Math.max(0, originX), working.w - cropW));
       originY = Math.round(Math.min(Math.max(0, originY), working.h - cropH));
-      const ref = await ImageManipulator.manipulate(working.uri)
-        .crop({ originX, originY, width: cropW, height: cropH })
-        .renderAsync();
+      // 자른 뒤에 줄인다 — 많이 확대해 자른 작은 영역도 손실이 없다.
+      const shrink = Math.min(1, OUTPUT_MAX_EDGE / Math.max(cropW, cropH));
+      const ctx = ImageManipulator.manipulate(working.uri).crop({ originX, originY, width: cropW, height: cropH });
+      if (shrink < 1) ctx.resize({ width: Math.round(cropW * shrink), height: Math.round(cropH * shrink) });
+      const ref = await ctx.renderAsync();
       const out = await ref.saveAsync({ compress: 0.85, format: SaveFormat.JPEG });
       onComplete(out.uri);
     } catch {

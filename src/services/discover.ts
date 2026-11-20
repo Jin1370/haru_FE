@@ -91,7 +91,11 @@ export async function openPlaylist(idx: number, expectedCount?: number): Promise
 // 잠긴 받은 좋아요 카드 공개 — 별사탕 2개 (모자라면 402 insufficient_stars), 또는
 // free=true 면 무료 카드 (화면에 띄우는 순간 부른다, 없으면 409 free_unavailable).
 // 상대가 그사이 탈퇴·정지·차단됐으면 차감 없이 revealed=false.
-export async function revealLike(likerId: string, free = false): Promise<{ revealed: boolean }> {
+// card = 열린 카드 (별사탕 공개일 때만, 옛 서버는 안 보낸다) — 목록을 다시 받기 전에 바로 보여 준다.
+export async function revealLike(
+  likerId: string,
+  free = false,
+): Promise<{ revealed: boolean; card?: DiscoverCandidate }> {
   return api.post('/api/discover/likes-received/reveal', { liker_id: likerId, free });
 }
 

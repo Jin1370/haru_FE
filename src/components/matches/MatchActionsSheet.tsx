@@ -35,7 +35,7 @@ interface MatchActionsSheetProps {
   // Fired after a destructive action (unmatch/report/hide) resolves
   // successfully. Caller decides the follow-up — refresh a list, navigate
   // back, etc.
-  onResolved?: () => void;
+  onResolved?: () => void | Promise<void>;
 }
 
 export function MatchActionsSheet({
@@ -95,10 +95,12 @@ export function MatchActionsSheet({
       cancelText: t('common.cancel'),
       confirmText: t('matches.actions.unmatch'),
       destructive: true,
+      waitForConfirm: true,
       onConfirm: async () => {
         try {
           await blockService.blockUser(partnerId);
-          onResolved?.();
+          // 목록 재조회 실패는 연결 끊기·삭제 실패가 아니다 — 오류 안내를 띄우지 않는다.
+          await Promise.resolve(onResolved?.()).catch(() => undefined);
         } catch (e: any) {
           showAlert({ variant: 'error', title: t('common.error'), message: userFacingError(e, t) });
         }
@@ -118,10 +120,12 @@ export function MatchActionsSheet({
       // 짧은 라벨로 대체. 시트의 진입 라벨에는 풀 표현이 그대로 노출됨.
       confirmText: t('common.delete'),
       destructive: true,
+      waitForConfirm: true,
       onConfirm: async () => {
         try {
           await hideMatch(matchId);
-          onResolved?.();
+          // 목록 재조회 실패는 연결 끊기·삭제 실패가 아니다 — 오류 안내를 띄우지 않는다.
+          await Promise.resolve(onResolved?.()).catch(() => undefined);
         } catch (e: any) {
           showAlert({ variant: 'error', title: t('common.error'), message: userFacingError(e, t) });
         }

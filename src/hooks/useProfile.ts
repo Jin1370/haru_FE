@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDiscoverStore } from '@/stores/discoverStore';
 import * as profileService from '@/services/profile';
+import { ApiRequestError } from '@/services/api';
 import type { ProfileUpsertRequest, PhotoUploadResponse, PhotoDeleteResponse, PhotoStatus } from '@/types';
 
 export const MAX_PHOTOS = 5;
@@ -65,12 +66,23 @@ export function useProfile() {
     }
   }, [loadProfile]);
 
+  // 삭제·순서 변경 응답에 이미 새 사진 목록이 있다 — 프로필을 다시 받지 않고 그걸로 갱신한다.
+  // 목록이 없는 옛 서버 응답이면 예전처럼 다시 받는다.
+  const applyPhotoSnapshot = useCallback(
+    async (res: PhotoDeleteResponse) => {
+      const current = useAuthStore.getState().profile;
+      if (!current || !res.photo_statuses) return loadProfile();
+      setProfile({ ...current, photos: res.photos, photo_statuses: res.photo_statuses });
+    },
+    [loadProfile, setProfile],
+  );
+
   const deletePhoto = useCallback(async (index: number): Promise<PhotoDeleteResponse> => {
     setLoading(true);
     setError(null);
     try {
       const res = await profileService.deletePhoto(index);
-      await loadProfile();
+      await applyPhotoSnapshot(res);
       return res;
     } catch (e: any) {
       setError(e.message);
@@ -78,7 +90,7 @@ export function useProfile() {
     } finally {
       setLoading(false);
     }
-  }, [loadProfile]);
+  }, [applyPhotoSnapshot]);
 
   // photo-reorder-no-reconvert sprint: 재변환 없이 position 만 재배치. 시그니처는
   // photo id 배열 (인덱스 = 새 position, order[0] → 메인). BE RPC 가 완전성(전체
@@ -87,29 +99,39 @@ export function useProfile() {
     setLoading(true);
     setError(null);
     try {
-      await profileService.reorderPhotos(orderedIds);
-      await loadProfile();
+      await applyPhotoSnapshot(await profileService.reorderPhotos(orderedIds));
     } catch (e: any) {
       setError(e.message);
       throw e;
     } finally {
       setLoading(false);
     }
-  }, [loadProfile]);
+  }, [applyPhotoSnapshot]);
 
   // 메인설정: 선택 슬롯(position)의 사진을 맨 앞으로. profile.photo_statuses 를
   // position ASC 정렬해 전체 id 배열을 구성(비-ready 포함 — 완전성 검증 통과 필수)
   // 후 선택 사진을 맨 앞으로 옮긴다. 선택 사진이 비-ready 면 BE 가 422
   // main_photo_not_ready 로 거부 (방어선 — 현행 UI 는 ready 슬롯에서만 메인설정 노출).
+  // 화면에 있는 사진 목록으로 바로 요청한다. 그 목록이 낡았으면(다른 기기에서 사진을 바꿈) 서버가
+  // 거절하므로 그때만 새로 받아 한 번 더 시도한다.
   const setPrimaryPhoto = useCallback(async (position: number): Promise<void> => {
-    const fresh = await profileService.getMyProfile();
-    const ordered = (fresh.photo_statuses ?? [])
-      .slice()
-      .sort((a, b) => a.position - b.position);
-    const selected = ordered.find((s) => s.position === position);
-    if (!selected) return;
-    const newOrder = [selected.id, ...ordered.filter((s) => s.id !== selected.id).map((s) => s.id)];
-    await reorderPhotos(newOrder);
+    const orderFor = (statuses: PhotoStatus[] | undefined) => {
+      const ordered = (statuses ?? []).slice().sort((a, b) => a.position - b.position);
+      const selected = ordered.find((s) => s.position === position);
+      return selected ? [selected.id, ...ordered.filter((s) => s.id !== selected.id).map((s) => s.id)] : null;
+    };
+    const local = orderFor(useAuthStore.getState().profile?.photo_statuses);
+    if (local) {
+      try {
+        await reorderPhotos(local);
+        return;
+      } catch (e) {
+        // 400 = 목록에 빠진 사진이 있음, 404 = 이미 지워진 사진이 섞임 (서버가 코드 없이 상태만 준다).
+        if (!(e instanceof ApiRequestError) || (e.status !== 400 && e.status !== 404)) throw e;
+      }
+    }
+    const fresh = orderFor((await profileService.getMyProfile()).photo_statuses);
+    if (fresh) await reorderPhotos(fresh);
   }, [reorderPhotos]);
 
   // 사진 교체: 해당 슬롯 삭제 후 새 사진 업로드 (새 사진은 변환 필요 — POST 비동기).

@@ -20,6 +20,7 @@ import {
 import { getMyProfile } from '@/services/profile';
 import { unregisterCurrentPushToken } from '@/hooks/usePushToken';
 import { usePendingPhotoUploadsStore } from '@/stores/pendingPhotoUploadsStore';
+import { clearChatCache } from '@/lib/chatCache';
 import type { Profile } from '@/types';
 
 interface AuthState {
@@ -129,6 +130,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // 회복 큐(가입 중 실패한 사진 로컬 URI)는 세션 메모리라 다음 계정으로 누수되면
     // 안 됨 — 로그아웃 시 비운다(다른 계정으로 재로그인 시 이전 사용자 사진 재업로드 방지).
     usePendingPhotoUploadsStore.getState().clear();
+    clearChatCache(); // 이전 계정의 채팅 메시지를 메모리에 남기지 않는다
     set({
       isAuthenticated: false,
       userId: null,
@@ -145,6 +147,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await deleteAccountApi();
     await clearTokens();
     usePendingPhotoUploadsStore.getState().clear();
+    clearChatCache(); // 이전 계정의 채팅 메시지를 메모리에 남기지 않는다
     set({
       isAuthenticated: false,
       userId: null,

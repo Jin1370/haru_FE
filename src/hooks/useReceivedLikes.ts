@@ -77,8 +77,16 @@ export function useReceivedLikes() {
   // 바꾼다. 상대가 그사이 사라졌으면 false (차감 없음). 실패는 호출처로.
   const reveal = useCallback(
     async (likerId: string, free = false) => {
-      const { revealed } = await discoverService.revealLike(likerId, free);
-      await Promise.all([mutate(), syncQuota()]);
+      const { revealed, card } = await discoverService.revealLike(likerId, free);
+      if (revealed && card && !free) {
+        // 서버가 열린 카드를 함께 줬다 — 그 자리의 잠긴 카드를 바로 바꾸고, 목록·잔액은 뒤에서 받는다.
+        // (무료 카드는 New! 표시·시작 위치가 목록 응답에 달려 있어 예전처럼 목록을 기다린다.)
+        await mutate((prev) => prev?.map((c) => (c.id === likerId ? card : c)), { revalidate: false });
+        void mutate();
+        void syncQuota();
+      } else {
+        await Promise.all([mutate(), syncQuota()]);
+      }
       return revealed;
     },
     [mutate, syncQuota],

@@ -173,12 +173,18 @@ export function PlaylistCarousel<T extends { id: string }>({
   // 날아간 카드의 투명도. 앞 카드가 바뀌면(신청한 카드가 목록에서 빠짐) 새 앞 카드는 제자리로.
   const fade = useRef(new Animated.Value(1)).current;
   const frontId = n > 0 ? cards[settled % n]?.id : undefined;
-  useEffect(() => {
+  // 그리기 전에 되돌린다 (effect 가 아니라). 새 앞 카드는 이 값을 처음 그릴 때의 위치로 레이아웃에
+  // 기록하는데, 그리고 난 뒤 effect 에서 되돌리면 화면(네이티브)만 제자리로 오고 레이아웃엔 날아간 위치가
+  // 남는다 — 안드로이드에서 버튼이 손가락 위치를 그 높이로 계산해 눌림이 취소됐다 (인사 직후 다음
+  // 카드의 버튼이 탭을 옮겨 다시 그릴 때까지 안 눌림).
+  const lastFrontId = useRef(frontId);
+  if (lastFrontId.current !== frontId) {
+    lastFrontId.current = frontId;
     back.stopAnimation();
     back.setValue(0);
     liftY.setValue(0);
     fade.setValue(1);
-  }, [frontId, back, liftY, fade]);
+  }
   const onLiftEvent = Animated.event([{ nativeEvent: { translationY: liftY } }], { useNativeDriver: true });
   const onLiftState = (e: PanGestureHandlerStateChangeEvent) => {
     const { state, translationY, velocityY } = e.nativeEvent;

@@ -4,6 +4,10 @@ import * as Crypto from 'expo-crypto';
 import * as Sentry from '@sentry/react-native';
 import * as messageService from '@/services/messages';
 import { adoptLocalPhoto } from '@/components/chat/photoCache';
+import { readChatCache, writeChatCache } from '@/lib/chatCache';
+import { prefetchAudio } from '@/components/chat/audioCache';
+
+const PREFETCH_UNHEARD = 5;
 import {
   subscribeToMessages,
   isKeychainLocked,
@@ -41,10 +45,13 @@ function mergeServerOnly(incoming: Message, existing: Message): Message {
 
 export function useChat(matchId: string) {
   const userId = useAuthStore((s) => s.userId);
-  const [messages, setMessages] = useState<Message[]>([]);
+  // 전에 들어왔던 방이면 그때 본 메시지로 바로 그린다 (loadMessages 가 뒤에서 교체).
+  const [messages, setMessages] = useState<Message[]>(() => readChatCache(userId, matchId) ?? []);
   // idempotent-send sprint: client id → 송신 상태 맵. messages 배열과 분리해
   // ChatBubble 에 sendState[item.id] 로 전달한다.
   const [sendState, setSendState] = useState<Record<string, SendStatus>>({});
+  const sendStateRef = useRef(sendState);
+  sendStateRef.current = sendState;
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +78,8 @@ export function useChat(matchId: string) {
   const loadingNewerRef = useRef(false);
 
   const loadMessages = useCallback(async () => {
-    setLoading(true);
+    // 캐시로 이미 그린 화면이 있으면 스피너 없이 뒤에서 교체한다.
+    if (messagesRef.current.length === 0) setLoading(true);
     setError(null);
     try {
       const data = await messageService.getMessages(matchId, 50);
@@ -79,7 +87,17 @@ export function useChat(matchId: string) {
       // chat-flatlist-pagination sprint: copy before reverse — in-place
       // mutation on the service response can desync ordering when React
       // StrictMode double-invokes the effect.
-      setMessages([...data].reverse());
+      const fresh = [...data].reverse();
+      const freshIds = new Set(fresh.map((m) => m.id));
+      const newestAt = fresh.length > 0 ? Date.parse(fresh[fresh.length - 1].created_at) : 0;
+      // 받는 사이 화면에 생긴 메시지(실시간 도착·보내는 중·전송 실패)는 지우지 않는다 — 캐시를
+      // 그린 채 바로 보낼 수 있어서 이 응답보다 늦게 생긴 말풍선이 있을 수 있다.
+      setMessages((prev) => [
+        ...fresh,
+        ...prev.filter(
+          (m) => !freshIds.has(m.id) && (Date.parse(m.created_at) > newestAt || !!sendStateRef.current[m.id]),
+        ),
+      ]);
       setHasMore(data.length === 50);
     } catch (e) {
       setError(describeError(e));
@@ -184,8 +202,28 @@ export function useChat(matchId: string) {
     jumpedRef.current = false;
     setJumped(false);
     setHasNewer(false);
+    setLoading(true); // 옛 구간이 떠 있어 loadMessages 가 스스로 스피너를 켜지 않는다
     await loadMessages();
   }, [loadMessages]);
+
+  // 아직 안 들은 받은 음성 중 가장 최근 PREFETCH_UNHEARD 개를 미리 받는다 — 처음 탭할 때 스트리밍
+  // 버퍼링 없이 바로 재생되게. 실시간으로 새로 오는 메시지는 가장 최근이라 자연히 포함된다.
+  // 위로 불러온 옛 메시지는 탭할 때 받는다.
+  useEffect(() => {
+    let left = PREFETCH_UNHEARD;
+    for (let i = messages.length - 1; i >= 0 && left > 0; i--) {
+      const m = messages[i];
+      if (m.sender_id === userId || m.listened_at || m.audio_status !== 'ready' || !m.audio_url) continue;
+      prefetchAudio(m.audio_url);
+      left--;
+    }
+  }, [messages, userId]);
+
+  // 최신 구간을 보는 동안의 목록을 캐시에 둔다 (보내는 중·실패한 말풍선은 빼고 — 서버에 없는 메시지).
+  useEffect(() => {
+    if (jumped) return;
+    writeChatCache(userId, matchId, messages.filter((m) => !sendState[m.id]));
+  }, [messages, jumped, sendState, userId, matchId]);
 
   // idempotent-send sprint: 낙관 stub + 멱등 재시도.
   //   1) clientId(없으면 Crypto.randomUUID) 로 낙관 stub 을 messages 에 즉시

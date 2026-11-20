@@ -29,6 +29,7 @@ export default function SettingsScreen() {
       cancelText: t('common.cancel'),
       confirmText: t('common.logout'),
       destructive: true,
+      waitForConfirm: true,
       onConfirm: async () => {
         await logout();
         router.replace('/');
@@ -44,6 +45,7 @@ export default function SettingsScreen() {
       cancelText: t('common.cancel'),
       confirmText: t('settings.deleteAccount'),
       destructive: true,
+      waitForConfirm: true,
       onConfirm: async () => {
         try {
           await deleteAccount();

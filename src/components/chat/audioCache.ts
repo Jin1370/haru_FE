@@ -87,10 +87,23 @@ export async function cachedUriForMessage(messageId: string): Promise<string | n
 
 /** 백그라운드 다운로드. 이미 있거나 받는 중이면 no-op. */
 export function cacheAudio(url: string): void {
+  void download(url);
+}
+
+// 미리 받기는 한 번에 1개씩 — 화면의 사진·메시지 요청과 대역폭을 다투지 않게.
+let prefetchChain: Promise<void> = Promise.resolve();
+/** 아직 안 들은 메시지 미리 받기. 차례로 받고, 이미 있거나 받는 중이면 건너뛴다. */
+export function prefetchAudio(url: string): void {
   const name = fileNameOf(url);
   if (!name || entries.has(name) || inFlight.has(name)) return;
+  prefetchChain = prefetchChain.then(() => download(url));
+}
+
+function download(url: string): Promise<void> {
+  const name = fileNameOf(url);
+  if (!name || entries.has(name) || inFlight.has(name)) return Promise.resolve();
   inFlight.add(name);
-  void (async () => {
+  return (async () => {
     const target = DIR + name;
     const part = `${target}.part`;
     try {

@@ -23,7 +23,9 @@ export interface AlertSpec {
   destructive?: boolean;
   /** Stack actions vertically (primary on top) instead of side-by-side. */
   stackedActions?: boolean;
-  onConfirm?: () => void;
+  onConfirm?: () => void | Promise<void>;
+  /** 확인 후 onConfirm(비동기)이 끝날 때까지 창을 닫지 않고 확인 버튼에 스피너를 띄운다. */
+  waitForConfirm?: boolean;
   onCancel?: () => void;
 }
 
