@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     // 문구가 길면 그만큼 자연스럽게 늘어난다.
     minHeight: CARD_CONTENT_MIN_HEIGHT,
     fontSize: fs(13),
-    lineHeight: fs(19),
+    lineHeight: fs(20),
     color: colors.text,
     fontFamily: fonts.regular,
   },
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     // 바꾸려면 CARD_CONTENT_MIN_HEIGHT 를 조정한다.
     height: CARD_CONTENT_MIN_HEIGHT,
     fontSize: fs(13),
-    lineHeight: fs(19),
+    lineHeight: fs(20),
     color: colors.text,
     fontFamily: fonts.regular,
     textAlignVertical: 'top',
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     fontSize: fs(13),
-    lineHeight: fs(19),
+    lineHeight: fs(20),
     color: colors.textLight,
     fontFamily: fonts.pixel,
   },

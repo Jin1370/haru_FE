@@ -1310,10 +1310,10 @@ const styles = StyleSheet.create({
   },
   bio: {
     flex: 1,
-    fontSize: fs(12),
+    fontSize: fs(13),
     color: photoCard.text,
     fontFamily: fonts.bold,
-    lineHeight: fs(18),
+    lineHeight: fs(20),
   },
   bioEmpty: {
     color: photoCard.muted,
