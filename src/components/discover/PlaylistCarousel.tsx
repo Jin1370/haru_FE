@@ -185,6 +185,13 @@ export function PlaylistCarousel<T extends { id: string }>({
     // 튕기는 도중 다시 잡으면 그 자리에서 이어 끈다.
     if (state === State.BEGAN) back.stopAnimation();
     if (state !== State.END && state !== State.CANCELLED && state !== State.FAILED) return;
+    // 위로 밀기가 시작도 안 됐으면(가로로 넘기느라 취소·실패) 카드는 움직인 적이 없다. 여기서
+    // 손가락의 세로 흔들림(translationY)만큼 옮겨 되돌리면 넘길 때 카드가 위로 살짝 튄다.
+    // 다만 튕기는 도중 잡았다면(BEGAN 에서 멈춤) 멈춘 자리에서 마저 제자리로.
+    if (e.nativeEvent.oldState !== State.ACTIVE) {
+      Animated.spring(back, { toValue: 0, damping: 14, stiffness: 220, mass: 1, useNativeDriver: true }).start();
+      return;
+    }
     const far = translationY < -room * 0.75;
     const flick = velocityY < -1200 && translationY < -room * 0.4;
     const sent = state === State.END && (far || flick);
