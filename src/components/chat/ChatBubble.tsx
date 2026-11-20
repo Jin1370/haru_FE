@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
   mineBubble: {
     // 밤: 남색 하늘 배경에 묻히지 않게 primary 보다 밝은 파랑 (흰 글자 대비 4.7:1).
     // 낮: 딸기우유색.
-    backgroundColor: isNight ? '#4D74B4' : '#FFDEDE',
+    backgroundColor: isNight ? '#4D74B4' : '#FFDEE5',
     borderBottomRightRadius: 6,
   },
   theirsBubble: {
