@@ -120,14 +120,21 @@ export default function PlaylistScreen() {
 
   // 처음 화면에 나온 카드를 바로 기록한다 — 기록이 빠지면 본 사람이 다음 날 다시 후보가
   // 되어 별사탕으로 산 플레이리스트에 섞일 수 있다. 실패한 기록은 화면을 나갈 때 다시 보낸다.
+  // "봤다" = 가운데에 멈춘 카드 + 넘기는 도중 가운데로 80% 넘게 들어온 카드 (휙휙 넘겨 멈추지
+  // 않고 지나간 카드도 얼굴은 봤다 — 받은 인사 탭의 New! 배지와 같은 기준).
   const reported = useRef(new Set<string>());
   const pending = useRef(new Set<string>());
+  const markSeen = useCallback(
+    (id: string | undefined) => {
+      if (!id || reported.current.has(id)) return;
+      reported.current.add(id);
+      discoverService.markPlaylistSeen(idx, [id]).catch(() => pending.current.add(id));
+    },
+    [idx],
+  );
   useEffect(() => {
-    const id = current?.id;
-    if (!id || reported.current.has(id)) return;
-    reported.current.add(id);
-    discoverService.markPlaylistSeen(idx, [id]).catch(() => pending.current.add(id));
-  }, [current?.id, idx]);
+    markSeen(current?.id);
+  }, [current?.id, markSeen]);
   useEffect(
     () => () => {
       if (pending.current.size > 0) discoverService.markPlaylistSeen(idx, [...pending.current]).catch(() => {});
@@ -227,6 +234,7 @@ export default function PlaylistScreen() {
             cards={cards}
             pos={pos}
             onSettle={setPos}
+            onLiveChange={(i) => markSeen(cards[i]?.id)}
             cardWidth={cardWidth}
             onSwipeUp={onRequest}
             swipeUpLabel={t('discover.playlist.request')}
