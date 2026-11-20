@@ -270,7 +270,12 @@ export function VoiceCloneCard({
                 />
               </Pressable>
               {scriptExpanded && (
-                <ScrollView style={styles.scriptScroll} contentContainerStyle={styles.scriptContent}>
+                <ScrollView
+                  style={styles.scriptScroll}
+                  contentContainerStyle={styles.scriptContent}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                >
                   <Text style={styles.scriptText}>{t('setupVoice.exampleScript')}</Text>
                 </ScrollView>
               )}
@@ -378,7 +383,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  scriptScroll: { maxHeight: 420, borderTopWidth: 1, borderTopColor: colors.border },
+  scriptScroll: { maxHeight: 200, borderTopWidth: 1, borderTopColor: colors.border },
   scriptContent: { padding: 14 },
   scriptTitle: { fontSize: fs(13), fontFamily: fonts.semibold, color: colors.primary },
   scriptText: {

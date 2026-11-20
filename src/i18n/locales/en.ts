@@ -604,9 +604,9 @@ export default {
     cloneReady: 'Voice registered',
     recordingGuide:
       '• The longer you record, the closer the result sounds to your real voice.\n• Please read slowly and softly.',
-    exampleScriptTitle: "Read this if you're not sure what to say.",
+    exampleScriptTitle: 'Script',
     exampleScript:
-      "Hello. How was your day today? I hope your day was kind to you. It's funny — I walk the same path every day, but some days my heart feels a little heavy, and other days I find myself lifted by the smallest things. Did anyone's words make you smile today? Or, on the other hand, was there something that hurt a little? It's strange — sometimes a brief word from someone far away resonates more deeply than anything from someone close. Like the melody of a favorite playlist, certain voices have a way of comforting you just by being heard. So today, why don't we share a small hello with each other?",
+      "Hello! I'm the developer of Haru.\n\nSometimes, when you're asked to just say something, it can be hard to know where to start. So I prepared a little script to help you out.\n\nHow has your day been so far?\n\nToday, I took a nap with my dog under a warm blanket, and it made me really happy. I think happiness often finds us in these little, everyday moments.\n\nI hope this app can become one of those little things that brings joy to your everyday life, too.\n\nKnowing that someone might find comfort, feel a little excitement, or make precious memories through this app gives me so much motivation to keep it going.\n\nIf you have any suggestions or feedback about the app, feel free to reach out to me anytime using the email address listed at the bottom of the Settings menu.\n\nI hope you have a lovely day. Thank you!",
     uploadVoice: 'Register voice',
     reRecord: 'Re-record',
     processingHint: 'This may take a moment...',

@@ -12,6 +12,8 @@ import { colors, radii, shadows } from '@/constants/colors';
 import { fonts, fs } from '@/constants/fonts';
 import { LEGAL_URLS } from '@/constants/legal';
 
+const CONTACT_EMAIL = 'haru.official.app@gmail.com';
+
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -152,6 +154,10 @@ export default function SettingsScreen() {
             {t('settings.deleteAccount')}
           </Text>
         </View>
+        {/* 길게 눌러 복사할 수 있게 selectable. */}
+        <Text style={styles.contact} selectable>
+          {CONTACT_EMAIL}
+        </Text>
       </ScrollView>
     </View>
   );
@@ -203,6 +209,13 @@ const styles = StyleSheet.create({
     fontSize: fs(11),
     fontFamily: fonts.regular,
     textDecorationLine: 'underline',
+  },
+  contact: {
+    color: colors.textSecondary,
+    fontSize: fs(11),
+    fontFamily: fonts.regular,
+    textAlign: 'center',
+    marginTop: 8,
   },
   legalSeparator: {
     color: colors.textSecondary,
