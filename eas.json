@@ -44,6 +44,22 @@
             "android": {
                 "buildType": "app-bundle"
             }
+        },
+        "playtest": {
+            "autoIncrement": true,
+            "channel": "playtest",
+            "environment": "production",
+            "credentialsSource": "remote",
+            "env": {
+                "APP_VARIANT": "production",
+                "EXPO_PUBLIC_API_URL": "https://haru-dev.fly.dev",
+                "EXPO_PUBLIC_SUPABASE_URL": "https://squrlgdwljohukhblrbi.supabase.co",
+                "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxdXJsZ2R3bGpvaHVraGJscmJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA4OTA5MjEsImV4cCI6MjA5NjQ2NjkyMX0.yuOg0bIMPPQ0aOPistq8TI1JQ6BCccyQXagnl1A3KP0",
+                "EXPO_PUBLIC_SENTRY_ENV": "playtest"
+            },
+            "android": {
+                "buildType": "app-bundle"
+            }
         }
     },
     "submit": {
@@ -55,6 +71,11 @@
                 "appleId": "sejinim02@gmail.com",
                 "ascAppId": "6779128759",
                 "appleTeamId": "8Y3T679M89"
+            }
+        },
+        "playtest": {
+            "android": {
+                "track": "internal"
             }
         }
     }

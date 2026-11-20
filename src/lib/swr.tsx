@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { AppState } from 'react-native';
-import { SWRConfig, preload } from 'swr';
+import { SWRConfig, preload, mutate } from 'swr';
 import * as matchService from '@/services/matches';
 import * as discoverService from '@/services/discover';
 import type { DiscoverCandidate } from '@/types';
@@ -43,25 +43,30 @@ export function takeLikesPreload(): Promise<DiscoverCandidate[]> | null {
   return p;
 }
 
+// 앱이 다시 앞으로 나오면 별사탕 잔액과 채팅 목록을 다시 받는다 (다른 기기에서 바뀐 값).
+// SWR 의 revalidateOnFocus 는 RN 에서 동작하지 않는다 — 기본 감지는 RN 에 없는 window 이벤트를
+// 쓰고, SWRConfig 의 initFocus 는 custom provider 를 줄 때만 적용된다 (custom provider 는
+// `preload` 가 쓰는 기본 캐시와 갈라져 프리로드가 무효). 그래서 공개 mutate 로 키를 직접 지정한다.
+// 받은 인사 목록·채팅방은 일부러 앱 복귀 때 다시 받지 않는다 (각 훅의 revalidateOnFocus:false 주석).
+// mutate 는 화면에 떠 있는 키만 다시 받고, 안 떠 있는 키는 그대로 둔다.
+const REFETCH_ON_APP_ACTIVE = new Set(['discover-quota', 'matches']);
+function useAppFocusRevalidate() {
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      void mutate((key) => Array.isArray(key) && REFETCH_ON_APP_ACTIVE.has(key[0]));
+    });
+    return () => sub.remove();
+  }, []);
+}
+
 export function SWRConfigProvider({ children }: { children: ReactNode }) {
+  useAppFocusRevalidate();
   return (
     <SWRConfig
       value={{
         revalidateOnFocus: true,
         dedupingInterval: 3000,
-        // SWR's default focus detection uses window events that don't fire in
-        // RN. Hook AppState 'active' transitions instead so revalidateOnFocus
-        // works on iOS/Android.
-        initFocus(callback) {
-          const sub = AppState.addEventListener('change', (state) => {
-            if (state === 'active') callback();
-          });
-          return () => sub.remove();
-        },
-        // No NetInfo dependency — leave reconnect signaling unwired.
-        initReconnect() {
-          return () => {};
-        },
         // 401 logout is owned by api.ts → registerOnSessionExpired in
         // _layout.tsx. Don't duplicate it here.
       }}
