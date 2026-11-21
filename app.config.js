@@ -43,10 +43,11 @@ module.exports = ({ config }) => {
       ...config.android,
       package: 'com.haruvoice.app.dev',
       googleServicesFile: './google-services.dev.json',
-      // dev 아이콘 배경색을 prod(핑크 #F8D2DC)와 다른 보라로 → 홈 화면에서 한눈에 구분.
-      // (전경 로고 adaptive-icon.png 의 투명 여백 영역에 이 색이 보임)
+      // dev 아이콘 배경을 prod(분홍 그라데이션 이미지)와 다른 보라 단색으로 → 홈 화면에서 한눈에 구분.
+      // (전경 로고 adaptive-icon.png 의 투명 여백 영역에 이 색이 보임. 배경 이미지가 있으면 색이 가려져 뺀다)
       adaptiveIcon: {
         ...config.android.adaptiveIcon,
+        backgroundImage: undefined,
         backgroundColor: '#6C5CE7',
       },
     },

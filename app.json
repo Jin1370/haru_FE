@@ -16,7 +16,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FEEEF0"
+      "backgroundColor": "#FDE2E6"
     },
     "androidStatusBar": {
       "translucent": true,
@@ -37,7 +37,8 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#F8D2DC"
+        "backgroundImage": "./assets/adaptive-icon-bg.png",
+        "backgroundColor": "#FDE2E6"
       },
       "package": "com.haruvoice.app",
       "googleServicesFile": "./google-services.json",
