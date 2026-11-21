@@ -252,7 +252,9 @@ const CustomInput = forwardRef<
   // TextInputs (the state this field starts in until the user taps the card),
   // so render a Text overlay instead of relying on the `placeholder` prop.
   return (
-    <View style={styles.customInputWrap}>
+    // 읽기 전용일 땐 탭을 카드(Pressable)로 넘긴다. 안 그러면 iOS 에서 읽기 전용 입력이 키보드 없이
+    // 포커스를 잡고, 이어서 editable 이 켜져도 이미 포커스 상태라 키보드가 끝내 안 올라온다.
+    <View style={styles.customInputWrap} pointerEvents={editable ? 'auto' : 'none'}>
       <TextInput
         ref={ref}
         value={value}

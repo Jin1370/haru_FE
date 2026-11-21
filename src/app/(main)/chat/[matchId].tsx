@@ -1118,7 +1118,8 @@ export default function ChatScreen() {
             onViewableItemsChanged={onViewableItemsChangedRef.current}
             onScroll={handleScroll}
             scrollEventThrottle={16}
-            contentContainerStyle={styles.messageList}
+            // 빈 방 안내(emptyChat flex:1 + 위 정렬)는 콘텐츠가 리스트 높이를 채워야 화면 위쪽에 온다.
+            contentContainerStyle={[styles.messageList, inverseMessages.length === 0 && styles.messageListEmpty]}
             style={styles.list}
             // Inverted: ListHeaderComponent renders at the visual BOTTOM (above
             // the input dock), ListFooterComponent renders at the visual TOP.
@@ -1727,6 +1728,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: nightBar?.border ?? colors.borderSoft,
   },
+  messageListEmpty: { flexGrow: 1 },
   emptyChat: {
     flex: 1,
     alignItems: 'center',

@@ -216,6 +216,8 @@ export default function PlaylistScreen() {
           headerStyle: { backgroundColor: nightBar?.bg ?? colors.background },
           headerShadowVisible: false,
           headerTintColor: nightBar?.text ?? colors.text,
+          // iOS 는 뒤로 버튼 옆에 이전 화면 이름을 붙여 내부 라우트명 "(tabs)" 가 보였다 — 화살표만.
+          headerBackButtonDisplayMode: 'minimal',
           // 제목 앞에 이 플레이리스트의 커버.
           headerTitle: ({ children }) => (
             <View style={styles.titleRow}>

@@ -30,7 +30,8 @@ import { fonts, fs, PIXEL_NUMBER_OFFSET_Y } from '@/constants/fonts';
 // 별사탕 충전 — 스토어 상품 2개 + 보상형 광고. 지급은 서버(웹훅/광고 콜백)가 하므로
 // 결제·시청 뒤엔 잔액을 몇 초 간격으로 다시 읽는다.
 const COUNT_BY_PRODUCT: Record<string, number> = { star_10: 10, star_30: 30 };
-const SYNC_DELAYS_MS = [2000, 5000];
+// 광고 보상은 구글의 확인 요청이 서버에 닿아야 지급돼 몇 초 걸린다 — 늦게 와도 반영되게 길게 본다.
+const SYNC_DELAYS_MS = [1500, 3000, 5000, 8000, 12000];
 // BE constants/stars.ts 의 AD_REWARD_STARS / AD_REWARD_DAILY_MAX 와 같은 값.
 const AD_REWARD_STARS = 1;
 const AD_DAILY_MAX = 2;
@@ -57,6 +58,17 @@ export default function StarsScreen() {
   const { starsTotal, adsRemaining, syncQuota } = useDiscoverQuota();
   const [products, setProducts] = useState<StarProduct[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // 광고를 끝까지 본 뒤 서버가 지급을 확인하기 전의 남은 횟수. 그동안 광고 줄을 잠근다 — 그 사이 또
+  // 보면 서버 하루 한도에 걸려 보상 없이 광고만 보게 된다. null = 기다리는 중 아님.
+  const [adPendingFrom, setAdPendingFrom] = useState<number | null>(null);
+  const adPendingRef = useRef(false);
+  const clearAdPending = () => {
+    adPendingRef.current = false;
+    setAdPendingFrom(null);
+  };
+  useEffect(() => {
+    if (adPendingFrom !== null && adsRemaining < adPendingFrom) clearAdPending();
+  }, [adsRemaining, adPendingFrom]);
 
   useEffect(() => {
     if (!userId) return;
@@ -99,11 +111,17 @@ export default function StarsScreen() {
   };
 
   const onAd = async () => {
-    if (!userId || busyRef.current) return;
+    if (!userId || busyRef.current || adPendingRef.current) return;
     busyRef.current = true;
     setBusy('ad');
+    const before = adsRemaining;
     try {
-      if (await watchRewardedAd(userId)) void syncAfterGrant();
+      if (await watchRewardedAd(userId)) {
+        adPendingRef.current = true;
+        setAdPendingFrom(before);
+        // 끝까지 확인이 안 오면 (콜백 지연·실패) 잠금만 풀어 다시 볼 수 있게 한다. 지급은 서버가 판단.
+        void syncAfterGrant().finally(clearAdPending);
+      }
     } catch {
       showAlert({ variant: 'info', title: t('common.notice'), message: t('stars.adsUnavailable') });
     } finally {
@@ -157,7 +175,7 @@ export default function StarsScreen() {
           <Pressable
             style={({ pressed }) => [styles.row, adsRemaining <= 0 && styles.disabled, pressed && styles.pressed]}
             onPress={onAd}
-            disabled={adsRemaining <= 0 || busy !== null}
+            disabled={adsRemaining <= 0 || busy !== null || adPendingFrom !== null}
             accessibilityRole="button"
             accessibilityLabel={
               adsRemaining > 0
@@ -173,7 +191,7 @@ export default function StarsScreen() {
             ) : (
               <Text style={[styles.subLabel, styles.adDone]}>{t('stars.watchAdDone')}</Text>
             )}
-            {busy === 'ad' ? (
+            {busy === 'ad' || adPendingFrom !== null ? (
               <ActivityIndicator color={colors.primary} />
             ) : (
               <Ionicons name="play-circle-outline" size={26} color={colors.primary} />

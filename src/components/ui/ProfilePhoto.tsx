@@ -1,4 +1,5 @@
-import { View, Image, StyleSheet, ViewStyle } from 'react-native';
+import { useState } from 'react';
+import { View, Image, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, gradients } from '@/constants/colors';
@@ -116,10 +117,18 @@ const avatarStyles = StyleSheet.create({
 // ---------- swipe-card ----------
 
 function SwipeCardVariant({ uri, style }: { uri?: string | null; style?: ViewStyle }) {
+  // 사진을 받는 동안 빈 배경색만 보이면 고장 난 카드처럼 보인다 — 다 받을 때까지 로딩 표시.
+  // (방금 무료로 열린 받은 인사 카드는 사진 주소가 그 응답에 처음 와서 미리 받아 둘 수 없다.)
+  const [loadedUri, setLoadedUri] = useState<string | null>(null);
   return (
     <View style={[swipeStyles.container, style]}>
       {uri ? (
-        <Image source={{ uri }} style={swipeStyles.photo} />
+        <>
+          <Image source={{ uri }} style={swipeStyles.photo} onLoadEnd={() => setLoadedUri(uri)} />
+          {loadedUri !== uri ? (
+            <ActivityIndicator style={StyleSheet.absoluteFill} color={colors.white} />
+          ) : null}
+        </>
       ) : (
         <View style={[swipeStyles.photo, swipeStyles.placeholder]}>
           <Ionicons name="person" size={80} color={colors.white} />
