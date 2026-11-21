@@ -1112,6 +1112,16 @@ export default function ChatScreen() {
                 <ActivityIndicator color={isNight ? colors.onPhotoText : colors.primary} style={{ padding: 12 }} />
               ) : null
             }
+            // 빈 방 안내. inverted 리스트는 이것도 자동으로 뒤집어 준다 (VirtualizedList).
+            ListEmptyComponent={
+              loading || partnerDeleted || matchUnmatched || partnerReadOnly ? null : (
+                <View style={styles.emptyChat}>
+                  <Text style={[styles.tombstoneNoticeText, { color: colors.white }]}>
+                    {t('chat.emptyHint')}
+                  </Text>
+                </View>
+              )
+            }
             ListFooterComponent={
               // chat-flatlist-pagination sprint: also surface the spinner while
               // older pages are being fetched. In an inverted list the footer
@@ -1701,6 +1711,13 @@ const styles = StyleSheet.create({
     backgroundColor: nightBar?.bg ?? colors.card,
     borderTopWidth: 0.5,
     borderTopColor: nightBar?.border ?? colors.borderSoft,
+  },
+  emptyChat: {
+    flex: 1,
+    alignItems: 'center',
+    // 리스트와 셀이 둘 다 뒤집혀 이 뷰 안은 정방향 — flex-start 가 화면상 위쪽.
+    justifyContent: 'flex-start',
+    paddingTop: 28,
   },
   tombstoneNoticeText: {
     fontSize: fs(13),

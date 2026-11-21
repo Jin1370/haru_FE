@@ -96,7 +96,13 @@ export function AlertCard({
               secondary.disabled && styles.btnDisabled,
             ]}
           >
-            <Text style={[styles.btnText, styles.btnSecondaryText]}>{secondary.label}</Text>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={[styles.btnText, styles.btnSecondaryText]}
+            >
+              {secondary.label}
+            </Text>
           </Pressable>
         ) : null}
         <Pressable
@@ -116,7 +122,14 @@ export function AlertCard({
           {primary.loading ? (
             <ActivityIndicator color={colors.white} />
           ) : (
-            <Text style={[styles.btnText, styles.btnPrimaryText]}>{primary.label}</Text>
+            // 좁은 기기에서 두 버튼이 반씩 나눠 쓰면 긴 라벨이 줄바꿈돼 버튼이 세로로 늘어난다 → 한 줄 유지, 넘치면 글자 축소.
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={[styles.btnText, styles.btnPrimaryText]}
+            >
+              {primary.label}
+            </Text>
           )}
         </Pressable>
       </View>

@@ -344,6 +344,7 @@ export default {
     chat: {
         title: "채팅",
         typeMessage: "메시지를 입력하세요...",
+        emptyHint: "먼저 인사를 건네보세요!",
         partnerDeletedNotice: "상대방이 탈퇴해 더 이상 메시지를 보낼 수 없어요.",
         matchEndedNotice: "대화가 종료되어 더 이상 메시지를 보낼 수 없어요.",
         // 캠페인 봇(하치와레) 전용 — 답장 불가 안내 + 첫 메시지 합성 대기 표시.

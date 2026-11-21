@@ -340,6 +340,7 @@ export default {
     chat: {
         title: "チャット",
         typeMessage: "メッセージを入力…",
+        emptyHint: "まずはあいさつしてみましょう！",
         partnerDeletedNotice: "相手が退会したため、これ以上メッセージを送信できません。",
         matchEndedNotice: "会話が終了したため、これ以上メッセージを送信できません。",
         // キャンペーンボット（ハチワレ）専用 — 返信不可の案内 + 初回メッセージ合成待ち。
