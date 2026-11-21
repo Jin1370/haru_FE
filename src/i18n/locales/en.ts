@@ -198,7 +198,7 @@ export default {
     newBadge: 'New!',
     freeSwitched: "The person you were waiting for isn't available right now, so we opened the next one.",
     freeKept: "The person you were waiting for isn't available right now. We'll open the next hello for free when it arrives.",
-    swipeHint: 'This person said hello to you first. Swipe the card up to say hello back and start chatting right away.',
+    swipeHint: 'This person said hello to you first. Swipe the card up to say hello back and start chatting right away. Hellos are removed 30 days after you receive them.',
     empty: {
       title: 'No hellos yet',
       needVoice: 'Register your voice to receive hellos.',
