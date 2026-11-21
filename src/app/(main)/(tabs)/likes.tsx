@@ -391,6 +391,8 @@ export default function LikesScreen() {
               pos={pos}
               onSettle={setPos}
               cardWidth={cardWidth}
+              // 순환하지 않는 줄 — 양 끝에서 멈춘다.
+              loop={false}
               showPosition
               onSwipeUp={onRequest}
               swipeUpLabel={t('discover.playlist.request')}
@@ -421,8 +423,9 @@ export default function LikesScreen() {
                     candidate={card}
                     width={cardWidth}
                     active={active}
-                    canPrev={candidates.length > 1}
-                    canNext={candidates.length > 1}
+                    // 양 끝이 있는 줄이라 첫 카드는 이전, 마지막 카드는 다음 버튼이 꺼진다.
+                    canPrev={candidates.indexOf(card) > 0}
+                    canNext={candidates.indexOf(card) < candidates.length - 1}
                     onPrev={() => step(-1)}
                     onNext={() => step(1)}
                     onReported={() => removeCandidate(card.id)}

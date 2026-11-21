@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { dotWindow } from './dotWindow';
 import { useSafeAreaFrame, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Animated, Easing, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { PanGestureHandler, State, type PanGestureHandlerStateChangeEvent } from 'react-native-gesture-handler';
@@ -424,17 +425,27 @@ function LiveOverlay<T>({
   useEffect(() => setLive(pos), [pos]);
   setterRef.current = setLive;
   const card = cards[live];
-  const h = compactHint ? HINT_H_COMPACT : HINT_H;
-  const gap = compactHint ? HINT_GAP_COMPACT : HINT_GAP;
+  // 카드 위 여백(room)이 좁은 화면(iPad 의 iPhone 호환 모드 등)에선 고정 크기 화살표가 헤더에 닿는다 —
+  // 헤더 밑 6px 을 남기고 들어가게 줄이고, 너무 작아지면 숨긴다.
+  const fit = Math.max(0, room - 6);
+  const baseH = compactHint ? HINT_H_COMPACT : HINT_H;
+  const baseGap = compactHint ? HINT_GAP_COMPACT : HINT_GAP;
+  const scale = Math.min(1, fit / (baseH + baseGap));
+  const h = baseH * scale;
+  const gap = baseGap * scale;
   return (
     <>
-      {card && canSwipeUp(card) ? <UpHint height={h} top={-h - gap} /> : null}
+      {card && canSwipeUp(card) && h >= 16 ? <UpHint height={h} top={-h - gap} /> : null}
       {showPosition ? (
         <View pointerEvents="none" style={[styles.positionBox, { top: cardHeight, height: room }]}>
-          {/* 카드 수만큼 점 — 보고 있는 카드는 인사 도장·테두리와 같은 색. */}
+          {/* 카드 수만큼 점 — 보고 있는 카드는 인사 도장·테두리와 같은 색.
+              MAX_DOTS 를 넘으면 그만큼만 보여주며 보는 카드를 따라 밀고, 가려진 쪽 끝은 작게 그린다. */}
           <View style={styles.dots}>
-            {cards.map((c, i) => (
-              <View key={i} style={[styles.dot, i === live && styles.dotActive]} />
+            {dotWindow(cards.length, live).map(({ i, size }) => (
+              <View
+                key={i}
+                style={[styles.dot, { width: size, height: size }, i === live && styles.dotActive]}
+              />
             ))}
           </View>
         </View>
@@ -478,6 +489,7 @@ const styles = StyleSheet.create({
   },
   dots: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 7,
   },
   dot: {
