@@ -346,8 +346,8 @@ export default {
     title: 'Chat',
     typeMessage: 'Type a message...',
     emptyHint: 'Say hi first!',
-    partnerDeletedNotice: 'This person has left the app — you can no longer send messages.',
-    matchEndedNotice: 'This conversation has ended — you can no longer send messages.',
+    partnerDeletedNotice: 'This person has left the app.\nYou can no longer send messages.',
+    matchEndedNotice: 'This conversation has ended.\nYou can no longer send messages.',
     // Campaign bot (Hachiware) only — reply-disabled notice + first-message wait.
     noReplyNotice: 'They ran off, so replies are not possible.',
     botWritingNotice: '{{name}} is writing a message…',

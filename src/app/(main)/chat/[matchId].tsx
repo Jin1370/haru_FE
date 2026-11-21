@@ -120,6 +120,15 @@ function formatDateLabel(iso: string, locale: string) {
   });
 }
 
+// 상대가 대화를 끝낸 뒤 보낸 경우 BE 가 403 으로 거절한다. 옛 BE 는 code 없이 문구만 보낸다.
+function isMatchEndedError(e: unknown): boolean {
+  return (
+    e instanceof ApiRequestError &&
+    e.status === 403 &&
+    (e.code === 'match_ended' || /unmatched|has ended/i.test(e.errorMessage))
+  );
+}
+
 export default function ChatScreen() {
   const { t, i18n } = useTranslation();
   const { labelFor: interestLabelFor } = useInterestResolver();
@@ -594,6 +603,10 @@ export default function ChatScreen() {
     } catch (e: any) {
       // 모더레이션 차단은 메시지와 같은 카피를 재사용한다 (표면별 카피를 늘리지
       // 않는 게 message-moderation-v1 이후의 규칙).
+      if (isMatchEndedError(e)) {
+        setMatchUnmatched(true);
+        return;
+      }
       if (e instanceof ApiRequestError && e.code === 'photo_blocked') {
         showAlert({
           variant: 'info',
@@ -1204,14 +1217,10 @@ export default function ChatScreen() {
             <View
               style={[
                 styles.tombstoneNotice,
-                { paddingBottom: bottomSafePad },
+                // 입력창(위 8 + 칸 44 + 아래 8)과 같은 높이 — 보이는 흰 영역 안에서 세로 중앙.
+                { paddingBottom: bottomSafePad, minHeight: 52 + bottomSafePad },
               ]}
             >
-              <Ionicons
-                name="information-circle-outline"
-                size={16}
-                color={nightBar?.muted ?? colors.textSecondary}
-              />
               <Text style={styles.tombstoneNoticeText}>
                 {partnerDeleted
                   ? t('chat.partnerDeletedNotice')
@@ -1707,7 +1716,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingHorizontal: 18,
-    paddingTop: 14,
+    paddingTop: 8,
     backgroundColor: nightBar?.bg ?? colors.card,
     borderTopWidth: 0.5,
     borderTopColor: nightBar?.border ?? colors.borderSoft,
@@ -1720,6 +1729,8 @@ const styles = StyleSheet.create({
     paddingTop: 28,
   },
   tombstoneNoticeText: {
+    flexShrink: 1,
+    textAlign: 'center',
     fontSize: fs(13),
     color: nightBar?.muted ?? colors.textSecondary,
     fontFamily: fonts.medium,

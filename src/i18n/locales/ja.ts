@@ -341,8 +341,8 @@ export default {
         title: "チャット",
         typeMessage: "メッセージを入力…",
         emptyHint: "まずはあいさつしてみましょう！",
-        partnerDeletedNotice: "相手が退会したため、これ以上メッセージを送信できません。",
-        matchEndedNotice: "会話が終了したため、これ以上メッセージを送信できません。",
+        partnerDeletedNotice: "相手が退会しました。\nこれ以上メッセージを送信できません。",
+        matchEndedNotice: "会話が終了しました。\nこれ以上メッセージを送信できません。",
         // キャンペーンボット（ハチワレ）専用 — 返信不可の案内 + 初回メッセージ合成待ち。
         noReplyNotice: "逃げちゃったので、お返事はできません。",
         botWritingNotice: "{{name}}がメッセージを書いています…",
