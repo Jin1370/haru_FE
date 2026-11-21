@@ -178,7 +178,7 @@ export default {
       noInterests: "Let's get to know each other",
       replaced: "We've added a new card.",
       swipeHintTitle: 'Tip',
-      swipeHint: 'Swipe the card up to say hello.',
+      swipeHint: 'Once you both say hello, you can start chatting. Swipe the card up to say hello.',
       request: 'Say hello',
       requested: 'Hello sent',
       prev: 'Previous card',

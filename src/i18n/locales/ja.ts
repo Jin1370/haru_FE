@@ -176,7 +176,7 @@ export default {
             noInterests: "話しながら知っていこう",
             replaced: "新しいカードを入れました。",
             swipeHintTitle: "ご案内",
-            swipeHint: "あいさつを送るには、カードを上にスワイプしてください。",
+            swipeHint: "お互いにあいさつすると、トークが始まります。あいさつするには、カードを上にスワイプしてください。",
             request: "あいさつする",
             requested: "あいさつ済み",
             prev: "前のカード",

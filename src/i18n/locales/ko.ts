@@ -176,7 +176,7 @@ export default {
             noInterests: "대화하면서 알아가요",
             replaced: "새 카드를 넣어드렸어요.",
             swipeHintTitle: "안내",
-            swipeHint: "인사를 보내려면 카드를 위로 미세요.",
+            swipeHint: "서로 인사를 하면 대화가 시작돼요. 인사를 하려면 카드를 위로 미세요.",
             request: "인사하기",
             requested: "인사 완료",
             prev: "이전 카드",
