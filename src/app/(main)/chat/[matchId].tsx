@@ -657,6 +657,12 @@ export default function ChatScreen() {
       // 안전 카피 토스트 + 입력 텍스트 복원 (재편집 가능). send 가 낙관 stub 을
       // 이미 제거했으므로 화면 잔존 없음. 카테고리/매칭 토큰은 응답에 없어
       // 우회 학습 차단.
+      if (isMatchEndedError(e)) {
+        // 보던 중에 상대가 대화를 끝냈다 — 오류 모달 대신 입력창을 종료 안내로 바꾼다.
+        setText(trimmed);
+        setMatchUnmatched(true);
+        return;
+      }
       if (e instanceof ApiRequestError && e.code === 'message_blocked') {
         showAlert({
           variant: 'info',
